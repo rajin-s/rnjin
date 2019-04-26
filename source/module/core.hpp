@@ -1,3 +1,13 @@
+/*  Part of rnjin
+    (c) Rajin Shankar, 2019
+        rajinshankar.com
+*/
+
+/*  Core engine functionality include with
+        - STL containers and symbolic type names (potentially replaced later with custom ones)
+        - General purpose engine data structures
+        - General purpose namespaces
+ */
 #pragma once
 
 // std data structures
@@ -14,4 +24,5 @@
 #define list std::vector
 #define dictionary std::unordered_map
 
+using namespace rnjin;
 using namespace rnjin::core;
