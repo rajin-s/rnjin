@@ -1,3 +1,8 @@
+/*  Part of rnjin
+    (c) Rajin Shankar, 2019
+        rajinshankar.com
+*/
+
 #include "log.hpp"
 #include <thread>
 
@@ -36,7 +41,7 @@ namespace rnjin::log
         channels[channel_name] = number;
     }
 
-    // Control which channels are enabled
+    // Control which channels are enabled by a mask
     void output_log::enable_channels( const bitmask mask, const affect output_type )
     {
         if ( output_type & affect::console )
@@ -60,6 +65,7 @@ namespace rnjin::log
         }
     }
 
+    // Control which channels are enabled by number
     void output_log::enable_channel( const unsigned int channel_number, const affect output_type )
     {
         if ( bitmask::is_valid_bit( channel_number ) )
@@ -96,6 +102,8 @@ namespace rnjin::log
             _writef( "Can't disable invalid channel #\1!", { str( channel_number ) } );
         }
     }
+
+    // Control which channels are enabled by name
     void output_log::enable_channel( const string& channel_name, const affect output_type )
     {
         if ( channels.count( channel_name ) )
@@ -286,7 +294,7 @@ namespace rnjin::log
     // Basic write and store operations
     void output_log::_write( const string& message, const bool line )
     {
-        ( *output_stream ) << message;
+        ( *output_stream ) << name << ": " << message;
         if ( line )
         {
             ( *output_stream ) << std::endl;
@@ -296,7 +304,7 @@ namespace rnjin::log
     {
         if ( output_file_stream.good() )
         {
-            output_file_stream << message;
+            output_file_stream << name << ": " << message;
             if ( line )
             {
                 ( *output_stream ) << std::endl;
@@ -307,6 +315,7 @@ namespace rnjin::log
     // Write and store with formatting
     void output_log::_writef( const string& message, const list<string> args, const bool line )
     {
+        ( *output_stream ) << name << ": ";
         for ( int i = 0; i < message.length(); i++ )
         {
             char c = message[i];
@@ -332,6 +341,7 @@ namespace rnjin::log
     {
         if ( output_file_stream.good() )
         {
+            output_file_stream << name << ": ";
             for ( int i = 0; i < message.length(); i++ )
             {
                 char c = message[i];
