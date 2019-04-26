@@ -20,7 +20,7 @@
 #include <core/bitmask.hpp>
 
 #define string std::string
-#define str(value) std::to_string(value)
+#define s(value) std::to_string(value)
 #define list std::vector
 #define dictionary std::unordered_map
 

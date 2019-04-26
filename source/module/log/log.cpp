@@ -4,22 +4,31 @@
 */
 
 #include "log.hpp"
-#include <thread>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
+
 
 namespace rnjin
 {
     namespace log
     {
         // Create a new output log
-        source::source( const string& name, const write_to_file output_mode, const string& file_path )
+        source::source( const string& name, const write_to_file output_mode )
         {
+            this->name    = name;
             output_stream = &std::cout;
 
-            output_file_mode = output_mode;
+            std::stringstream name_stream;
+            auto current_time       = std::time( nullptr );
+            auto current_local_time = *std::localtime( &current_time );
+            name_stream << "logs/" << name << std::put_time( &current_local_time, "_%m%d%y_%H%M.log" );
+            output_file_name = name_stream.str();
 
+            output_file_mode = output_mode;
             if ( output_file_mode != write_to_file::never )
             {
-                output_file_stream.open( file_path );
+                output_file_stream.open( output_file_name );
             }
 
             if ( output_file_mode == write_to_file::in_background )
@@ -31,6 +40,10 @@ namespace rnjin
             channels["default"] = 0;
 
             print( "Log created" );
+        }
+        source::~source()
+        {
+            print( "Log ended" );
         }
 
         // Assign a number to a channel name
@@ -83,7 +96,7 @@ namespace rnjin
             }
             else
             {
-                _writef( "Can't enable invalid channel #\1!", { str( channel_number ) } );
+                printf( "Can't enable invalid channel #\1!", { s( channel_number ) }, bitmask::all() );
             }
         }
         void source::disable_channel( const unsigned int channel_number, const affect output_type )
@@ -101,7 +114,7 @@ namespace rnjin
             }
             else
             {
-                _writef( "Can't disable invalid channel #\1!", { str( channel_number ) } );
+                printf( "Can't disable invalid channel #\1!", { s( channel_number ) }, bitmask::all() );
             }
         }
 
@@ -114,7 +127,7 @@ namespace rnjin
             }
             else
             {
-                _writef( "Can't enable nonexistent channel '\1'!", { channel_name } );
+                printf( "Can't enable nonexistent channel '\1'!", { channel_name }, bitmask::all() );
             }
         }
         void source::disable_channel( const string& channel_name, const affect output_type )
@@ -125,7 +138,7 @@ namespace rnjin
             }
             else
             {
-                _writef( "Can't disable nonexistent channel '\1'!", { channel_name } );
+                printf( "Can't disable nonexistent channel '\1'!", { channel_name }, bitmask::all() );
             }
         }
 
@@ -138,7 +151,7 @@ namespace rnjin
             }
             else
             {
-                _writef( "Can't set invalid channel #\1 active!", { str( channel_number ) } );
+                printf( "Can't set invalid channel #\1 active!", { s( channel_number ) }, bitmask::all() );
             }
         }
         void source::set_active_channel( const string& channel_name )
@@ -149,12 +162,12 @@ namespace rnjin
             }
             else
             {
-                _writef( "Can't set nonexistent channel '\1' active!", { channel_name } );
+                printf( "Can't set nonexistent channel '\1' active!", { channel_name }, bitmask::all() );
             }
         }
 
         // Public printing API
-        source* const source::print( const string& message, const bitmask channels )
+        source& source::print( const string& message, const bitmask channels )
         {
             if ( console_channel_mask && channels )
             {
@@ -172,14 +185,14 @@ namespace rnjin
                 }
             }
 
-            return this;
+            return *this;
         }
-        source* const source::print( const string& message, const unsigned int channel_number )
+        source& source::print( const string& message, const unsigned int channel_number )
         {
             if ( !bitmask::is_valid_bit( channel_number ) )
             {
-                _writef( "Can't print to invalid channel #\1!", { str( channel_number ) } );
-                return this;
+                printf( "Can't print to invalid channel #\1!", { s( channel_number ) }, bitmask::all() );
+                return *this;
             }
 
             if ( console_channel_mask[channel_number] )
@@ -198,9 +211,9 @@ namespace rnjin
                 }
             }
 
-            return this;
+            return *this;
         }
-        source* const source::print( const string& message, const string& channel_name )
+        source& source::print( const string& message, const string& channel_name )
         {
             if ( channels.count( channel_name ) )
             {
@@ -208,12 +221,12 @@ namespace rnjin
             }
             else
             {
-                _writef( "Can't print to nonexistent channel '\1'!", { channel_name } );
+                printf( "Can't print to nonexistent channel '\1'!", { channel_name }, bitmask::all() );
             }
-            return this;
+            return *this;
         }
 
-        source* const source::printf( const string& message, const list<string> args, const bitmask channels )
+        source& source::printf( const string& message, const list<string> args, const bitmask channels )
         {
             if ( console_channel_mask && channels )
             {
@@ -231,14 +244,14 @@ namespace rnjin
                 }
             }
 
-            return this;
+            return *this;
         }
-        source* const source::printf( const string& message, const list<string> args, const unsigned int channel_number )
+        source& source::printf( const string& message, const list<string> args, const unsigned int channel_number )
         {
             if ( !bitmask::is_valid_bit( channel_number ) )
             {
-                _writef( "Can't print to invalid channel #\1!", { str( channel_number ) } );
-                return this;
+                printf( "Can't print to invalid channel #\1!", { s( channel_number ) }, bitmask::all() );
+                return *this;
             }
 
             if ( console_channel_mask[channel_number] )
@@ -257,9 +270,9 @@ namespace rnjin
                 }
             }
 
-            return this;
+            return *this;
         }
-        source* const source::printf( const string& message, const list<string> args, const string& channel_name )
+        source& source::printf( const string& message, const list<string> args, const string& channel_name )
         {
             if ( channels.count( channel_name ) )
             {
@@ -267,12 +280,12 @@ namespace rnjin
             }
             else
             {
-                _writef( "Can't print to nonexistent channel '\1'!", { channel_name } );
+                printf( "Can't print to nonexistent channel '\1'!", { channel_name }, bitmask::all() );
             }
-            return this;
+            return *this;
         }
 
-        source* const source::operator<<( const string& message )
+        source& source::operator<<( const string& message )
         {
             if ( console_channel_mask[active_channel] )
             {
@@ -290,13 +303,42 @@ namespace rnjin
                 }
             }
 
-            return this;
+            return *this;
+        }
+        source& source::operator<<( const log::start output_name )
+        {
+            *this << name << ": ";
+            return *this;
+        }
+        source& source::operator<<( const log::line output_name )
+        {
+            *this << "\n";
+            return *this;
+        }
+        source& source::operator<<( const log::use_channel output_channel )
+        {
+            if (output_channel.use_name)
+            {
+                set_active_channel(output_channel.name);
+            }
+            else
+            {
+                set_active_channel(output_channel.number);
+            }
+            
+            return *this;
         }
 
         // Basic write and store operations
         void source::_write( const string& message, const bool line )
         {
-            ( *output_stream ) << name << ": " << message;
+            if ( line )
+            {
+                ( *output_stream ) << name << ": ";
+            }
+
+            ( *output_stream ) << message;
+
             if ( line )
             {
                 ( *output_stream ) << std::endl;
@@ -306,10 +348,16 @@ namespace rnjin
         {
             if ( output_file_stream.good() )
             {
-                output_file_stream << name << ": " << message;
                 if ( line )
                 {
-                    ( *output_stream ) << std::endl;
+                    output_file_stream << name << ": ";
+                }
+
+                output_file_stream << message;
+
+                if ( line )
+                {
+                    output_file_stream << std::endl;
                 }
             }
         }
@@ -317,17 +365,20 @@ namespace rnjin
         // Write and store with formatting
         void source::_writef( const string& message, const list<string> args, const bool line )
         {
-            ( *output_stream ) << name << ": ";
+            if ( line )
+            {
+                ( *output_stream ) << name << ": ";
+            }
             for ( int i = 0; i < message.length(); i++ )
             {
-                char c = message[i];
+                unsigned char c = message[i];
                 if ( c == 0x0 )
                 {
                     break;
                 }
-                else if ( c < args.size() )
+                else if ( c <= args.size() )
                 {
-                    ( *output_stream ) << args[c];
+                    ( *output_stream ) << args[c - 1];
                 }
                 else
                 {
@@ -343,7 +394,10 @@ namespace rnjin
         {
             if ( output_file_stream.good() )
             {
-                output_file_stream << name << ": ";
+                if ( line )
+                {
+                    output_file_stream << name << ": ";
+                }
                 for ( int i = 0; i < message.length(); i++ )
                 {
                     char c = message[i];
@@ -351,9 +405,9 @@ namespace rnjin
                     {
                         break;
                     }
-                    else if ( c < args.size() )
+                    else if ( c <= args.size() )
                     {
-                        output_file_stream << args[c];
+                        output_file_stream << args[c - 1];
                     }
                     else
                     {
@@ -367,14 +421,8 @@ namespace rnjin
             }
         }
 
-        void source::_queue( const string& message, const bool line )
-        {
-
-        }
-        void source::_queuef( const string& message, const list<string> args, const bool line )
-        {
-
-        }
+        void source::_queue( const string& message, const bool line ) {}
+        void source::_queuef( const string& message, const list<string> args, const bool line ) {}
 
         // // Basic write and store, check any of multiple channels
         // void source::write( const string& message, const bitmask channels )
@@ -404,7 +452,7 @@ namespace rnjin
         //     }
         //     else
         //     {
-        //         _writef( "Can't write to invalid channel #\1", { str( channel_number ) } );
+        //         _writef( "Can't write to invalid channel #\1", { s( channel_number ) } );
         //     }
         // }
         // void source::store( const string& message, const unsigned int channel_number )
@@ -418,7 +466,7 @@ namespace rnjin
         //     }
         //     else
         //     {
-        //         _writef( "Can't store to invalid channel #\1", { str( channel_number ) } );
+        //         _writef( "Can't store to invalid channel #\1", { s( channel_number ) } );
         //     }
         // }
 
@@ -474,7 +522,7 @@ namespace rnjin
         //     }
         //     else
         //     {
-        //         _writef( "Can't write to invalid channel #\1", { str( channel_number ) } );
+        //         _writef( "Can't write to invalid channel #\1", { s( channel_number ) } );
         //     }
         // }
         // void source::storef( const string& message, const list<string> args, const unsigned int channel_number )
@@ -488,7 +536,7 @@ namespace rnjin
         //     }
         //     else
         //     {
-        //         _writef( "Can't store to invalid channel #\1", { str( channel_number ) } );
+        //         _writef( "Can't store to invalid channel #\1", { s( channel_number ) } );
         //     }
         // }
 

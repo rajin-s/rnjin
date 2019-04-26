@@ -43,11 +43,28 @@ namespace rnjin
             both    = 3
         };
 
+        // Stream-style print modifiers
+        struct start
+        {
+        };
+        struct use_channel
+        {
+            use_channel( const unsigned int number ) : number( number ), name( nullptr ), use_name( false ) {}
+            use_channel( const string& name ) : name( name ), number( -1 ), use_name( true ) {}
+
+            const unsigned int number;
+            const string& name;
+            const bool use_name;
+        };
+        struct line
+        {
+        };
+
         class source
         {
 
             public:
-            source( const string& name, const write_to_file output_mode, const string& file_path );
+            source( const string& name, const write_to_file output_mode );
             ~source();
 
             void set_channel( const unsigned int number, const string& channel_name );
@@ -61,15 +78,18 @@ namespace rnjin
             void enable_channels( const bitmask mask, const affect output_type = affect::both );
             void disable_channels( const bitmask mask, const affect output_type = affect::both );
 
-            source* const operator<<( const string& message );
-            
-            source* const print( const string& message, const bitmask channels );
-            source* const print( const string& message, const string& channel_name );
-            source* const print( const string& message, const unsigned int channel_number = 0 );
+            source& operator<<( const string& message );
+            source& operator<<( const log::start output_name );
+            source& operator<<( const log::use_channel output_channel );
+            source& operator<<( const log::line output_line );
 
-            source* const printf( const string& message, const list<string> args, const bitmask channels );
-            source* const printf( const string& message, const list<string> args, const unsigned int channel_number = 0 );
-            source* const printf( const string& message, const list<string> args, const string& channel_name );
+            source& print( const string& message, const bitmask channels );
+            source& print( const string& message, const string& channel_name );
+            source& print( const string& message, const unsigned int channel_number = 0 );
+
+            source& printf( const string& message, const list<string> args, const bitmask channels );
+            source& printf( const string& message, const list<string> args, const unsigned int channel_number = 0 );
+            source& printf( const string& message, const list<string> args, const string& channel_name );
 
             void set_active_channel( const unsigned int channel_number );
             void set_active_channel( const string& channel_name );
@@ -82,6 +102,7 @@ namespace rnjin
             std::ostream* output_stream;
 
             // Output file config
+            string output_file_name;
             std::ofstream output_file_stream;
             write_to_file output_file_mode;
 
