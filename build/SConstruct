@@ -1,0 +1,18 @@
+import os, glob
+
+source_root = "../source/"
+include_paths = [ "../source/module", "../source/include" ]
+source_ext = ".cpp"
+
+def get_source_files(directory):
+    source_files = []
+    for path in os.listdir(directory):
+        path = os.path.join(directory, path)
+        if path.endswith(source_ext):
+            source_files.append(path)
+        elif os.path.isdir(path):
+            source_files += get_source_files(path)
+    return source_files
+
+env = Environment(CPPPATH = include_paths)
+env.Program(target = "hello", source = get_source_files(source_root))
