@@ -14,5 +14,6 @@ def get_source_files(directory):
             source_files += get_source_files(path)
     return source_files
 
-env = Environment(CPPPATH = include_paths)
-env.Program(target = "hello", source = get_source_files(source_root))
+env = Environment(CPPPATH = include_paths, CPPFLAGS = ["-DTEST"])
+#env.Program(target = "hello", source = get_source_files(source_root))
+env.Program(target = "tests", source = ["../source/test/test_main.cpp"])
