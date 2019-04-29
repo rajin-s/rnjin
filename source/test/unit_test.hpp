@@ -1,3 +1,9 @@
+/* *** ** *** ** *** ** *** *
+* Part of rnjin            *
+* (c) Rajin Shankar, 2019  *
+*        rajinshankar.com  *
+* *** ** *** ** *** ** *** */
+
 // For unit test hpp files
 #include <iostream>
 using namespace std;

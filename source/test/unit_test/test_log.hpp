@@ -1,3 +1,9 @@
+/* *** ** *** ** *** ** *** *
+* Part of rnjin            *
+* (c) Rajin Shankar, 2019  *
+*        rajinshankar.com  *
+* *** ** *** ** *** ** *** */
+
 #include "unit_test.hpp"
 #include <log.hpp>
 

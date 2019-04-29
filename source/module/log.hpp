@@ -1,7 +1,8 @@
-/*  Part of rnjin
-    (c) Rajin Shankar, 2019
-        rajinshankar.com
-*/
+/* *** ** *** ** *** ** *** *
+* Part of rnjin            *
+* (c) Rajin Shankar, 2019  *
+*        rajinshankar.com  *
+* *** ** *** ** *** ** *** */
 
 /*  Logging API
     Supports arbitrary creation of output logs, each writing to their own file and the console
