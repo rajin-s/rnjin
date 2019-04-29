@@ -1,0 +1,90 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Clear Build",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "clean"
+            ],
+            "group": "build",
+            "options": {
+                "cwd": "build"
+            },
+            "presentation": {
+                "reveal": "never",
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build all",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "all"
+            ],
+            "group": "build",
+            "options": {
+                "cwd": "build"
+            },
+            "presentation": {
+                "reveal": "never",
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build engine",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "rnjin"
+            ],
+            "group": "build",
+            "options": {
+                "cwd": "build"
+            },
+            "presentation": {
+                "reveal": "never",
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build tests",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "tests"
+            ],
+            "group": "build",
+            "options": {
+                "cwd": "build"
+            },
+            "presentation": {
+                "reveal": "never",
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run",
+            "type": "shell",
+            "command": ".\\build\\rnjin.exe",
+            "args": [],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run tests",
+            "type": "shell",
+            "command": ".\\build\\tests.exe",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+            },
+            "problemMatcher": []
+        },
+    ]
+}

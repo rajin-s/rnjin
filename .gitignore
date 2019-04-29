@@ -34,7 +34,7 @@
 *.log
 
 # VS Code
-.vscode/
+.vscode/ipch
 
 # SCons
 .sconsign.dblite

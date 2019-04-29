@@ -1,0 +1,54 @@
+{
+    "files.associations": {
+        "*.shader": "hlsl",
+        "*.pad": "python",
+        "SConstruct": "python",
+        "ostream": "cpp",
+        "xhash": "cpp",
+        "xstring": "cpp"
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/*.obj": true,
+        "**/*.exe": true,
+        "**/.sconsign.dblite": true,
+        "LICENSE": true,
+        "README.md": true,
+        "source/.clang-format": true
+    },
+    "highlight.regexes": {
+        "(\\btext)(\\()(.+?),\\s+(.+?)(\\))" : {
+            "decorations": [
+                { "color": "#e06c75" },
+                { },
+                { "color": "#56b6c2" },
+                { },
+            ]
+        },
+        "(get_text)(\\()(.+?)(\\))" : {
+            "decorations": [
+                { "color": "#e5c07b" },
+                { },
+                { "color": "#56b6c2" },
+                { },
+            ]
+        },
+        "(\\bstring)": {
+            "color": "#56b6c2"
+        },
+        "(\\blist)": {
+            "color": "#56b6c2"
+        },
+        "(\\[)(.+?)(\\])": {
+            "decorations": [
+                { "color": "#e06c75" },
+                {  },
+                { "color": "#e06c75" },
+            ]
+        },
+    }
+}
