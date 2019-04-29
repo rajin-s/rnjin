@@ -5,3 +5,6 @@
 
 /*  Common macros
  */
+
+#define text(name, value) const string message__##name = value
+#define get_text(name) message__##name
