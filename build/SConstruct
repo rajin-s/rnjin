@@ -1,19 +1,41 @@
-import os, glob
+import os
 
-source_root = "../source/"
-include_paths = [ "../source/module", "../source/include" ]
-source_ext = ".cpp"
+include_paths = ["../source/module", "../source/include"]
+source_root = "../source/module"
+test_root = "../source/test/unit_test"
+main = "../source/main.cpp"
+tests_main = "../source/test/main.cpp"
 
-def get_source_files(directory):
+
+def get_files(directory, extension):
     source_files = []
     for path in os.listdir(directory):
         path = os.path.join(directory, path)
-        if path.endswith(source_ext):
+        if path.endswith(extension):
             source_files.append(path)
         elif os.path.isdir(path):
-            source_files += get_source_files(path)
+            source_files += get_files(path, extension)
     return source_files
 
-env = Environment(CPPPATH = include_paths, CPPFLAGS = ["-DTEST"])
-#env.Program(target = "hello", source = get_source_files(source_root))
-env.Program(target = "tests", source = ["../source/test/test_main.cpp"])
+
+sources = get_files(source_root, ".cpp")
+test_includes = []
+for path in os.listdir(test_root):
+    if path.endswith(".hpp"):
+        test_includes.append("/FIunit_test/" + path)
+
+env = Environment(CPPPATH=include_paths, CPPFLAGS=[])
+o_core = env.Object(target="core.obj", source=sources)
+
+t = ARGUMENTS.get("make", "rnjin")
+if t in ["all", "rnjin"]:
+    o_main = env.Object(target="rnjin.obj", source=main)
+    exe_rnjin = env.Program(target="rnjin", source=["core.obj", "rnjin.obj"])
+    env.Command(target="rnjin", source="rnjin.exe", action="C:/rcedit.exe rnjin.exe --set-icon icon.ico")
+
+if t in ["all", "tests"]:
+    tests_env = env.Clone()
+    tests_env.Append(CPPPATH=["../source/test"], CPPFLAGS=test_includes)
+    o_tests = tests_env.Object(target="tests.obj", source=tests_main)
+    exe_tests = env.Program(target="tests", source=["core.obj", "tests.obj"])
+    env.Command(target="tests", source="tests.exe", action="C:/rcedit.exe tests.exe --set-icon icon.ico")
