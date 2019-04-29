@@ -1,10 +1,22 @@
-#ifndef TEST
-    #define unit_test(name) int name()
-    #define finish() return 0
-    #define for_test(file) file
-#else
-    #define run int
-    #define unit_test(name) name = 0;
-    #define finish()
-    #define for_test(file) "nothing.h"
-#endif
+// For unit test hpp files
+#include <iostream>
+using namespace std;
+
+#define unit_test( name ) class unit_test_##name
+#define body \
+    public:  \
+    static void run()
+#define assert( condition, if_pass, if_fail ) \
+    if ( condition )                          \
+    {                                         \
+        cout << if_pass << endl;              \
+    }                                         \
+    else                                      \
+    {                                         \
+        cout << if_fail << endl;              \
+    }
+
+// For tests.hpp
+#define test( name ) unit_test_##name::run
+#define stringify( value ) #value
+#define test_header( name ) stringify( test_##name.hpp )
