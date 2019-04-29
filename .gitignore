@@ -30,6 +30,7 @@
 *.exe
 *.out
 *.app
+**/logs/
 
 # VS Code
 .vscode/
