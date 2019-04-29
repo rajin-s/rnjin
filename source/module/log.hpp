@@ -30,12 +30,21 @@ namespace rnjin
 {
     namespace log
     {
+        // How should a log source handle writing to disk?
+        // in_background: Write queued messages to a log file on a dedicated thread at regular intervals
+        // immediately: Do file writing at the same time as console output
+        // never: Only log to console, not a file on disk
         enum write_to_file
         {
             in_background,
             immediately,
             never
         };
+
+        // How should log source mask operations affect output to the console and files?
+        // console: Affect the mask of only console output
+        // file: Affect the mask of only file output
+        // both: Affect the masks of both console and file output
         enum affect
         {
             console = 1,
@@ -44,9 +53,14 @@ namespace rnjin
         };
 
         // Stream-style print modifiers
+        //  note: maybe there's a better way of handling these...
+
+        // Stream-style token to print the standard log starting message ("<name>: ")
         struct start
         {
         };
+
+        //...
         struct use_channel
         {
             use_channel( const unsigned int number ) : number( number ), name( nullptr ), use_name( false ) {}
@@ -56,13 +70,15 @@ namespace rnjin
             const string& name;
             const bool use_name;
         };
+
+        //...
         struct line
         {
         };
 
+        //...
         class source
         {
-
             public:
             source( const string& name, const write_to_file output_mode );
             ~source();
@@ -112,27 +128,15 @@ namespace rnjin
             dictionary<string, unsigned int> channels;
             unsigned int active_channel;
 
-            void _write( const string& message, const bool line = true );
-            void _store( const string& message, const bool line = true );
-            void _queue( const string& message, const bool line = true );
+            void write( const string& message, const bool line = true );
+            void store( const string& message, const bool line = true );
+            void queue_store( const string& message, const bool line = true );
 
-            void _writef( const string& message, const list<string> args, const bool line = true );
-            void _storef( const string& message, const list<string> args, const bool line = true );
-            void _queuef( const string& message, const list<string> args, const bool line = true );
-
-            // void write( const string& message, const bitmask channels );
-            // void store( const string& message, const bitmask channels );
-            // void write( const string& message, const unsigned int channel_number = 0 );
-            // void store( const string& message, const unsigned int channel_number = 0 );
-            // void write( const string& message, const string& channel_name );
-            // void store( const string& message, const string& channel_name );
-
-            // void writef( const string& message, const list<string> args, const unsigned int channel_number = 0 );
-            // void storef( const string& message, const list<string> args, const unsigned int channel_number = 0 );
-            // void writef( const string& message, const list<string> args, const string& channel_name );
-            // void storef( const string& message, const list<string> args, const string& channel_name );
-            // void writef( const string& message, const list<string> args, const bitmask channels );
-            // void storef( const string& message, const list<string> args, const bitmask channels );
+            void writef( const string& message, const list<string> args, const bool line = true );
+            void storef( const string& message, const list<string> args, const bool line = true );
+            void queue_storef( const string& message, const list<string> args, const bool line = true );
         };
+
+        extern source main;
     } // namespace log
 } // namespace rnjin
