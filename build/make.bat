@@ -1,6 +1,6 @@
 @echo off
 
-SET output_log = scons.txt
+SET output_log = scons.log
 
 if "%1%"=="" (goto make_default)
 if %1% == clean (goto make_clean) else (goto make_arg)
