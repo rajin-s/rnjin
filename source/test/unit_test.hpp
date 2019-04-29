@@ -24,5 +24,3 @@ using namespace std;
 
 // For tests.hpp
 #define test( name ) unit_test_##name::run
-#define stringify( value ) #value
-#define test_header( name ) stringify( test_##name.hpp )
