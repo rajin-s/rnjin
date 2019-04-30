@@ -1,8 +1,8 @@
 /* *** ** *** ** *** ** *** *
-* Part of rnjin            *
-* (c) Rajin Shankar, 2019  *
-*        rajinshankar.com  *
-* *** ** *** ** *** ** *** */
+ * Part of rnjin            *
+ * (c) Rajin Shankar, 2019  *
+ *        rajinshankar.com  *
+ * *** ** *** ** *** ** *** */
 
 /*  Core engine functionality include with
         - STL containers and symbolic type names (potentially replaced later with custom ones)

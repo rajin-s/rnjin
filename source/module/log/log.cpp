@@ -1,8 +1,8 @@
 /* *** ** *** ** *** ** *** *
-* Part of rnjin            *
-* (c) Rajin Shankar, 2019  *
-*        rajinshankar.com  *
-* *** ** *** ** *** ** *** */
+ * Part of rnjin            *
+ * (c) Rajin Shankar, 2019  *
+ *        rajinshankar.com  *
+ * *** ** *** ** *** ** *** */
 
 #include "log.hpp"
 #include <ctime>

@@ -1,8 +1,8 @@
 /* *** ** *** ** *** ** *** *
-* Part of rnjin            *
-* (c) Rajin Shankar, 2019  *
-*        rajinshankar.com  *
-* *** ** *** ** *** ** *** */
+ * Part of rnjin            *
+ * (c) Rajin Shankar, 2019  *
+ *        rajinshankar.com  *
+ * *** ** *** ** *** ** *** */
 
 /*  Bitmask data structure with operator support:
         mask + number -> set a bit
