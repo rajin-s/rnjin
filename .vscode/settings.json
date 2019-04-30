@@ -43,6 +43,9 @@
         "(\\blist\\b)": {
             "color": "#56b6c2"
         },
+        "(\\bdictionary\\b)": {
+            "color": "#56b6c2"
+        },
         "(\\[)(.+?)(\\])": {
             "decorations": [
                 { "color": "#e06c75" },
