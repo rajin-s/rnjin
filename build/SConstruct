@@ -25,7 +25,7 @@ for path in os.listdir(test_root):
         test_includes.append("/FIunit_test/" + path)
 
 env = Environment(CPPPATH=include_paths, CPPFLAGS=[])
-o_core = env.Object(target="core.obj", source=sources)
+o_core = env.Library(target="core.obj", source=sources)
 
 t = ARGUMENTS.get("make", "rnjin")
 if t in ["all", "rnjin"]:
