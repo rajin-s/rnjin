@@ -98,6 +98,12 @@
         "(\\bdictionary\\b)": {
             "color": "#56b6c2"
         },
+        "([^:\\s<\\(\\[\\.]*)(::)": {
+            "decorations": [
+                { "color": "#56b6c2", "textDecoration": "underline" },
+                { "color": "#e06c75"" },
+            ]
+        },
         "(\\[)(.+?)(\\])": {
             "decorations": [
                 { "color": "#e06c75" },
