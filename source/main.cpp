@@ -10,12 +10,6 @@
 #include "log.hpp"
 #include "script.hpp"
 
-template <int V>
-void print_num()
-{
-    log::main << "Instruction " << s( V ) << log::line();
-}
-
 template <typename T>
 void print_bits( const void* value )
 {
@@ -28,33 +22,19 @@ void print_bits( const void* value )
     log::main << log::line();
 }
 
-void foo( char a, char b )
+void print_char( const char c )
 {
-    log::main << "foo: " << s( a ) << ", " << s( b ) << log::line();
-}
-
-void bar( char a )
-{
-    log::main << "bar: " << s( a ) << log::line();
-}
-
-void foobar( void )
-{
-    log::main << "!";
+    log::main.printf( "\1", { s( c ) } );
 }
 
 void main( int argc, char* argv[] )
 {
-    char data[]    = { 0x04, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02 };
-    auto foo_call  = script::function_call<void, char, char>( foo );
-    auto foo_call2 = script::function_call( foo );
+    script::runtime rt = script::runtime();
+    script::compiled_script test_script( "test.script" );
+    script::execution_context exec( test_script, rt );
 
-    foo_call.invoke( data );
-    foo_call2.invoke( data );
-
-    auto bar_call = script::function_call( bar );
-    bar_call.invoke( data );
-
-    auto foobar_call = script::function_call( foobar );
-    foobar_call.invoke( data );
+    exec.execute(); exec.execute();
+    exec.execute(); exec.execute();
+    exec.execute(); exec.execute();
+    exec.execute(); exec.execute();
 }
