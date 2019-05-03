@@ -23,6 +23,7 @@
         Use set_active_channel to determine what channel subsequent << calls will write to
  */
 
+#pragma once
 #include "core.hpp"
 #include <fstream>
 #include <iostream>
