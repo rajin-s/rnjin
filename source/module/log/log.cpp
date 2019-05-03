@@ -37,7 +37,8 @@ namespace rnjin
             std::stringstream name_stream;
             auto current_time       = std::time( nullptr );
             auto current_local_time = *std::localtime( &current_time );
-            name_stream << "logs/" << name << std::put_time( &current_local_time, "_%m%d%y_%H%M.log" );
+            // name_stream << "logs/" << name << std::put_time( &current_local_time, "_%m%d%y_%H%M" ) << ".log";
+            name_stream << "logs/" << name << ".log";
             output_file_name = name_stream.str();
 
             output_file_mode = output_mode;
@@ -439,6 +440,6 @@ namespace rnjin
         void source::queue_store( const string& message, const bool line ) {}
         void source::queue_storef( const string& message, const list<string> args, const bool line ) {}
 
-        source main( "rnjin", write_to_file::immediately );
+        source main( "rnjin.main", write_to_file::immediately );
     } // namespace log
 } // namespace rnjin
