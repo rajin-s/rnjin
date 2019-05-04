@@ -1,7 +1,7 @@
-main:
-    vcrt int 0
-    prnt int 1
-    prnt int* 0
-    vset 0 int 123
-    prnt int* 0
-    move $main
+main:               # bytecode                     compressed
+    vcrt int 0      # 05 02 00 00 00 00        =>  05 02 00 03
+    prnt int 1      # 1E 02 01 00 00 00        =>  1E 02 01 00 03
+    prnt int* 0     # 1E 03 00 00              =>  1E 03 00 01
+    vset 0 int 255  # 07 00 00 02 FF 00 00 00  =>  07 00 01 02 FF 00 02
+    prnt int* 0     # 1E 03 00 00              =>  1E 03 00 01
+    move .main      # 02 02 06 00 00 00        =>  02 02 06 00 02
