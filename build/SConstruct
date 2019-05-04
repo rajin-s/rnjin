@@ -1,7 +1,10 @@
 import os
 
-include_paths = ["../source/module", "../source/include", "../libs/glfw" ]
+include_paths = ["../source/module", "../source/include", "../libs/glfw_include", "../libs/vulkan_include" ]
 source_root = "../source/module"
+library_paths = [ "../libs/vulkan_lib", "../libs/glfw_lib" ]
+libraries = ["glfw3", "vulkan-1", "gdi32", "opengl32", "kernel32", "user32", "shell32"]
+
 test_root = "../source/test/unit_test"
 main = "../source/main.cpp"
 tests_main = "../source/test/main.cpp"
@@ -24,7 +27,7 @@ for path in os.listdir(test_root):
     if path.endswith(".hpp"):
         test_includes.append("/FIunit_test/" + path)
 
-env = Environment(CPPPATH=include_paths, CPPFLAGS=[])
+env = Environment(CPPPATH=include_paths, CPPFLAGS=["/std:c++17"], LIBPATH=library_paths, LIBS=libraries)
 o_core = env.Library(target="core.obj", source=sources)
 
 t = ARGUMENTS.get("make", "rnjin")
