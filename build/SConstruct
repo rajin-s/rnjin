@@ -1,6 +1,6 @@
 import os
 
-include_paths = ["../source/module", "../source/include"]
+include_paths = ["../source/module", "../source/include", "../libs/glfw" ]
 source_root = "../source/module"
 test_root = "../source/test/unit_test"
 main = "../source/main.cpp"
