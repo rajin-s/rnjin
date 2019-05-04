@@ -18,6 +18,20 @@ namespace rnjin
         text( unbound_opcode, "Unbound opcode \1!" );
         text( bad_opcode, "Bad opcode \1!" );
 
+        // Type -> string conversion
+        const string type_names[16] = { "byte", "byte*", "int", "int*", "float", "float*", "double", "double*", "float2", "float2*", "float3", "float3*", "float4", "float4*", "string", "string*" };
+        const string get_type_name( any::type type )
+        {
+            if ( type < 16 )
+            {
+                return type_names[type];
+            }
+            else
+            {
+                return "error";
+            }
+        }
+
         // runtime
         runtime::runtime() {}
         runtime::~runtime()
@@ -82,6 +96,8 @@ namespace rnjin
         execution_context::execution_context( compiled_script& source_script, runtime& source_runtime ) : source_script( source_script ), source_runtime( source_runtime )
         {
             program_counter = 0;
+            stack_top       = &stack[0];
+            next_var        = 0;
         }
         bool execution_context::valid()
         {
@@ -92,7 +108,10 @@ namespace rnjin
             byte opcode = source_script.data[program_counter];
             program_counter += sizeof( byte );
 
-            // script_log << "op: " << s( opcode ) << " ";
+            min_debug( debug_internal )
+            {
+                script_log << "op " << s( opcode ) << ": ";
+            }
 
             if ( opcode < opcodes_reserved_for_context )
             {
@@ -102,9 +121,19 @@ namespace rnjin
             else
             {
                 binding* operation = source_runtime.get_binding( opcode );
-                if ( operation == nullptr )
+
+                // For test builds, check opcodes for null
+                // For release builds, always invoke
+                min_debug( test )
                 {
-                    script_log.printf( get_text( unbound_opcode ), { s( opcode ) } );
+                    if ( operation == nullptr )
+                    {
+                        script_log.printf( get_text( unbound_opcode ), { s( opcode ) } );
+                    }
+                    else
+                    {
+                        operation->invoke( this );
+                    }
                 }
                 else
                 {
@@ -120,6 +149,10 @@ namespace rnjin
         }
         void execution_context::jump_to( unsigned int position )
         {
+            min_debug( debug_internal )
+            {
+                script_log << "jump to " << s( position ) << log::line();
+            }
             program_counter = position;
         }
         void execution_context::jump_if( int offset, any value )
@@ -153,6 +186,33 @@ namespace rnjin
                 default:
                     break;
             }
+
+            min_debug( debug_internal )
+            {
+                script_log << "create " << get_type_name( initial_value.var_type ) << ": ";
+                switch ( initial_value.var_type )
+                {
+                    case any::type::byte_val:
+                        script_log << s( initial_value.value.as_byte );
+                        break;
+
+                    case any::type::int_val:
+                        script_log << s( initial_value.value.as_int );
+                        break;
+
+                    case any::type::float_val:
+                        script_log << s( initial_value.value.as_float );
+                        break;
+
+                    case any::type::double_val:
+                        script_log << s( initial_value.value.as_double );
+                        break;
+
+                    default:
+                        break;
+                }
+                script_log << log::line();
+            }
         }
         void execution_context::delete_var( type_info type )
         {
@@ -177,33 +237,61 @@ namespace rnjin
                 default:
                     break;
             }
+
+            min_debug( debug_internal )
+            {
+                script_log << "delete " << get_type_name( (any::type)type ) << log::line();
+            }
         }
         void execution_context::set_var( var_pointer var, any value )
         {
             switch ( value.var_type )
             {
-                case any::type::byte_ptr:
                 case any::type::byte_val:
                     write_var( var, value.value.as_byte );
                     break;
 
-                case any::type::int_ptr:
                 case any::type::int_val:
                     write_var( var, value.value.as_int );
                     break;
 
-                case any::type::float_ptr:
                 case any::type::float_val:
                     write_var( var, value.value.as_float );
                     break;
 
-                case any::type::double_ptr:
                 case any::type::double_val:
                     write_var( var, value.value.as_double );
                     break;
 
                 default:
                     break;
+            }
+
+            min_debug( debug_internal )
+            {
+                script_log << "set var #" << s(var) << " to (" << get_type_name( value.var_type ) << ") ";
+                switch ( value.var_type )
+                {
+                    case any::type::byte_val:
+                        script_log << s( value.value.as_byte );
+                        break;
+
+                    case any::type::int_val:
+                        script_log << s( value.value.as_int );
+                        break;
+
+                    case any::type::float_val:
+                        script_log << s( value.value.as_float );
+                        break;
+
+                    case any::type::double_val:
+                        script_log << s( value.value.as_double );
+                        break;
+
+                    default:
+                        break;
+                }
+                script_log << log::line();
             }
         }
         void execution_context::set_var_array( void )

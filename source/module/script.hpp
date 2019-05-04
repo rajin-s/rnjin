@@ -372,6 +372,7 @@ namespace rnjin
         class compiled_script
         {
             public:
+            // Script bytecode (little-endian)
             list<byte> data;
 
             compiled_script( const string file_path );
@@ -495,6 +496,13 @@ namespace rnjin
             {
                 return read_value<type_info>();
             }
+            
+            // Read a lone var_ptr with no attached type
+            template <>
+            var_pointer read<var_pointer>()
+            {
+                return read_value<var_pointer>();
+            }
 
             // Fill in an any struct based on the read type_info.
             // Note: always returns a value (will do pointer lookup internally)
@@ -586,7 +594,7 @@ namespace rnjin
             byte* stack_top;
 
             void* vars[max_stack_vars];
-            unsigned int next_var = 0;
+            unsigned int next_var;
 
             template <typename T>
             T lookup( var_pointer var )
