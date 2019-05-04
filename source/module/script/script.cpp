@@ -90,15 +90,14 @@ namespace rnjin
         void execution_context::execute()
         {
             byte opcode = source_script.data[program_counter];
-            program_counter++;
+            program_counter += sizeof( byte );
 
             // script_log << "op: " << s( opcode ) << " ";
 
             if ( opcode < opcodes_reserved_for_context )
             {
                 context_binding* context_operation = context_bindings[opcode];
-                context_operation->invoke( this, &source_script.data[program_counter] );
-                program_counter += context_operation->get_params_size();
+                context_operation->invoke( this );
             }
             else
             {
@@ -109,11 +108,12 @@ namespace rnjin
                 }
                 else
                 {
-                    operation->invoke( &source_script.data[program_counter] );
-                    program_counter += operation->get_params_size();
+                    operation->invoke( this );
                 }
             }
         }
+
+        // Execution context bindings
         void execution_context::jump( int offset )
         {
             program_counter += offset;
@@ -122,25 +122,89 @@ namespace rnjin
         {
             program_counter = position;
         }
-        void execution_context::jump_if( int offset )
+        void execution_context::jump_if( int offset, any value )
         {
             return;
         }
-        void execution_context::jump_to_if( unsigned int position )
+        void execution_context::jump_to_if( unsigned int position, any value )
         {
             return;
         }
-        void execution_context::create_var( void )
+        void execution_context::create_var( any initial_value )
         {
-            return;
+            switch ( initial_value.var_type )
+            {
+                case any::type::byte_val:
+                    allocate_var<byte>( initial_value.value.as_byte );
+                    break;
+
+                case any::type::int_val:
+                    allocate_var<int>( initial_value.value.as_int );
+                    break;
+
+                case any::type::float_val:
+                    allocate_var<float>( initial_value.value.as_float );
+                    break;
+
+                case any::type::double_val:
+                    allocate_var<double>( initial_value.value.as_double );
+                    break;
+
+                default:
+                    break;
+            }
         }
-        void execution_context::delete_var( void )
+        void execution_context::delete_var( type_info type )
         {
-            return;
+            switch ( type )
+            {
+                case any::type::byte_val:
+                    free_var<byte>();
+                    break;
+
+                case any::type::int_val:
+                    free_var<int>();
+                    break;
+
+                case any::type::float_val:
+                    free_var<float>();
+                    break;
+
+                case any::type::double_val:
+                    free_var<double>();
+                    break;
+
+                default:
+                    break;
+            }
         }
-        void execution_context::set_var( void )
+        void execution_context::set_var( var_pointer var, any value )
         {
-            return;
+            switch ( value.var_type )
+            {
+                case any::type::byte_ptr:
+                case any::type::byte_val:
+                    write_var( var, value.value.as_byte );
+                    break;
+
+                case any::type::int_ptr:
+                case any::type::int_val:
+                    write_var( var, value.value.as_int );
+                    break;
+
+                case any::type::float_ptr:
+                case any::type::float_val:
+                    write_var( var, value.value.as_float );
+                    break;
+
+                case any::type::double_ptr:
+                case any::type::double_val:
+                    write_var( var, value.value.as_double );
+                    break;
+
+                default:
+                    break;
+            }
         }
         void execution_context::set_var_array( void )
         {
@@ -150,15 +214,15 @@ namespace rnjin
         {
             return;
         }
-        void execution_context::create_static( void )
+        void execution_context::create_static( any initial_value )
         {
             return;
         }
-        void execution_context::delete_static( void )
+        void execution_context::delete_static( type_info type )
         {
             return;
         }
-        void execution_context::set_static( void )
+        void execution_context::set_static( var_pointer var, any value )
         {
             return;
         }
@@ -166,92 +230,117 @@ namespace rnjin
         {
             return;
         }
-        void execution_context::set_static_offset( void )
+        void execution_context::set_static_offset( unsigned char offset )
         {
             return;
         }
-        void execution_context::set_or( void )
+        void execution_context::set_or( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_and( void )
+        void execution_context::set_and( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_not( void )
+        void execution_context::set_not( var_pointer var, any a )
         {
             return;
         }
-        void execution_context::set_sum( void )
+        void execution_context::set_sum( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_difference( void )
+        void execution_context::set_difference( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_product( void )
+        void execution_context::set_product( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_quotient( void )
+        void execution_context::set_quotient( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_remainder( void )
+        void execution_context::set_remainder( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_exponent( void )
+        void execution_context::set_exponent( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_dot( void )
+        void execution_context::set_dot( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_cross( void )
+        void execution_context::set_cross( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::set_norm( void )
+        void execution_context::set_norm( var_pointer var, any a, any b )
         {
             return;
         }
-        void execution_context::increment( void )
+        void execution_context::increment( var_pointer var )
         {
             return;
         }
-        void execution_context::decrement( void )
+        void execution_context::decrement( var_pointer var )
         {
             return;
         }
-        void execution_context::print_value( void )
+        void execution_context::print_value( any value )
         {
-            return;
+            script_log << "(debug) ";
+            switch ( value.var_type )
+            {
+                case any::type::byte_val:
+                    script_log << s( value.value.as_byte );
+                    break;
+
+                case any::type::int_val:
+                    script_log << s( value.value.as_int );
+                    break;
+
+                case any::type::float_val:
+                    script_log << s( value.value.as_float );
+                    break;
+
+                case any::type::double_val:
+                    script_log << s( value.value.as_double );
+                    break;
+
+                default:
+                    break;
+            }
+            script_log << log::line();
         }
-        void execution_context::print_absolute( void )
+        void execution_context::print_absolute( any value )
         {
             return;
         }
 
         // Default call for opcodes that aren't otherwise bound
+        _context_binding<void>* execution_context::unbound_context_call = _get_context_binding( &execution_context::print_bad_opcode );
         void execution_context::print_bad_opcode()
         {
             script_log.printf( get_text( bad_opcode ), { s( source_script.data[program_counter - 1] ) } );
         }
-        _context_binding<void>* execution_context::unbound_context_call = _get_context_binding( &execution_context::print_bad_opcode );
+
+        // Null instruction
+        void execution_context::do_nothing() {}
 
         // 32 opcodes reserved for context bindings
         context_binding* execution_context::context_bindings[opcodes_reserved_for_context] = {
-            /* 0x00 */ unbound_context_call,
-            /* 0x01 */ unbound_context_call,
-            /* 0x02 */ unbound_context_call,
+            /* 0x00 */ _get_context_binding( &execution_context::do_nothing ),
+            /* 0x01 */ _get_context_binding( &execution_context::jump ),
+            /* 0x02 */ _get_context_binding( &execution_context::jump_to ),
             /* 0x03 */ unbound_context_call,
             /* 0x04 */ unbound_context_call,
-            /* 0x05 */ unbound_context_call,
-            /* 0x06 */ unbound_context_call,
-            /* 0x07 */ unbound_context_call,
+            /* 0x05 */ _get_context_binding( &execution_context::create_var ),
+            /* 0x06 */ _get_context_binding( &execution_context::delete_var ),
+            /* 0x07 */ _get_context_binding( &execution_context::set_var ),
             /* 0x08 */ unbound_context_call,
             /* 0x09 */ unbound_context_call,
             /* 0x0A */ unbound_context_call,
@@ -274,7 +363,7 @@ namespace rnjin
             /* 0x1B */ unbound_context_call,
             /* 0x1C */ unbound_context_call,
             /* 0x1D */ unbound_context_call,
-            /* 0x1E */ unbound_context_call,
+            /* 0x1E */ _get_context_binding( &execution_context::print_value ),
             /* 0x1F */ unbound_context_call,
         };
 

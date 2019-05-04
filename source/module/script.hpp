@@ -19,13 +19,19 @@ namespace rnjin
         constexpr size_t opcodes_reserved_for_context = 32;
         constexpr size_t opcodes_free_for_runtime     = opcode_count - opcodes_reserved_for_context;
 
-        // Read data from an arbitrary pointer as type T
-        // (used to extract parameters from bytecode)
-        template <typename T>
-        T get_data( const byte* data )
-        {
-            return *( (T*)data );
-        }
+        // TODO: Maybe replace this with dynamically allocated? Or initial size + grow/shrink operations
+        constexpr size_t stack_size     = 2048;
+        constexpr size_t max_stack_vars = 512;
+
+        class execution_context;
+
+        // // Read data from an arbitrary pointer as type T
+        // // (used to extract parameters from bytecode)
+        // template <typename T>
+        // T get_data( const byte* data )
+        // {
+        //     return *( (T*)data );
+        // }
 
         // We need a way to separate two parameter packs... this seems to work but I'd guess there's a better way
         // Passed in _function_binding->invoke(...) as __
@@ -41,7 +47,7 @@ namespace rnjin
                 context_method
             };
 
-            virtual void invoke( const byte* data ) = 0;
+            virtual void invoke( execution_context* context ) = 0;
 
             size_t get_params_size()
             {
@@ -73,15 +79,15 @@ namespace rnjin
             }
 
             // Non-returning invoke for implenting _binding_base interface
-            void invoke( const byte* data )
+            void invoke( execution_context* context )
             {
-                _invoke( data );
+                _invoke( context );
             }
 
             // Intial public call, use parameter types from function itself
-            return_type _invoke( const byte* data )
+            return_type _invoke( execution_context* context )
             {
-                return _invoke<input_types...>( data );
+                return _invoke<input_types...>( context );
             }
 
             private:
@@ -90,30 +96,30 @@ namespace rnjin
 
             // Initial internal call, only specify types to get
             template <typename first, typename... rest>
-            return_type _invoke( const byte* data )
+            return_type _invoke( execution_context* context )
             {
-                return _invoke<rest..., 1, first>( data + sizeof( first ), _separator, get_data<first>( data ) );
+                return _invoke<rest..., 1, first>( context, _separator, context->read<first>() );
             }
 
             // Base case: no remaining values to get
             template <int _, typename... param_types>
-            return_type _invoke( const byte* data, int __[_], param_types... params )
+            return_type _invoke( execution_context* context, int __[_], param_types... params )
             {
                 return function( params... );
             }
 
             // Base case: one remaining type_info to get
             template <typename first, int _, typename... param_types>
-            return_type _invoke( const byte* data, int __[_], param_types... params )
+            return_type _invoke( execution_context* context, int __[_], param_types... params )
             {
-                return function( params..., get_data<first>( data ) );
+                return function( context, params..., context->read<first>() );
             }
 
             // General case: get one type_info and put it into params
             template <typename first, typename... rest, int _, typename... param_types>
-            return_type _invoke( const byte* data, int __[_], param_types... params )
+            return_type _invoke( execution_context* context, int __[_], param_types... params )
             {
-                return _invoke<rest..., _, first, param_types...>( data + sizeof( first ), __, params..., get_data<first>( data ) );
+                return _invoke<rest..., _, first, param_types...>( context, __, params..., context->read<first>() );
             }
         };
 
@@ -130,11 +136,11 @@ namespace rnjin
                 call_type   = type::static_function;
             }
 
-            void invoke( const byte* data )
+            void invoke( execution_context* context )
             {
                 function();
             }
-            return_type _invoke( const byte* data )
+            return_type _invoke( execution_context* context )
             {
                 return function();
             }
@@ -158,14 +164,14 @@ namespace rnjin
                 call_type   = type::instance_method;
             }
 
-            void invoke( const byte* data )
+            void invoke( execution_context* context )
             {
-                _invoke( data );
+                _invoke( context );
             }
 
-            return_type _invoke( const byte* data )
+            return_type _invoke( execution_context* context )
             {
-                _invoke<input_types...>( data );
+                return _invoke<input_types...>( context );
             }
 
             private:
@@ -174,30 +180,30 @@ namespace rnjin
 
             // Initial internal call, only specify types to get
             template <typename first, typename... rest>
-            return_type _invoke( const byte* data )
+            return_type _invoke( execution_context* context )
             {
-                return _invoke<rest..., 1, first>( data + sizeof( first ), _separator, get_data<first>( data ) );
+                return _invoke<rest..., 1, first>( context, _separator, context->read<first>() );
             }
 
             // Base case: no remaining values to get
             template <int _, typename... param_types>
-            return_type _invoke( const byte* data, int __[_], param_types... params )
+            return_type _invoke( execution_context* context, int __[_], param_types... params )
             {
                 return ( object_reference->*method )( params... );
             }
 
             // Base case: one remaining type_info to get
             template <typename first, int _, typename... param_types>
-            return_type _invoke( const byte* data, int __[_], param_types... params )
+            return_type _invoke( execution_context* context, int __[_], param_types... params )
             {
-                return ( object_reference->*method )( params..., get_data<first>( data ) );
+                return ( object_reference->*method )( params..., context->read<first>() );
             }
 
             // General case: get one type_info and put it into params
             template <typename first, typename... rest, int _, typename... param_types>
-            return_type _invoke( const byte* data, int __[_], param_types... params )
+            return_type _invoke( execution_context* context, int __[_], param_types... params )
             {
-                return _invoke<rest..., _, first, param_types...>( data + sizeof( first ), __, params..., get_data<first>( data ) );
+                return _invoke<rest..., _, first, param_types...>( context, __, params..., context->read<first>() );
             }
         };
 
@@ -214,7 +220,7 @@ namespace rnjin
                 call_type   = type::instance_method;
             }
 
-            void invoke( const byte* data )
+            void invoke( execution_context* context )
             {
                 ( object_reference->*method )();
             }
@@ -224,11 +230,9 @@ namespace rnjin
             method_type method;
         };
 
-        class execution_context;
-
         struct _context_binding_base : _binding_base
         {
-            virtual void invoke( execution_context* context, const byte* data ) = 0;
+            virtual void invoke( execution_context* context ) = 0;
         };
 
         // Method call struct not bound to a particular object instance, can be invoked provided an execution context
@@ -246,19 +250,14 @@ namespace rnjin
                 call_type   = type::instance_method;
             }
 
-            void invoke( const byte* data )
+            void invoke( execution_context* context )
             {
-                script_log.print( "Can't call context method without context!" );
+                _invoke( context );
             }
 
-            void invoke( execution_context* context, const byte* data )
+            return_type _invoke( execution_context* context )
             {
-                _invoke( context, data );
-            }
-
-            return_type _invoke( execution_context* context, const byte* data )
-            {
-                _invoke<input_types...>( context, data );
+                _invoke<input_types...>( context );
             }
 
             private:
@@ -266,30 +265,30 @@ namespace rnjin
 
             // Initial internal call, only specify types to get
             template <typename first, typename... rest>
-            return_type _invoke( execution_context* context, const byte* data )
+            return_type _invoke( execution_context* context )
             {
-                return _invoke<rest..., 1, first>( data + sizeof( first ), context, _separator, get_data<first>( data ) );
+                return _invoke<rest..., 1, first>( context, _separator, context->read<first>() );
             }
 
             // Base case: no remaining values to get
             template <int _, typename... param_types>
-            return_type _invoke( execution_context* context, const byte* data, int __[_], param_types... params )
+            return_type _invoke( execution_context* context, int __[_], param_types... params )
             {
                 return ( context->*method )( params... );
             }
 
             // Base case: one remaining type_info to get
             template <typename first, int _, typename... param_types>
-            return_type _invoke( execution_context* context, const byte* data, int __[_], param_types... params )
+            return_type _invoke( execution_context* context, int __[_], param_types... params )
             {
-                return ( context->*method )( params..., get_data<first>( data ) );
+                return ( context->*method )( params..., context->read<first>() );
             }
 
             // General case: get one type_info and put it into params
             template <typename first, typename... rest, int _, typename... param_types>
-            return_type _invoke( execution_context* context, const byte* data, int __[_], param_types... params )
+            return_type _invoke( execution_context* context, int __[_], param_types... params )
             {
-                return _invoke<rest..., _, first, param_types...>( data + sizeof( first ), context, __, params..., get_data<first>( data ) );
+                return _invoke<rest..., _, first, param_types...>( context, __, params..., context->read<first>() );
             }
         };
 
@@ -306,12 +305,7 @@ namespace rnjin
                 call_type   = type::context_method;
             }
 
-            void invoke( const byte* data )
-            {
-                script_log.print( "Can't call context method without context!" );
-            }
-
-            void invoke( execution_context* context, const byte* data )
+            void invoke( execution_context* context )
             {
                 ( context->*method )();
             }
@@ -428,52 +422,57 @@ namespace rnjin
         class execution_context
         {
             public:
+            // Single byte specifying type of a variable according to any::type enum.
+            typedef unsigned char type_info;
+
             execution_context( compiled_script& script, runtime& runtime );
 
-            // Check if the script and runtime are both valid
+            // Check if the script and runtime are both valid.
             bool valid();
+
+            // Execute the current instruction.
             void execute();
 
             void jump( int offset );
             void jump_to( unsigned int position );
 
-            // Additional parameters are manually extracted
-            void jump_if( int offset );
-            void jump_to_if( unsigned int position );
+            void jump_if( int offset, any value );
+            void jump_to_if( unsigned int position, any value );
 
-            void create_var( void );
-            void delete_var( void );
-            void set_var( void );
+            void create_var( any initial_value );
+            void delete_var( type_info type );
+            void set_var( var_pointer var, any value );
             void set_var_array( void );
             void set_var_offset( unsigned char offset );
 
-            void create_static( void );
-            void delete_static( void );
-            void set_static( void );
+            void create_static( any initial_value );
+            void delete_static( type_info type );
+            void set_static( var_pointer var, any value );
             void set_static_array( void );
-            void set_static_offset( void );
+            void set_static_offset( unsigned char offset );
 
-            void set_or( void );
-            void set_and( void );
-            void set_not( void );
+            void set_or( var_pointer var, any a, any b );
+            void set_and( var_pointer var, any a, any b );
+            void set_not( var_pointer var, any a );
 
-            void set_sum( void );
-            void set_difference( void );
-            void set_product( void );
-            void set_quotient( void );
-            void set_remainder( void );
-            void set_exponent( void );
+            void set_sum( var_pointer var, any a, any b );
+            void set_difference( var_pointer var, any a, any b );
+            void set_product( var_pointer var, any a, any b );
+            void set_quotient( var_pointer var, any a, any b );
+            void set_remainder( var_pointer var, any a, any b );
+            void set_exponent( var_pointer var, any a, any b );
 
-            void set_dot( void );
-            void set_cross( void );
-            void set_norm( void );
+            void set_dot( var_pointer var, any a, any b );
+            void set_cross( var_pointer var, any a, any b );
+            void set_norm( var_pointer var, any a, any b );
 
-            void increment( void );
-            void decrement( void );
+            void increment( var_pointer var );
+            void decrement( var_pointer var );
 
-            void print_value( void );
-            void print_absolute( void );
+            void print_value( any value );
+            void print_absolute( any value );
 
+            // Read a value of type T at the current instruction pointer, and advance it forward.
             template <typename T>
             T read()
             {
@@ -490,9 +489,74 @@ namespace rnjin
                 }
             }
 
-            private:
-            typedef unsigned char type_info;
+            // Read a lone type_info with no attached value.
+            template <>
+            type_info read<type_info>()
+            {
+                return read_value<type_info>();
+            }
 
+            // Fill in an any struct based on the read type_info.
+            // Note: always returns a value (will do pointer lookup internally)
+            template <>
+            any read<any>()
+            {
+                type_info type = *( (type_info*)( &source_script.data[program_counter] ) );
+                program_counter += sizeof( type_info );
+                any result;
+
+                switch ( type )
+                {
+                    case any::type::byte_val:
+                        result.var_type      = any::byte_val;
+                        result.value.as_byte = read_value<byte>();
+                        break;
+
+                    case any::type::byte_ptr:
+                        result.var_type      = any::byte_val;
+                        result.value.as_byte = read_pointer<byte>();
+                        break;
+
+                    case any::type::int_val:
+                        result.var_type     = any::int_val;
+                        result.value.as_int = read_value<int>();
+                        break;
+
+                    case any::type::int_ptr:
+                        result.var_type     = any::int_val;
+                        result.value.as_int = read_pointer<int>();
+                        break;
+
+                    case any::type::float_val:
+                        result.var_type       = any::float_val;
+                        result.value.as_float = read_value<float>();
+                        break;
+
+                    case any::type::float_ptr:
+                        result.var_type       = any::float_val;
+                        result.value.as_float = read_pointer<float>();
+                        break;
+
+                    case any::type::double_val:
+                        result.var_type        = any::double_val;
+                        result.value.as_double = read_value<double>();
+                        break;
+
+                    case any::type::double_ptr:
+                        result.var_type        = any::double_val;
+                        result.value.as_double = read_pointer<double>();
+                        break;
+
+                    default:
+                        break;
+                }
+
+                return result;
+            }
+
+            private:
+
+            // Read a value from the source bytecode at the program counter, advancing it forward.
             template <typename T>
             T read_value()
             {
@@ -501,6 +565,8 @@ namespace rnjin
                 return value;
             }
 
+            // Read a variable number from the source bytecode at the program counter, advancing it forward.
+            // Look up the variable in the context's variable stack.
             template <typename T>
             T read_pointer()
             {
@@ -509,61 +575,52 @@ namespace rnjin
                 return lookup<T>( var );
             }
 
-            template <>
-            any read<any>()
-            {
-                type_info type = *( (type_info*)( &source_script.data[program_counter] ) );
-                program_counter += sizeof( type_info );
-                any result;
-                result.var_type = (any::type)type;
-
-                switch ( result.var_type )
-                {
-                    case any::type::byte_val:
-                        result.value.as_byte = read_value<byte>();
-                        break;
-                    case any::type::byte_ptr:
-                        result.value.as_byte = read_pointer<byte>();
-                        break;
-                    case any::type::int_val:
-                        result.value.as_int = read_value<int>();
-                        break;
-                    case any::type::int_ptr:
-                        result.value.as_int = read_pointer<int>();
-                        break;
-                    case any::type::float_val:
-                        result.value.as_float = read_value<float>();
-                        break;
-                    case any::type::float_ptr:
-                        result.value.as_float = read_pointer<float>();
-                        break;
-                    case any::type::double_val:
-                        result.value.as_double = read_value<double>();
-                        break;
-                    case any::type::double_ptr:
-                        result.value.as_double = read_pointer<double>();
-                        break;
-                    default:
-                        break;
-                }
-
-                return result;
-            }
-
             static context_binding* context_bindings[opcodes_reserved_for_context];
 
             instruction_pointer program_counter;
             compiled_script& source_script;
             runtime& source_runtime;
 
+            // Variables
+            byte stack[stack_size];
+            byte* stack_top;
+
+            void* vars[max_stack_vars];
+            unsigned int next_var = 0;
+
             template <typename T>
             T lookup( var_pointer var )
             {
-                return T();
+                T* pointer = (T*)( vars[var] );
+                return *pointer;
+            }
+
+            template <typename T>
+            void allocate_var( T initial_value )
+            {
+                vars[next_var] = (void*)stack_top;
+                stack_top += sizeof( T );
+                next_var += 1;
+            }
+
+            template <typename T>
+            void free_var()
+            {
+                stack_top -= sizeof( T );
+                next_var -= 1;
+                vars[next_var] = nullptr;
+            }
+
+            template <typename T>
+            void write_var( var_pointer var, T value )
+            {
+                T* pointer = (T*)( vars[var] );
+                *pointer = value;
             }
 
             static _context_binding<void>* unbound_context_call;
             void print_bad_opcode();
+            void do_nothing();
         };
 
         template <typename return_type, typename... param_types>
