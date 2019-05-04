@@ -33,8 +33,15 @@ void main( int argc, char* argv[] )
     script::compiled_script test_script( "test.script" );
     script::execution_context exec( test_script, rt );
 
-    exec.execute(); exec.execute();
-    exec.execute(); exec.execute();
-    exec.execute(); exec.execute();
-    exec.execute(); exec.execute();
+    exec.execute();
+    exec.execute();
+    exec.execute();
+    exec.execute();
+    exec.execute();
+    exec.execute();
+    exec.execute();
+    exec.execute();
+    exec.execute();
+    exec.execute();
+    exec.execute();
 }
