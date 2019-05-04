@@ -11,22 +11,21 @@
  */
 #pragma once
 
-// std data structures
+// STL data structures
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-// include build configuration
+// build configuration
 #include "core/platform.hpp"
 
 // core data structures
-#include "core/macro.hpp"
+#include "core/math.hpp"
 #include "core/bitmask.hpp"
 
-#define string std::string
-#define s(value) std::to_string(value)
-#define list std::vector
-#define dictionary std::unordered_map
+// macros
+#include "core/macro.hpp"
 
+// always used namespaces
 using namespace rnjin;
 using namespace rnjin::core;
