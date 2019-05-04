@@ -1,0 +1,7 @@
+main:
+    vcrt int 0
+    prnt int 1
+    prnt int* 0
+    vset 0 int 123
+    prnt int* 0
+    move $main
