@@ -16,9 +16,12 @@
 #include <unordered_map>
 #include <vector>
 
+// include build configuration
+#include "core/platform.hpp"
+
 // core data structures
-#include <core/macro.hpp>
-#include <core/bitmask.hpp>
+#include "core/macro.hpp"
+#include "core/bitmask.hpp"
 
 #define string std::string
 #define s(value) std::to_string(value)
