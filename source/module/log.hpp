@@ -65,7 +65,7 @@ namespace rnjin
         //...
         struct use_channel
         {
-            use_channel( const unsigned int number ) : number( number ), name( nullptr ), use_name( false ) {}
+            use_channel( const unsigned int number ) : number( number ), name( "" ), use_name( false ) {}
             use_channel( const string& name ) : name( name ), number( -1 ), use_name( true ) {}
 
             const unsigned int number;
