@@ -4,6 +4,7 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "unit_test.hpp"
+#pragma once
 
-#define TESTS test( log ), test( log )
+// Build mode (from platform::build_type enum)
+#define BUILD_MODE debug_internal

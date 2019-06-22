@@ -5,17 +5,18 @@
  * *** ** *** ** *** ** *** */
 
 #include <iostream>
-#include "tests.hpp"
+#include "tests.generated.hpp"
 
 int main( int argc, char* argv[] )
 {
-    void ( *functions[] )( void ) = {
+    _unit_test* tests[] = {
         TESTS
     };
 
-    for (int i = 0; i < sizeof(functions) / sizeof(void*); i++)
+    for (int i = 0; i < sizeof(tests) / sizeof(_unit_test*); i++)
     {
-        functions[i]();
+        tests[i]->run();
     }
+    
     return 0;
 }

@@ -7,10 +7,11 @@
 #include <iostream>
 
 #include "core.hpp"
+#include "glfw.hpp"
 #include "graphics.hpp"
+#include "vulkan.hpp"
 #include "log.hpp"
 #include "script.hpp"
-
 
 // template <typename T>
 // void print_bits( const void* value )
@@ -48,7 +49,29 @@
 //     exec.execute();
 // }
 
+using namespace rnjin;
+using namespace rnjin::core;
+
 void main( int argc, char* argv[] )
 {
-    graphics::test();
+    // graphics::test();
+    auto w = graphics::window<graphics::GLFW>( "My cool window", int2( 600, 600 ), true );
+
+    try
+    {
+        graphics::vulkan::initialize();
+    }
+    catch (std::exception e)
+    {
+        log::main.print(e.what());
+    }
+
+    // test windowing
+    while( !glfwWindowShouldClose(w.get_api_window()) ) {
+        glfwPollEvents();
+    }
+
+    log::main.print("Exiting...");
+
+    graphics::vulkan::clean_up();
 }

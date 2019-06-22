@@ -1,30 +1,34 @@
 @echo off
 
-SET output_log=scons.log
+echo REPLACED BY `build.py`
 
-if "%1%"=="" (goto make_default)
-if %1% == clean (goto make_clean) else (goto make_arg)
+REM SET output_log=scons.log
 
-echo "something went wrong :("
-goto _exit
+REM if "%1%"=="" (goto make_default)
+REM if %1% == clean (goto make_clean) else (goto make_arg)
 
-:make_clean
-    cmd /c scons make=all -c > %output_log%
-    goto _end
+REM echo "something went wrong :("
+REM goto _exit
 
-:make_arg
-    cmd /c scons make=%1 > %output_log%
-    goto _end
+REM :make_clean
+REM     cmd /c scons make=all -c > %output_log%
+REM     goto _end
 
-:make_default
-    cmd /c scons make=all > %output_log%
-    goto _end
+REM :make_arg
+REM     cmd /c scons make=%1 > %output_log%
+REM     set /p build_result=<%output_log%
+REM     echo %build_result%
+REM     goto _end
 
-:_end
-    if "%2%"=="run" (goto run) else (goto _exit)
+REM :make_default
+REM     cmd /c scons make=all > %output_log%
+REM     goto _end
 
-:run
-    cmd /c .\rnjin.exe
-    goto _exit
+REM :_end
+REM     if "%2%"=="run" (goto run) else (goto _exit)
 
-:_exit
+REM :run
+REM     cmd /c .\rnjin.exe
+REM     goto _exit
+
+REM :_exit

@@ -24,9 +24,12 @@
  */
 
 #pragma once
+
 #include "core.hpp"
 #include <fstream>
 #include <iostream>
+
+using namespace rnjin::core;
 
 namespace rnjin
 {

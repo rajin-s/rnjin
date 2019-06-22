@@ -5,6 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+
 #include "conf.h"
 
 namespace rnjin

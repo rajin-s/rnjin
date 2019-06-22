@@ -4,12 +4,13 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-// Aliases for STL types
-#define string std::string
-#define list std::vector
-#define dictionary std::unordered_map
+#pragma once
 
-// Common macros
+// Common macros (these aren't that great...)
 #define s( value ) std::to_string( value )
 #define text( name, value ) const string message__##name = value
 #define get_text( name ) message__##name
+
+// C++ language extensions
+#define foreach(iteration) for (const auto& iteration)
+#define let const auto

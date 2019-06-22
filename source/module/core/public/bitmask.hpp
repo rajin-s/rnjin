@@ -23,6 +23,10 @@
         note: unsigned int is word-sized, so different between 64 and 32-bit systems...
  */
 
+#pragma once
+
+#include <ostream>
+
 #define bit( n ) ( 1 << n )
 #define notbit( n ) ( ~( 1 << n ) )
 
@@ -30,6 +34,7 @@ namespace rnjin
 {
     namespace core
     {
+        struct bitmask;
         struct bitmask
         {
             typedef unsigned int value_type;
@@ -53,13 +58,15 @@ namespace rnjin
             {
                 return bitmask( value & notbit( number ) );
             }
-            void operator+=( const unsigned int number )
+            bitmask operator+=( const unsigned int number )
             {
                 value = ( value | bit( number ) );
+                return *this;
             }
-            void operator-=( const unsigned int number )
+            bitmask operator-=( const unsigned int number )
             {
                 value = ( value & notbit( number ) );
+                return *this;
             }
 
             // Combine two masks
@@ -75,13 +82,15 @@ namespace rnjin
             {
                 return bitmask( value | other.value );
             }
-            void operator|=( const bitmask other )
+            bitmask operator|=( const bitmask other )
             {
                 value = ( value | other.value );
+                return *this;
             }
-            void operator/=( const bitmask other )
+            bitmask operator/=( const bitmask other )
             {
                 value = ( value & ~other.value );
+                return *this;
             }
 
             // Negate a mask
@@ -114,18 +123,67 @@ namespace rnjin
                 return value != other.value;
             }
 
+            bool operator==( const unsigned int other )
+            {
+                return value == other;
+            }
+
+            bool operator!=( const unsigned int other )
+            {
+                return value != other;
+            }
+
+            bitmask clear()
+            {
+                value = 0;
+                return *this;
+            }
+
             // All (un)set masks
             static bitmask all()
             {
-                return bitmask( ~0 );
+                return bitmask( ~( 0u ) );
             }
             static bitmask none()
             {
-                return bitmask( 0 );
+                return bitmask( 0u );
+            }
+
+            const unsigned int get_value() const
+            {
+                return value;
+            }
+
+            const char* toString(const char set, const char unset) const
+            {
+                const size_t n = sizeof( value_type ) * 8;
+                char* result   = new char[n + 1];
+
+                result[n] = '\0';
+
+                for ( int i = 0; i < n; i++ )
+                {
+                    if ( value & bit( i ) )
+                    {
+                        result[i] = set;
+                    }
+                    else
+                    {
+                        result[i] = unset;
+                    }
+                }
+
+                return result;
             }
 
             private:
             value_type value;
         };
+
+        std::ostream& operator<<( std::ostream& stream, const bitmask& mask )
+        {
+            stream << "<" << mask.toString('-', '_') << ">(" << mask.get_value() << ")";
+            return stream;
+        }
     } // namespace core
 } // namespace rnjin

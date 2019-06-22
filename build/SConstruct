@@ -1,12 +1,14 @@
 import os
 
-include_paths = ["../source/module", "../source/include", "../libs/glfw_include", "../libs/vulkan_include" ]
+include_paths = ["../libs/glfw_include", "../libs/vulkan_include" ]
 source_root = "../source/module"
 library_paths = [ "../libs/vulkan_lib", "../libs/glfw_lib" ]
 libraries = ["glfw3", "vulkan-1", "gdi32", "opengl32", "kernel32", "user32", "shell32"]
 
-test_root = "../source/test/unit_test"
 main = "../source/main.cpp"
+
+tests_root = "../source/test/unit_test"
+tests_generated_header = "../source/test/tests.generated.hpp"
 tests_main = "../source/test/main.cpp"
 
 
@@ -20,12 +22,23 @@ def get_files(directory, extension):
             source_files += get_files(path, extension)
     return source_files
 
+def get_include_folders(directory, valid_folder_names):
+    include_paths = []
 
+    for path in os.listdir(directory):
+        is_include_directory = path in valid_folder_names
+        path = os.path.join(directory, path)
+        
+        if os.path.isdir(path):
+            if is_include_directory:
+                include_paths.append(path)
+            include_paths += get_include_folders(path, valid_folder_names)
+    
+    return include_paths
+
+
+include_paths += get_include_folders(source_root, ["public"])
 sources = get_files(source_root, ".cpp")
-test_includes = []
-for path in os.listdir(test_root):
-    if path.endswith(".hpp"):
-        test_includes.append("/FIunit_test/" + path)
 
 env = Environment(CPPPATH=include_paths, CPPFLAGS=["/std:c++17"], LIBPATH=library_paths, LIBS=libraries)
 o_core = env.Library(target="core.obj", source=sources)
@@ -37,8 +50,27 @@ if t in ["all", "rnjin"]:
     env.Command(target="rnjin", source="rnjin.exe", action="C:/rcedit.exe rnjin.exe --set-icon icon.ico")
 
 if t in ["all", "tests"]:
+    tests_includes = []
+    for path in os.listdir(tests_root):
+        if path.endswith(".hpp"):
+            tests_includes.append(path)
+
+    gen = open(tests_generated_header, 'w')
+    gen.write('#include "unit_test.hpp"\n')
+    for include in tests_includes:
+        gen.write('#include "unit_test/' + include + '"\n')
+    gen.write("#define TESTS ")
+    for i in range(len(tests_includes)):
+        include = tests_includes[i]
+        gen.write("GET_TEST(" + include[:-9] + ")") # Remove .test.hpp from file name
+        if i != len(tests_includes) - 1:
+            gen.write(", ")
+    gen.close()
+
+    tests_includes +=  ["../source/test", tests_root]
+    
     tests_env = env.Clone()
-    tests_env.Append(CPPPATH=["../source/test"], CPPFLAGS=test_includes)
+    tests_env.Append(CPPPATH=tests_includes)
     o_tests = tests_env.Object(target="tests.obj", source=tests_main)
     exe_tests = env.Program(target="tests", source=["core.obj", "tests.obj"])
     env.Command(target="tests", source="tests.exe", action="C:/rcedit.exe tests.exe --set-icon icon.ico")

@@ -5,22 +5,35 @@
  * *** ** *** ** *** ** *** */
 
 // For unit test hpp files
-#include <iostream>
-using namespace std;
 
-#define unit_test( name ) class unit_test_##name
+#pragma once
+
+#include <iostream>
+
+
+#define SEPARATOR '/'
+#define __FILENAME__ ( strrchr( __FILE__, SEPARATOR ) ? strrchr( __FILE__, SEPARATOR ) + 1 : __FILE__ )
+
+class _unit_test
+{
+    public:
+    virtual void run() = 0;
+};
+
 #define body \
     public:  \
-    static void run()
-#define assert( condition, if_pass, if_fail ) \
-    if ( condition )                          \
-    {                                         \
-        cout << if_pass << endl;              \
-    }                                         \
-    else                                      \
-    {                                         \
-        cout << if_fail << endl;              \
-    }
+    void run()
 
-// For tests.hpp
-#define test( name ) unit_test_##name::run
+
+#define note( message ) std::cout << "    (" << __FILENAME__ << ": " << __LINE__ << ") " << message << std::endl
+#define pass( message ) std::cout << "< > (" << __FILENAME__ << ": " << __LINE__ << ") " << message << std::endl
+#define fail( message ) std::cout << "<!> (" << __FILENAME__ << ": " << __LINE__ << ") " << message << std::endl
+
+#define record( expression ) expression; note(#expression);
+#define assert_equal( A, B ) if ( (A) == (B) ) { pass( #A " = " #B ); } else { fail( #A " = " << (A) << " (expected " << (B) << ")" ); }
+
+// For tests.generated.hpp
+#define GET_TEST( name ) new unit_test__##name()
+
+// For *.test.hpp
+#define unit_test( name ) class unit_test__##name : public _unit_test

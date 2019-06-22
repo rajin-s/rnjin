@@ -9,23 +9,22 @@
         - General purpose engine data structures
         - General purpose namespaces
  */
+
 #pragma once
 
-// STL data structures
-#include <string>
-#include <unordered_map>
-#include <vector>
+// Basic container type templates
+#include "containers.hpp"
 
 // build configuration
-#include "core/platform.hpp"
+#include "platform.hpp"
 
 // core data structures
-#include "core/math.hpp"
-#include "core/bitmask.hpp"
+#include "bitmask.hpp"
+#include "math.hpp"
 
 // macros
-#include "core/macro.hpp"
+#include "macro.hpp"
 
 // always used namespaces
-using namespace rnjin;
-using namespace rnjin::core;
+// using namespace rnjin;
+// using namespace rnjin::core;

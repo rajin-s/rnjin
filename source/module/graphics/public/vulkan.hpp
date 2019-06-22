@@ -8,6 +8,10 @@ namespace rnjin
 {
     namespace graphics
     {
-        void test();
-    } // namespace graphics
-} // namespace rnjin
+        namespace vulkan
+        {
+            void initialize();
+            void clean_up();
+        }
+    }
+}
