@@ -40,7 +40,7 @@ def get_include_folders(directory, valid_folder_names):
 include_paths += get_include_folders(source_root, ["public"])
 sources = get_files(source_root, ".cpp")
 
-env = Environment(CPPPATH=include_paths, CPPFLAGS=["/std:c++17"], LIBPATH=library_paths, LIBS=libraries)
+env = Environment(CPPPATH=include_paths, CPPFLAGS=["/std:c++17", "/EHsc"], LIBPATH=library_paths, LIBS=libraries)
 o_core = env.Library(target="core.obj", source=sources)
 
 t = ARGUMENTS.get("make", "rnjin")
