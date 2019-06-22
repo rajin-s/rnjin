@@ -44,146 +44,52 @@ namespace rnjin
             bitmask( value_type value ) : value( value ) {}
 
             // Is a given bit number valid in a bitmask?
-            static bool is_valid_bit( const unsigned int number )
-            {
-                return number < ( 8 * sizeof( value_type ) );
-            }
+            static bool is_valid_bit( const unsigned int number );
 
             // (un)set a single bit
-            bitmask operator+( const unsigned int number )
-            {
-                return bitmask( value | bit( number ) );
-            }
-            bitmask operator-( const unsigned int number )
-            {
-                return bitmask( value & notbit( number ) );
-            }
-            bitmask operator+=( const unsigned int number )
-            {
-                value = ( value | bit( number ) );
-                return *this;
-            }
-            bitmask operator-=( const unsigned int number )
-            {
-                value = ( value & notbit( number ) );
-                return *this;
-            }
+            bitmask operator+( const unsigned int number );
+            bitmask operator-( const unsigned int number );
+            bitmask operator+=( const unsigned int number );
+            bitmask operator-=( const unsigned int number );
 
             // Combine two masks
-            bitmask operator&( const bitmask other )
-            {
-                return bitmask( value & other.value );
-            }
-            bitmask operator/( const bitmask other )
-            {
-                return bitmask( value & ~other.value );
-            }
-            bitmask operator|( const bitmask other )
-            {
-                return bitmask( value | other.value );
-            }
-            bitmask operator|=( const bitmask other )
-            {
-                value = ( value | other.value );
-                return *this;
-            }
-            bitmask operator/=( const bitmask other )
-            {
-                value = ( value & ~other.value );
-                return *this;
-            }
+            bitmask operator&( const bitmask other );
+            bitmask operator/( const bitmask other );
+            bitmask operator|( const bitmask other );
+            bitmask operator|=( const bitmask other );
+            bitmask operator/=( const bitmask other );
 
             // Negate a mask
-            bitmask operator~() const
-            {
-                return bitmask( ~value );
-            }
+            bitmask operator~() const;
 
             // Check if a bit is set
-            bool operator[]( const unsigned int number )
-            {
-                return ( value & bit( number ) ) != 0;
-            }
+            bool operator[]( const unsigned int number );
 
             // Check if two masks share any bits
-            bool operator&&( const bitmask other )
-            {
-                return ( value & other.value ) != 0;
-            }
+            bool operator&&( const bitmask other );
 
             // Check if two masks are equal
-            bool operator==( const bitmask other )
-            {
-                return value == other.value;
-            }
+            bool operator==( const bitmask other );
 
             // Check if two masks are not equal
-            bool operator!=( const bitmask other )
-            {
-                return value != other.value;
-            }
+            bool operator!=( const bitmask other );
+            bool operator==( const unsigned int other );
+            bool operator!=( const unsigned int other );
 
-            bool operator==( const unsigned int other )
-            {
-                return value == other;
-            }
-
-            bool operator!=( const unsigned int other )
-            {
-                return value != other;
-            }
-
-            bitmask clear()
-            {
-                value = 0;
-                return *this;
-            }
+            bitmask clear();
 
             // All (un)set masks
-            static bitmask all()
-            {
-                return bitmask( ~( 0u ) );
-            }
-            static bitmask none()
-            {
-                return bitmask( 0u );
-            }
+            static bitmask all();
+            static bitmask none();
 
-            const unsigned int get_value() const
-            {
-                return value;
-            }
+            const unsigned int get_value() const;
 
-            const char* toString(const char set, const char unset) const
-            {
-                const size_t n = sizeof( value_type ) * 8;
-                char* result   = new char[n + 1];
-
-                result[n] = '\0';
-
-                for ( int i = 0; i < n; i++ )
-                {
-                    if ( value & bit( i ) )
-                    {
-                        result[i] = set;
-                    }
-                    else
-                    {
-                        result[i] = unset;
-                    }
-                }
-
-                return result;
-            }
+            const char* toString( const char set, const char unset ) const;
 
             private:
             value_type value;
         };
 
-        std::ostream& operator<<( std::ostream& stream, const bitmask& mask )
-        {
-            stream << "<" << mask.toString('-', '_') << ">(" << mask.get_value() << ")";
-            return stream;
-        }
+        std::ostream& operator<<( std::ostream& stream, const bitmask& mask );
     } // namespace core
 } // namespace rnjin
