@@ -38,3 +38,6 @@
 
 # SCons
 .sconsign.dblite
+
+# Backups
+*.old
