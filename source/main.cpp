@@ -9,9 +9,10 @@
 #include "core.hpp"
 #include "glfw.hpp"
 #include "graphics.hpp"
-#include "vulkan.hpp"
 #include "log.hpp"
 #include "script.hpp"
+#include "vulkan_api.hpp"
+
 
 // template <typename T>
 // void print_bits( const void* value )
@@ -55,23 +56,33 @@ using namespace rnjin::core;
 void main( int argc, char* argv[] )
 {
     // graphics::test();
-    auto w = graphics::window<graphics::GLFW>( "My cool window", int2( 600, 600 ), true );
-
     try
     {
-        graphics::vulkan::initialize();
+        auto w = graphics::window<graphics::GLFW>( "My cool window", int2( 600, 600 ), true );
+        graphics::vulkan::instance v( w, true );
+
+        // test windowing
+        while ( !glfwWindowShouldClose( w.get_api_window() ) )
+        {
+            glfwPollEvents();
+        }
+
+        log::main.print( "Exiting..." );
     }
-    catch (std::exception e)
+    catch(const std::exception& e)
     {
-        log::main.print(e.what());
+        std::cerr << e.what() << '\n';
     }
 
-    // test windowing
-    while( !glfwWindowShouldClose(w.get_api_window()) ) {
-        glfwPollEvents();
-    }
+    // try
+    // {
+    //     graphics::vulkan::initialize( &w );
+    // }
+    // catch ( std::exception e )
+    // {
+    //     log::main.print( e.what() );
+    // }
 
-    log::main.print("Exiting...");
 
-    graphics::vulkan::clean_up();
+    // graphics::vulkan::clean_up();
 }

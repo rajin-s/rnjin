@@ -18,8 +18,8 @@ namespace rnjin
         extern log::source graphics_log;
         const unsigned int log_channel_window = 1;
 
-        template <class API>
         // A window managed by an aribitrary windowing API (such as GLFW in glfw.hpp)
+        template <class API>
         class window
         {
             // The API can access private members
@@ -69,7 +69,7 @@ namespace rnjin
             }
 
             // Can this window's size be changed?
-            bool can_resize()
+            bool can_resize() const
             {
                 return resizable && API::can_resize( *this );
             }
@@ -83,7 +83,7 @@ namespace rnjin
                 }
             }
             // Get this windows size (in pixels)
-            int2 get_size()
+            int2 get_size() const
             {
                 return size;
             }
@@ -98,13 +98,13 @@ namespace rnjin
                 API::set_window_title( *this, title );
             }
             // Get the title of this window
-            const string& get_title()
+            const string& get_title() const
             {
                 return this->title;
             }
 
             // Get the API-specific window structure (for debugging)
-            typename API::window_type* get_api_window()
+            typename API::window_type* get_api_window() const
             {
                 return api_window;
             }

@@ -4,6 +4,9 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
+#pragma once
+
+#define GLFW_INCLUDE_VULKAN // in case this is included before any of the vulkan includes
 #include <glfw3.h>
 #include <graphics.hpp>
 
