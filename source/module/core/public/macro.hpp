@@ -12,5 +12,5 @@
 #define get_text( name ) message__##name
 
 // C++ language extensions
-#define foreach(iteration) for (const auto& iteration)
+#define foreach( iteration ) for ( const auto& iteration )
 #define let const auto
