@@ -59,7 +59,9 @@ void main( int argc, char* argv[] )
     try
     {
         auto w = graphics::window<graphics::GLFW>( "My cool window", int2( 600, 600 ), true );
-        graphics::vulkan::instance v( w, true );
+
+        const bool enable_validation = true;
+        graphics::vulkan::instance v( w, enable_validation );
 
         // test windowing
         while ( !glfwWindowShouldClose( w.get_api_window() ) )
