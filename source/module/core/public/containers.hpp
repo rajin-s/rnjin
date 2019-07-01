@@ -25,4 +25,42 @@ namespace rnjin
 
     template <typename T>
     using set = std::unordered_set<T>;
+
+    using uint = uint32_t;
+    using byte = uint8_t;
+
+    class range
+    {
+        public:
+        range( const uint first, const uint limit ) : start_i( first ), end_i( limit ) {}
+
+        range& begin()
+        {
+            return *this;
+        }
+        range& end()
+        {
+            return *this;
+        }
+
+        const uint operator*()
+        {
+            return start_i;
+        }
+
+        const bool operator!=( const range& other )
+        {
+            return start_i < end_i;
+        }
+
+        range& operator++()
+        {
+            start_i++;
+            return *this;
+        }
+
+        private:
+        uint start_i;
+        const uint end_i;
+    };
 } // namespace rnjin
