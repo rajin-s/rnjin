@@ -81,6 +81,11 @@ namespace rnjin
         {
         };
 
+        // ...
+        struct indent
+        {
+        };
+
         //...
         class source
         {
@@ -103,6 +108,7 @@ namespace rnjin
             source& operator<<( const log::start output_name );
             source& operator<<( const log::use_channel output_channel );
             source& operator<<( const log::line output_line );
+            source& operator<<( const log::indent output_indent );
 
             source& print( const string& message, const bitmask channels );
             source& print( const string& message, const string& channel_name );

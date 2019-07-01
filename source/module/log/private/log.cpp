@@ -326,9 +326,14 @@ namespace rnjin
             *this << name << ": ";
             return *this;
         }
-        source& source::operator<<( const log::line output_name )
+        source& source::operator<<( const log::line output_line )
         {
             *this << "\n";
+            return *this;
+        }
+        source& source::operator<<( const log::indent output_indent )
+        {
+            *this << "    ";
             return *this;
         }
         source& source::operator<<( const log::use_channel output_channel )
