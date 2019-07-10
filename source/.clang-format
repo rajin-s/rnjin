@@ -40,6 +40,7 @@ SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
+SpaceAfterCStyleCast: true
 SpacesInContainerLiterals: true
 SpacesInParentheses: true
 Standard: Cpp11
@@ -50,3 +51,5 @@ AlignConsecutiveAssignments: true
 CompactNamespaces: false
 IndentCaseLabels: true
 SpaceBeforeRangeBasedForLoopColon: true
+ForEachMacros: ['foreach']
+IndentPPDirectives: AfterHash

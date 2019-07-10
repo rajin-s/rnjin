@@ -67,7 +67,6 @@
         "**/.sconsign.dblite": true,
         "LICENSE": true,
         "README.md": true,
-        "source/.clang-format": true
     },
     "highlight.regexes": {
         "(\\btext)(\\()(.+?),\\s+(.+?)(\\))" : {
@@ -88,6 +87,9 @@
         },
         "(\\bstring\\b)": {
             "color": "#56b6c2"
+        },
+        "(\\b(and|or|xor|not)\\b)": {
+            "color": "#e06c75"
         },
         "(\\btypename\\b)": {
             "color": "#e5c07b"
