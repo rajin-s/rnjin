@@ -4,15 +4,14 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "script.hpp"
-#include <fstream>
-#include <sstream>
+#pragma once
 
+#include "containers.hpp"
 
 namespace rnjin
 {
-    namespace script
+    namespace debug
     {
-        
-    } // namespace script
+        const string get_call_string(const char* file_path, const char* function_name, const char* line_number);
+    }
 } // namespace rnjin

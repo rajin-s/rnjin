@@ -5,446 +5,117 @@
  * *** ** *** ** *** ** *** */
 
 #include "log.hpp"
-#include <ctime>
-#include <iomanip>
+
+#include <iostream>
 #include <sstream>
 
 namespace rnjin
 {
     namespace log
     {
-        // Output messages
-        text( log_created, "Log created" );
-        text( log_ended, "Log ended" );
-
-        text( enable_bad_channel_number, "Can't enable invalid channel #\1!" );
-        text( enable_bad_channel_name, "Can't enable nonexistent channel '\1'!" );
-        text( disable_bad_channel_number, "Can't disable invalid channel #\1!" );
-        text( disable_bad_channel_name, "Can't disable nonexistent channel '\1'!" );
-
-        text( activate_bad_channel_number, "Can't set invalid channel #\1 active!" );
-        text( activate_bad_channel_name, "Can't set nonexistent channel '\1' active!" );
-
-        text( print_to_bad_channel_number, "Can't print to invalid channel #\1!" );
-        text( print_to_bad_channel_name, "Can't print to nonexistent channel '\1'!" );
-
-        // Create a new output log
-        source::source( const string& name, const write_to_file output_mode )
+        // Log icons for different print_* calls
+        namespace icon
         {
-            this->name    = name;
-            output_stream = &std::cout;
+            const string default = "    ";
+            const string warning = "(?) ";
+            const string error   = "<!> ";
+            const uint size      = 4;
+        } // namespace icon
 
-            std::stringstream name_stream;
-            auto current_time       = std::time( nullptr );
-            auto current_local_time = *std::localtime( &current_time );
-            // name_stream << "logs/" << name << std::put_time( &current_local_time, "_%m%d%y_%H%M" ) << ".log";
-            name_stream << "logs/" << name << ".log";
-            output_file_name = name_stream.str();
+        const string log_directory = "./logs/";
+        const string log_extension = ".log";
 
-            output_file_mode = output_mode;
-            if ( output_file_mode != write_to_file::never )
+        source main( "rnjin.main", output_mode::immediately, output_mode::immediately );
+
+        source::source( const string& log_name, const output_mode console_output_mode, const output_mode file_output_mode )
+        {
+            name = log_name;
+
+            // Save a string the same length as name but all blank for printing message additions
+            name_blank.resize( name.size(), ' ' );
+
+            // If a file is created by the log, this will be the name
+            default_file_name = log_directory + log_name + log_extension;
+
+            if ( console_output_mode != output_mode::never )
             {
-                output_file_stream.open( output_file_name );
+                add_output( std::cout, console_output_mode );
             }
 
-            if ( output_file_mode == write_to_file::in_background )
+            if ( file_output_mode != output_mode::never )
             {
-                // Start write to file thread
+                default_file_output_stream.open( default_file_name, std::ios::out );
+                if ( not default_file_output_stream.good() or not default_file_output_stream.is_open() )
+                {
+                    std::cerr << "Failed to open log file " << default_file_name << "\n";
+                }
+
+                add_output( default_file_output_stream, file_output_mode );
             }
 
-            active_channel      = 0;
-            channels["default"] = 0;
-
-            print( get_text( log_created ) );
+            print( "Log Started" );
         }
         source::~source()
         {
-            print( get_text( log_ended ) );
-        }
-
-        // Assign a number to a channel name
-        void source::set_channel( const unsigned int number, const string& channel_name )
-        {
-            if ( channels.count( channel_name ) )
+            print( "Log Ended" );
+            if ( default_file_output_stream.is_open() )
             {
-                channels.erase( channel_name );
-            }
-            channels[channel_name] = number;
-        }
-
-        // Control which channels are enabled by a mask
-        void source::enable_channels( const bitmask mask, const affect output_type )
-        {
-            if ( output_type & affect::console )
-            {
-                console_channel_mask |= mask;
-            }
-            if ( output_type & affect::file )
-            {
-                file_channel_mask |= mask;
-            }
-        }
-        void source::disable_channels( const bitmask mask, const affect output_type )
-        {
-            if ( output_type & affect::console )
-            {
-                console_channel_mask /= mask;
-            }
-            if ( output_type & affect::file )
-            {
-                file_channel_mask /= mask;
+                default_file_output_stream.flush();
+                default_file_output_stream.close();
             }
         }
 
-        // Control which channels are enabled by number
-        void source::enable_channel( const unsigned int channel_number, const affect output_type )
+        void source::add_output( std::ostream& stream, const output_mode mode )
         {
-            if ( bitmask::is_valid_bit( channel_number ) )
+            outputs.push_back( { stream, mode } );
+        }
+
+        void source::write_range( const char** begin, uint* count, const char* reset )
+        {
+            if ( begin == nullptr or count == 0 )
             {
-                if ( output_type & affect::console )
-                {
-                    console_channel_mask += channel_number;
-                }
-                if ( output_type & affect::file )
-                {
-                    file_channel_mask += channel_number;
-                }
+                return;
+            }
+
+            foreach ( output : outputs )
+            {
+                output.stream.write( *begin, *count );
+            }
+
+            if ( reset != nullptr )
+            {
+                *begin = reset + sizeof( const char );
+                *count = 0;
+            }
+        }
+
+        void source::print_prefix( const string& icon, const bool show_name )
+        {
+            // Don't add a newline for the first print
+            // note: this assumes nothing is printed *before* the first print_prefix call, which is probably fine?
+            if ( first_output )
+            {
+                first_output = false;
             }
             else
             {
-                printf( get_text( enable_bad_channel_number ), { s( channel_number ) }, bitmask::all() );
+                write( "\n" );
             }
-        }
-        void source::disable_channel( const unsigned int channel_number, const affect output_type )
-        {
-            if ( bitmask::is_valid_bit( channel_number ) )
+
+            write( icon );
+            if ( show_name )
             {
-                if ( output_type & affect::console )
-                {
-                    console_channel_mask -= channel_number;
-                }
-                if ( output_type & affect::file )
-                {
-                    file_channel_mask -= channel_number;
-                }
+                write( name );
+                write( ": " );
             }
             else
             {
-                printf( get_text( disable_bad_channel_number ), { s( channel_number ) }, bitmask::all() );
+                write( name_blank );
+                write( "  " );
             }
         }
 
-        // Control which channels are enabled by name
-        void source::enable_channel( const string& channel_name, const affect output_type )
-        {
-            if ( channels.count( channel_name ) )
-            {
-                enable_channel( channels[channel_name], output_type );
-            }
-            else
-            {
-                printf( get_text( enable_bad_channel_name ), { channel_name }, bitmask::all() );
-            }
-        }
-        void source::disable_channel( const string& channel_name, const affect output_type )
-        {
-            if ( channels.count( channel_name ) )
-            {
-                disable_channel( channels[channel_name], output_type );
-            }
-            else
-            {
-                printf( get_text( disable_bad_channel_name ), { channel_name }, bitmask::all() );
-            }
-        }
-
-        // Control what channel is written to using the << operator
-        void source::set_active_channel( const unsigned int channel_number )
-        {
-            if ( bitmask::is_valid_bit( channel_number ) )
-            {
-                active_channel = channel_number;
-            }
-            else
-            {
-                printf( get_text( activate_bad_channel_number ), { s( channel_number ) }, bitmask::all() );
-            }
-        }
-        void source::set_active_channel( const string& channel_name )
-        {
-            if ( channels.count( channel_name ) )
-            {
-                set_active_channel( channels[channel_name] );
-            }
-            else
-            {
-                printf( get_text( activate_bad_channel_name ), { channel_name }, bitmask::all() );
-            }
-        }
-
-        // Public printing API
-        source& source::print( const string& message, const bitmask channels )
-        {
-            if ( console_channel_mask && channels )
-            {
-                write( message );
-            }
-            if ( file_channel_mask && channels )
-            {
-                if ( output_file_mode == write_to_file::immediately )
-                {
-                    store( message );
-                }
-                else if ( output_file_mode == write_to_file::in_background )
-                {
-                    queue_store( message );
-                }
-            }
-
-            return *this;
-        }
-        source& source::print( const string& message, const unsigned int channel_number )
-        {
-            if ( !bitmask::is_valid_bit( channel_number ) )
-            {
-                printf( get_text( print_to_bad_channel_number ), { s( channel_number ) }, bitmask::all() );
-                return *this;
-            }
-
-            if ( console_channel_mask[channel_number] )
-            {
-                write( message );
-            }
-            if ( file_channel_mask[channel_number] )
-            {
-                if ( output_file_mode == write_to_file::immediately )
-                {
-                    store( message );
-                }
-                else if ( output_file_mode == write_to_file::in_background )
-                {
-                    queue_store( message );
-                }
-            }
-
-            return *this;
-        }
-        source& source::print( const string& message, const string& channel_name )
-        {
-            if ( channels.count( channel_name ) )
-            {
-                print( message, channels[channel_name] );
-            }
-            else
-            {
-                printf( get_text( print_to_bad_channel_name ), { channel_name }, bitmask::all() );
-            }
-            return *this;
-        }
-
-        source& source::printf( const string& message, const list<string> args, const bitmask channels )
-        {
-            if ( console_channel_mask && channels )
-            {
-                writef( message, args );
-            }
-            if ( file_channel_mask && channels )
-            {
-                if ( output_file_mode == write_to_file::immediately )
-                {
-                    storef( message, args );
-                }
-                else if ( output_file_mode == write_to_file::in_background )
-                {
-                    queue_storef( message, args );
-                }
-            }
-
-            return *this;
-        }
-        source& source::printf( const string& message, const list<string> args, const unsigned int channel_number )
-        {
-            if ( !bitmask::is_valid_bit( channel_number ) )
-            {
-                printf( get_text( print_to_bad_channel_number ), { s( channel_number ) }, bitmask::all() );
-                return *this;
-            }
-
-            if ( console_channel_mask[channel_number] )
-            {
-                writef( message, args );
-            }
-            if ( file_channel_mask[channel_number] )
-            {
-                if ( output_file_mode == write_to_file::immediately )
-                {
-                    storef( message, args );
-                }
-                else if ( output_file_mode == write_to_file::in_background )
-                {
-                    queue_storef( message, args );
-                }
-            }
-
-            return *this;
-        }
-        source& source::printf( const string& message, const list<string> args, const string& channel_name )
-        {
-            if ( channels.count( channel_name ) )
-            {
-                printf( message, args, channels[channel_name] );
-            }
-            else
-            {
-                printf( get_text( print_to_bad_channel_name ), { channel_name }, bitmask::all() );
-            }
-            return *this;
-        }
-
-        source& source::operator<<( const string& message )
-        {
-            if ( console_channel_mask[active_channel] )
-            {
-                write( message, false );
-            }
-            if ( file_channel_mask[active_channel] )
-            {
-                if ( output_file_mode == write_to_file::immediately )
-                {
-                    store( message, false );
-                }
-                else if ( output_file_mode == write_to_file::in_background )
-                {
-                    queue_store( message, false );
-                }
-            }
-
-            return *this;
-        }
-        source& source::operator<<( const log::start output_name )
-        {
-            *this << name << ": ";
-            return *this;
-        }
-        source& source::operator<<( const log::line output_line )
-        {
-            *this << "\n";
-            return *this;
-        }
-        source& source::operator<<( const log::indent output_indent )
-        {
-            *this << "    ";
-            return *this;
-        }
-        source& source::operator<<( const log::use_channel output_channel )
-        {
-            if ( output_channel.use_name )
-            {
-                set_active_channel( output_channel.name );
-            }
-            else
-            {
-                set_active_channel( output_channel.number );
-            }
-
-            return *this;
-        }
-
-        // Basic write and store operations
-        void source::write( const string& message, const bool line )
-        {
-            if ( line )
-            {
-                ( *output_stream ) << name << ": ";
-            }
-
-            ( *output_stream ) << message;
-
-            if ( line )
-            {
-                ( *output_stream ) << std::endl;
-            }
-        }
-        void source::store( const string& message, const bool line )
-        {
-            if ( output_file_stream.good() )
-            {
-                if ( line )
-                {
-                    output_file_stream << name << ": ";
-                }
-
-                output_file_stream << message;
-
-                if ( line )
-                {
-                    output_file_stream << std::endl;
-                }
-            }
-        }
-
-        // Write and store with formatting
-        void source::writef( const string& message, const list<string> args, const bool line )
-        {
-            if ( line )
-            {
-                ( *output_stream ) << name << ": ";
-            }
-            for ( int i = 0; i < message.length(); i++ )
-            {
-                unsigned char c = message[i];
-                if ( c == 0x0 )
-                {
-                    break;
-                }
-                else if ( c <= args.size() )
-                {
-                    ( *output_stream ) << args[c - 1];
-                }
-                else
-                {
-                    ( *output_stream ) << c;
-                }
-            }
-            if ( line )
-            {
-                ( *output_stream ) << std::endl;
-            }
-        }
-        void source::storef( const string& message, const list<string> args, const bool line )
-        {
-            if ( output_file_stream.good() )
-            {
-                if ( line )
-                {
-                    output_file_stream << name << ": ";
-                }
-                for ( int i = 0; i < message.length(); i++ )
-                {
-                    char c = message[i];
-                    if ( c == 0x0 )
-                    {
-                        break;
-                    }
-                    else if ( c <= args.size() )
-                    {
-                        output_file_stream << args[c - 1];
-                    }
-                    else
-                    {
-                        output_file_stream << c;
-                    }
-                }
-                if ( line )
-                {
-                    output_file_stream << std::endl;
-                }
-            }
-        }
-
-        void source::queue_store( const string& message, const bool line ) {}
-        void source::queue_storef( const string& message, const list<string> args, const bool line ) {}
-
-        source main( "rnjin.main", write_to_file::immediately );
+        // Static log management
+        dictionary<string, source> sources;
     } // namespace log
 } // namespace rnjin

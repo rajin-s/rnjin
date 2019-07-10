@@ -4,30 +4,14 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-/*  Logging API
-    Supports arbitrary creation of output logs, each writing to their own file and the console
-        note: currently not thread-safe, feature will be added soon!
-
-    Supports channel enable / disable for up to 64 channels (32 for 32-bit architecture...)
-        Channels can be named, and messages can be passed through any number of channels
-        Example: Engine log has channels:
-            0 -> default
-            1 -> warning info
-            2 -> error info
-            3 -> verbose output
-
-    Supports print formatting for up to 7 arguments using \1 - \7 characters
-        Using any more than 9 (\11) will lead to unexpected behavior
-
-    Supports << operator like cout (calls will not create line breaks automatically)
-        Use set_active_channel to determine what channel subsequent << calls will write to
- */
-
 #pragma once
 
 #include "core.hpp"
+
 #include <fstream>
 #include <iostream>
+#include <ostream>
+
 
 using namespace rnjin::core;
 
@@ -35,119 +19,529 @@ namespace rnjin
 {
     namespace log
     {
-        // How should a log source handle writing to disk?
-        // in_background: Write queued messages to a log file on a dedicated thread at regular intervals
-        // immediately: Do file writing at the same time as console output
-        // never: Only log to console, not a file on disk
-        enum write_to_file
+        // Log icons for different print_* calls
+        namespace icon
         {
-            in_background,
+            extern const string default;
+            extern const string warning;
+            extern const string error;
+            extern const uint size;
+        } // namespace icon
+
+        class source;
+
+        // How should the source interact with output destinations?
+        // <never> don't write to console / any output files
+        // <immediately> write to console / output files as soon as a message is written
+        // <in_background> write to console / output files on a background thread (not implemented yet)
+        enum output_mode
+        {
+            never,
             immediately,
-            never
+            in_background,
         };
 
-        // How should log source mask operations affect output to the console and files?
-        // console: Affect the mask of only console output
-        // file: Affect the mask of only file output
-        // both: Affect the masks of both console and file output
-        enum affect
+        enum begin
         {
-            console = 1,
-            file    = 2,
-            both    = 3
-        };
-
-        // Stream-style print modifiers
-        //  note: maybe there's a better way of handling these...
-
-        // Stream-style token to print the standard log starting message ("<name>: ")
-        struct start
-        {
-        };
-
-        //...
-        struct use_channel
-        {
-            use_channel( const unsigned int number ) : number( number ), name( "" ), use_name( false ) {}
-            use_channel( const string& name ) : name( name ), number( -1 ), use_name( true ) {}
-
-            const unsigned int number;
-            const string& name;
-            const bool use_name;
-        };
-
-        //...
-        struct line
-        {
-        };
-
-        // ...
-        struct indent
-        {
-        };
-
-        //...
-        class source
-        {
-            public:
-            source( const string& name, const write_to_file output_mode );
-            ~source();
-
-            void set_channel( const unsigned int number, const string& channel_name );
-
-            void enable_channel( const string& channel_name, const affect output_type = affect::both );
-            void disable_channel( const string& channel_name, const affect output_type = affect::both );
-
-            void enable_channel( const unsigned int channel_number, const affect output_type = affect::both );
-            void disable_channel( const unsigned int channel_number, const affect output_type = affect::both );
-
-            void enable_channels( const bitmask mask, const affect output_type = affect::both );
-            void disable_channels( const bitmask mask, const affect output_type = affect::both );
-
-            source& operator<<( const string& message );
-            source& operator<<( const log::start output_name );
-            source& operator<<( const log::use_channel output_channel );
-            source& operator<<( const log::line output_line );
-            source& operator<<( const log::indent output_indent );
-
-            source& print( const string& message, const bitmask channels );
-            source& print( const string& message, const string& channel_name );
-            source& print( const string& message, const unsigned int channel_number = 0 );
-
-            source& printf( const string& message, const list<string> args, const bitmask channels );
-            source& printf( const string& message, const list<string> args, const unsigned int channel_number = 0 );
-            source& printf( const string& message, const list<string> args, const string& channel_name );
-
-            void set_active_channel( const unsigned int channel_number );
-            void set_active_channel( const string& channel_name );
-
-            private:
-            // Log config
-            string name;
-
-            // Console output config
-            std::ostream* output_stream;
-
-            // Output file config
-            string output_file_name;
-            std::ofstream output_file_stream;
-            write_to_file output_file_mode;
-
-            // Channel config
-            bitmask console_channel_mask;
-            bitmask file_channel_mask;
-            dictionary<string, unsigned int> channels;
-            unsigned int active_channel;
-
-            void write( const string& message, const bool line = true );
-            void store( const string& message, const bool line = true );
-            void queue_store( const string& message, const bool line = true );
-
-            void writef( const string& message, const list<string> args, const bool line = true );
-            void storef( const string& message, const list<string> args, const bool line = true );
-            void queue_storef( const string& message, const list<string> args, const bool line = true );
+            message,
+            additional,
+            warning,
+            error,
+            raw_line,
         };
 
         extern source main;
+        extern const string log_directory;
+        extern const string log_extension;
+
+// Debug logging utilities
+// Check an error condition and output to the given log if it is met, recording the location
+// Action can be pass, return, continue, break, etc. to handle execution flow
+#define check_error_condition( action, target_log, condition, message_format, ... )                                                                    \
+    if ( condition )                                                                                                                                   \
+    {                                                                                                                                                  \
+        target_log.print_error( message_format, __VA_ARGS__ );                                                                                         \
+        target_log.print_additional( "'" #condition "' @ \1", debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) ); \
+        action;                                                                                                                                        \
+    }
+
+        // A single log source, capable of writing to any C++ ostream
+        // Constructor can set up default output file and stdout, or call add_output
+        class source
+        {
+            public:
+            source( const string& log_name, const output_mode console_output_mode, const output_mode file_output_mode );
+            ~source();
+
+            void add_output( std::ostream& stream, const output_mode mode );
+
+            // Output a formatted message. Supports up to 7 arguments (\1 - \7)
+            template <typename... Ts>
+            void print( const string& format, Ts... args )
+            {
+                write( begin::message );
+                printf( format, args... );
+            }
+
+            // Output a formatted message addendum. Supports up to 7 arguments (\1 - \7)
+            template <typename... Ts>
+            void print_additional( const string& format, Ts... args )
+            {
+                write( begin::additional );
+                printf( format, args... );
+            }
+
+            // Output a formatted warning message. Supports up to 7 arguments (\1 - \7)
+            template <typename... Ts>
+            void print_warning( const string& format, Ts... args )
+            {
+                write( begin::warning );
+                printf( format, args... );
+            }
+
+            // Output a formatted error message. Supports up to 7 arguments (\1 - \7)
+            template <typename... Ts>
+            void print_error( const string& format, Ts... args )
+            {
+                write( begin::error );
+                printf( format, args... );
+            }
+
+            // Stream-like write operator that can be chained.
+            // Supports special log tokens begin::message, etc.
+            template <typename T>
+            source& operator<<( const T value )
+            {
+                write( value );
+                return *this;
+            }
+
+            private:
+            string name;
+            string name_blank;
+            bool first_output = true;
+
+            string default_file_name;
+            std::ofstream default_file_output_stream;
+
+            struct output_target
+            {
+                std::ostream& stream;
+                output_mode mode;
+            };
+
+            list<output_target> outputs;
+
+            // Basic write function (forwards responsibilities to ostream << operator)
+            template <typename T>
+            void write( const T value )
+            {
+                uint i = 0;
+                foreach ( output : outputs )
+                {
+                    if ( output.mode == output_mode::immediately )
+                    {
+                        output.stream << value;
+                    }
+                }
+            }
+
+            // Write special log tokens to begin a message, etc.
+            template <>
+            void source::write( const begin value )
+            {
+                switch ( value )
+                {
+                    case begin::message:
+                    {
+                        print_prefix( icon::default, true );
+                        break;
+                    }
+                    case begin::additional:
+                    {
+                        print_prefix( icon::default, false );
+                        break;
+                    }
+                    case begin::warning:
+                    {
+                        print_prefix( icon::warning, true );
+                        break;
+                    }
+                    case begin::error:
+                    {
+                        print_prefix( icon::error, true );
+                        break;
+                    }
+                    case begin::raw_line:
+                    {
+                        write( "\n" );
+                        break;
+                    }
+                    default:
+                    {
+                        print_prefix( icon::default, true );
+                        break;
+                    }
+                }
+            }
+
+            // Called from print_* and source << begin::*
+            void print_prefix( const string& icon, const bool show_name );
+
+            private:
+            // Helper functions for printf
+            void write_range( const char** begin, uint* count, const char* reset );
+
+            // Printf zone (only printf definitions beyond this point)
+            // Each number of arguments needs to be defined as a specialization since arguments can appear an arbitrary number
+            // of times at arbitrary positions (so no recursive 'consuming')
+            template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+            void printf( const string& format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7 )
+            {
+                const char* read_begin = format.c_str();
+                uint read_size         = 0;
+
+                for ( const char* c = read_begin; c and *c; c += sizeof( const char ) )
+                {
+                    switch ( *c )
+                    {
+                        case '\1':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg1 );
+                            break;
+                        }
+                        case '\2':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg2 );
+                            break;
+                        }
+                        case '\3':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg3 );
+                            break;
+                        }
+                        case '\4':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg4 );
+                            break;
+                        }
+                        case '\5':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg5 );
+                            break;
+                        }
+                        case '\6':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg6 );
+                            break;
+                        }
+                        case '\7':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg7 );
+                            break;
+                        }
+
+                        default:
+                        {
+                            read_size++;
+                            break;
+                        }
+                    }
+                }
+
+                if ( read_size > 0 )
+                {
+                    write_range( &read_begin, &read_size, nullptr );
+                }
+            }
+
+            template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+            void printf( const string& format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6 )
+            {
+                const char* read_begin = format.c_str();
+                uint read_size         = 0;
+
+                for ( const char* c = read_begin; c and *c; c += sizeof( char ) )
+                {
+                    switch ( *c )
+                    {
+                        case '\1':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg1 );
+                            break;
+                        }
+                        case '\2':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg2 );
+                            break;
+                        }
+                        case '\3':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg3 );
+                            break;
+                        }
+                        case '\4':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg4 );
+                            break;
+                        }
+                        case '\5':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg5 );
+                            break;
+                        }
+                        case '\6':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg6 );
+                            break;
+                        }
+
+                        default:
+                        {
+                            read_size++;
+                            break;
+                        }
+                    }
+                }
+
+                if ( read_size > 0 )
+                {
+                    write_range( &read_begin, &read_size, nullptr );
+                }
+            }
+
+            template <typename T1, typename T2, typename T3, typename T4, typename T5>
+            void printf( const string& format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5 )
+            {
+                const char* read_begin = format.c_str();
+                uint read_size         = 0;
+
+                for ( const char* c = read_begin; c and *c; c += sizeof( char ) )
+                {
+                    switch ( *c )
+                    {
+                        case '\1':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg1 );
+                            break;
+                        }
+                        case '\2':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg2 );
+                            break;
+                        }
+                        case '\3':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg3 );
+                            break;
+                        }
+                        case '\4':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg4 );
+                            break;
+                        }
+                        case '\5':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg5 );
+                            break;
+                        }
+
+                        default:
+                        {
+                            read_size++;
+                            break;
+                        }
+                    }
+                }
+
+                if ( read_size > 0 )
+                {
+                    write_range( &read_begin, &read_size, nullptr );
+                }
+            }
+
+            template <typename T1, typename T2, typename T3, typename T4>
+            void printf( const string& format, T1 arg1, T2 arg2, T3 arg3, T4 arg4 )
+            {
+                const char* read_begin = format.c_str();
+                uint read_size         = 0;
+
+                for ( const char* c = read_begin; c and *c; c += sizeof( char ) )
+                {
+                    switch ( *c )
+                    {
+                        case '\1':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg1 );
+                            break;
+                        }
+                        case '\2':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg2 );
+                            break;
+                        }
+                        case '\3':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg3 );
+                            break;
+                        }
+                        case '\4':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg4 );
+                            break;
+
+                            default:
+                            {
+                                read_size++;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ( read_size > 0 )
+                    {
+                        write_range( &read_begin, &read_size, nullptr );
+                    }
+                }
+            }
+
+            template <typename T1, typename T2, typename T3>
+            void printf( const string& format, T1 arg1, T2 arg2, T3 arg3 )
+            {
+                const char* read_begin = format.c_str();
+                uint read_size         = 0;
+
+                for ( const char* c = read_begin; c and *c; c += sizeof( char ) )
+                {
+                    switch ( *c )
+                    {
+                        case '\1':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg1 );
+                            break;
+                        }
+                        case '\2':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg2 );
+                            break;
+                        }
+                        case '\3':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg3 );
+                            break;
+                        }
+
+                        default:
+                        {
+                            read_size++;
+                            break;
+                        }
+                    }
+                }
+
+                if ( read_size > 0 )
+                {
+                    write_range( &read_begin, &read_size, nullptr );
+                }
+            }
+
+            template <typename T1, typename T2>
+            void printf( const string& format, T1 arg1, T2 arg2 )
+            {
+                const char* read_begin = format.c_str();
+                uint read_size         = 0;
+
+                for ( const char* c = read_begin; c and *c; c += sizeof( char ) )
+                {
+                    switch ( *c )
+                    {
+                        case '\1':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg1 );
+                            break;
+                        }
+                        case '\2':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg2 );
+                            break;
+                        }
+
+                        default:
+                        {
+                            read_size++;
+                            break;
+                        }
+                    }
+                }
+
+                if ( read_size > 0 )
+                {
+                    write_range( &read_begin, &read_size, nullptr );
+                }
+            }
+
+            template <typename T1>
+            void printf( const string& format, T1 arg1 )
+            {
+                const char* read_begin = format.c_str();
+                uint read_size         = 0;
+
+                for ( const char* c = read_begin; c and *c; c += sizeof( char ) )
+                {
+                    switch ( *c )
+                    {
+                        case '\1':
+                        {
+                            write_range( &read_begin, &read_size, c );
+                            write( arg1 );
+                            break;
+                        }
+
+                        default:
+                        {
+                            read_size++;
+                            break;
+                        }
+                    }
+                }
+
+                if ( read_size > 0 )
+                {
+                    write_range( &read_begin, &read_size, nullptr );
+                }
+            }
+
+            void printf( const string& format )
+            {
+                write( format );
+            }
+        };
     } // namespace log
 } // namespace rnjin

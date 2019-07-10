@@ -8,29 +8,36 @@
 
 #include "conf.h"
 
+#if defined( _WIN32 )
+#define platform_specific( if_windows, if_apple, if_linux, fallback ) if_windows
+#elif defined( __APPLE__ )
+#define platform_specific( if_windows, if_apple, if_linux, fallback ) if_apple
+#elif defined( __linux__ )
+#define platform_specific( if_windows, if_apple, if_linux, fallback ) if_linux
+#else
+#define platform_specific( if_windows, if_apple, if_linux, fallback ) fallback
+#endif
+
 namespace rnjin
 {
     namespace platform
     {
         enum os
         {
+            unknown,
             windows,
             linux,
             mac,
-            android,
-            iOS,
-            nintendo_switch,
-            xbox,
-            playstation,
+
+            // android,
+            // iOS,
+            // nintendo_switch,
+            // xbox,
+            // playstation,
         };
-        constexpr os operating_system =
-#ifdef __linux__
-        os::linux;
-#elif __APPLE__
-        os::mac;
-#else
-        os::windows;
-#endif
+
+        constexpr os operating_system      = platform_specific( os::windows, os::mac, os::linux, os::unknown );
+        constexpr char directory_separator = platform_specific( '\\', '/', '/', '/' );
 
         enum build_type
         {
