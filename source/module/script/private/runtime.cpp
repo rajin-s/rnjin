@@ -19,17 +19,19 @@ namespace rnjin
         }
 
         // Output messages
-        text( bad_script_file, "Failed to open script file '\1'!" );
-        text( unbound_opcode, "Unbound opcode \1!" );
-        text( bad_opcode, "Bad opcode \1!" );
+        // text( bad_script_file, "Failed to open script file '\1'!" );
+        // text( unbound_opcode, "Unbound opcode \1!" );
+        // text( bad_opcode, "Bad opcode \1!" );
 
         // Type -> string conversion
         const string type_names[16] = { "byte", "byte*", "int", "int*", "float", "float*", "double", "double*", "float2", "float2*", "float3", "float3*", "float4", "float4*", "string", "string*" };
         const string get_type_name( any::type type )
         {
-            if ( type < 16 )
+            let type_number = (uint) type;
+
+            if ( type_number < 16 )
             {
-                return type_names[type];
+                return type_names[type_number];
             }
             else
             {
@@ -83,7 +85,7 @@ namespace rnjin
             }
             else
             {
-                runtime_log.print( get_text( bad_script_file ), file_path );
+                runtime_log.print_error( "Failed to open script file \1", file_path );
             }
         }
 
@@ -115,7 +117,7 @@ namespace rnjin
 
             min_debug( debug_internal )
             {
-                runtime_log << "op " << s( opcode ) << ": ";
+                runtime_log << "op " << opcode << ": ";
             }
 
             if ( opcode < opcodes_reserved_for_context )
@@ -133,7 +135,7 @@ namespace rnjin
                 {
                     if ( operation == nullptr )
                     {
-                        runtime_log.print( get_text( unbound_opcode ), opcode );
+                        runtime_log.print_error( "Invalid opcode \1", opcode );
                     }
                     else
                     {
@@ -198,19 +200,19 @@ namespace rnjin
                 switch ( initial_value.var_type )
                 {
                     case any::type::byte_val:
-                        runtime_log << s( initial_value.value.as_byte );
+                        runtime_log << initial_value.value.as_byte;
                         break;
 
                     case any::type::int_val:
-                        runtime_log << s( initial_value.value.as_int );
+                        runtime_log << initial_value.value.as_int;
                         break;
 
                     case any::type::float_val:
-                        runtime_log << s( initial_value.value.as_float );
+                        runtime_log << initial_value.value.as_float;
                         break;
 
                     case any::type::double_val:
-                        runtime_log << s( initial_value.value.as_double );
+                        runtime_log << initial_value.value.as_double;
                         break;
 
                     default:
@@ -220,7 +222,7 @@ namespace rnjin
         }
         void execution_context::delete_var( type_info type )
         {
-            switch ( type )
+            switch ( (any::type) type )
             {
                 case any::type::byte_val:
                     free_var<byte>();
@@ -277,19 +279,19 @@ namespace rnjin
                 switch ( value.var_type )
                 {
                     case any::type::byte_val:
-                        runtime_log << s( value.value.as_byte );
+                        runtime_log << value.value.as_byte;
                         break;
 
                     case any::type::int_val:
-                        runtime_log << s( value.value.as_int );
+                        runtime_log << value.value.as_int;
                         break;
 
                     case any::type::float_val:
-                        runtime_log << s( value.value.as_float );
+                        runtime_log << value.value.as_float;
                         break;
 
                     case any::type::double_val:
-                        runtime_log << s( value.value.as_double );
+                        runtime_log << value.value.as_double;
                         break;
 
                     default:
@@ -388,25 +390,25 @@ namespace rnjin
             {
                 case any::type::byte_val:
                 {
-                    runtime_log << s( value.value.as_byte );
+                    runtime_log << value.value.as_byte;
                     break;
                 }
 
                 case any::type::int_val:
                 {
-                    runtime_log << s( value.value.as_int );
+                    runtime_log << value.value.as_int;
                     break;
                 }
 
                 case any::type::float_val:
                 {
-                    runtime_log << s( value.value.as_float );
+                    runtime_log << value.value.as_float;
                     break;
                 }
 
                 case any::type::double_val:
                 {
-                    runtime_log << s( value.value.as_double );
+                    runtime_log << value.value.as_double;
                     break;
                 }
 
@@ -425,7 +427,7 @@ namespace rnjin
         internal::context_binding<void>* execution_context::unbound_context_call = internal::get_context_binding( &execution_context::print_bad_opcode );
         void execution_context::print_bad_opcode()
         {
-            runtime_log.print( get_text( bad_opcode ), source_script.data[program_counter - 1] );
+            runtime_log.print( "Invalid opcode \1", source_script.data[program_counter - 1] );
         }
 
         // Null instruction

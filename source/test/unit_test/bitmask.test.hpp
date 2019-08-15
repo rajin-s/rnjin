@@ -58,5 +58,13 @@ unit_test( bitmask )
         record( A = bitmask( b1 | b2 | b4 | b6 ) );
         record( B = bitmask( b0 | b1 | b2 | b7 ) );
         assert_equal( A & B, bitmask( b1 | b2 ) );
+
+        bitmask C;
+        record( C = bitmask( bits(1, 3, 5) ) );
+        assert_equal( C.contains( bits(1, 3, 5) ), true );
+        assert_equal( C.contains( bits(1) ), true );
+        assert_equal( C.contains( bits(3) ), true );
+        assert_equal( C.contains( bits(5) ), true );
+        assert_equal( C.contains( bits(5, 3) ), true );
     }
 };

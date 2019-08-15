@@ -15,8 +15,16 @@
 // Aliases for STL types
 namespace rnjin
 {
-    using string = std::string;
+    // numeric types
+    using byte  = uint8_t;
+    using uint  = uint32_t;
+    using ulong = uint64_t;
 
+    // strings
+    using string = std::string;
+    const string string_from_c_strings( const char** c_strings, uint count );
+
+    // containers
     template <typename T>
     using list = std::vector<T>;
 
@@ -26,41 +34,37 @@ namespace rnjin
     template <typename T>
     using set = std::unordered_set<T>;
 
-    using uint = uint32_t;
-    using byte = uint8_t;
-
+    // range for python-style for( uint i : range(0, 10) )
+    // note: only supports 32-bit unsigned values
     class range
     {
         public:
         range( const uint first, const uint limit ) : start_i( first ), end_i( limit ) {}
+        range( const uint limit ) : start_i( 0 ), end_i( limit ) {}
 
-        range& begin()
-        {
-            return *this;
-        }
-        range& end()
-        {
-            return *this;
-        }
-
-        const uint operator*()
-        {
-            return start_i;
-        }
-
-        const bool operator!=( const range& other )
-        {
-            return start_i < end_i;
-        }
-
-        range& operator++()
-        {
-            start_i++;
-            return *this;
-        }
+        range& begin();
+        range& end();
+        const uint operator*();
+        const bool operator!=( const range& other );
+        range& operator++();
 
         private:
         uint start_i;
         const uint end_i;
+    };
+
+    template <typename T>
+    class child_class
+    {
+        public: // methods
+        child_class( T& parent ) : parent( parent ) {}
+
+        void set_parent( T& new_parent )
+        {
+            parent = new_parent;
+        }
+
+        protected: // members
+        T& parent;
     };
 } // namespace rnjin

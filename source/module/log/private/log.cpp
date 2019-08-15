@@ -4,7 +4,9 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
+#include "console.hpp"
 #include "log.hpp"
+
 
 #include <iostream>
 #include <sstream>
@@ -25,8 +27,35 @@ namespace rnjin
         const string log_directory = "./logs/";
         const string log_extension = ".log";
 
-        source main( "rnjin.main", output_mode::immediately, output_mode::immediately );
+        // Static log management
+        static dictionary<string, source*>& get_sources()
+        {
+            static dictionary<string, source*> sources;
+            return sources;
+        }
 
+        enum class log_flag
+        {
+            default = 0,
+            verbose = 1,
+            errors  = 2
+        };
+
+        source main(
+            "rnjin.main",
+            output_mode::immediately,
+            output_mode::immediately,
+            {
+                { "default", (uint) log_flag::default, true },
+                { "verbose", (uint) log_flag::verbose, false },
+                { "errors", (uint) log_flag::errors, true },
+            } // flags
+        );
+
+        source::masked main_verbose = main.mask( log_flag::verbose );
+        source::masked main_errors  = main.mask( log_flag::errors );
+
+        // Constructors
         source::source( const string& log_name, const output_mode console_output_mode, const output_mode file_output_mode )
         {
             name = log_name;
@@ -53,7 +82,28 @@ namespace rnjin
                 add_output( default_file_output_stream, file_output_mode );
             }
 
+            // Output no flagged messages by default (unflagged will still go through)
+            flag_output_mask = bitmask::none();
+
+            // Track this in the global source list
+            auto& sources = get_sources();
+            check_error_condition( pass, log::main_errors, sources.count( log_name ) != 0, "A log source named '\1' already exists", log_name );
+            sources[log_name] = this;
+
+            // Record that the log has started
             print( "Log Started" );
+        }
+        source::source( const string& log_name, const output_mode console_output_mode, const output_mode file_output_mode, const list<flag_info> flags )
+        : source( log_name, console_output_mode, file_output_mode )
+        {
+            foreach ( info : flags )
+            {
+                name_flag( info.number, info.name );
+                if ( info.enabled )
+                {
+                    enable_flag( info.number );
+                }
+            }
         }
         source::~source()
         {
@@ -65,11 +115,33 @@ namespace rnjin
             }
         }
 
+        // Management
         void source::add_output( std::ostream& stream, const output_mode mode )
         {
             outputs.push_back( { stream, mode } );
         }
 
+        void source::enable_flag( const uint number )
+        {
+            flag_output_mask += number;
+        }
+        void source::disable_flag( const uint number )
+        {
+            flag_output_mask -= number;
+        }
+
+        void source::name_flag( const uint number, const string& name )
+        {
+            named_flags[name] = number;
+        }
+        const uint source::get_flag_number( const string& flag_name ) const
+        {
+            check_error_condition( return invalid_flag, log::main_errors, named_flags.count( flag_name ) == 0, "Flag with name '\1' not found for log '\2'", flag_name, name );
+
+            return named_flags.at( flag_name );
+        }
+
+        // General methods
         void source::write_range( const char** begin, uint* count, const char* reset )
         {
             if ( begin == nullptr or count == 0 )
@@ -91,17 +163,7 @@ namespace rnjin
 
         void source::print_prefix( const string& icon, const bool show_name )
         {
-            // Don't add a newline for the first print
-            // note: this assumes nothing is printed *before* the first print_prefix call, which is probably fine?
-            if ( first_output )
-            {
-                first_output = false;
-            }
-            else
-            {
-                write( "\n" );
-            }
-
+            write( "\n" );
             write( icon );
             if ( show_name )
             {
@@ -115,7 +177,38 @@ namespace rnjin
             }
         }
 
-        // Static log management
-        dictionary<string, source> sources;
+        // Console bindings
+        void set_log_flag( const list<string>& args )
+        {
+            let& log_name  = args[0];
+            let& action    = args[1];
+            let& flag_name = args[2];
+
+            let& sources = get_sources();
+            check_error_condition( return, log::main_errors, sources.count( log_name ) == 0, "Invalid log name '\1'", log_name );
+
+            source* target         = sources.at( log_name );
+            let target_flag_number = target->get_flag_number( flag_name );
+            if ( target_flag_number == source::invalid_flag )
+            {
+                return;
+            }
+
+            if ( action == "+" )
+            {
+                target->enable_flag( target_flag_number );
+            }
+            else if ( action == "-" )
+            {
+                target->disable_flag( target_flag_number );
+            }
+            else
+            {
+                const bool invalid_action = true;
+                check_error_condition( return, log::main_errors, invalid_action == true, "Invalid action for log-flag '\1' (must be + or -)", action );
+            }
+        }
+
+        bind_console_parameters( "log-flag", "lf", "Set or unset a log flag", set_log_flag, "log name", "+/-", "channel name" );
     } // namespace log
 } // namespace rnjin

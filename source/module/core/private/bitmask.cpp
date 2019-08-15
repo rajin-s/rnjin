@@ -11,41 +11,41 @@ namespace rnjin
     namespace core
     {
         // Is a given bit number valid in a bitmask?
-        bool bitmask::is_valid_bit( const unsigned int number )
+        bool bitmask::is_valid_bit( const uint number )
         {
             return number < ( 8 * sizeof( value_type ) );
         }
 
         // (un)set a single bit
-        bitmask bitmask::operator+( const unsigned int number )
+        bitmask bitmask::operator+( const uint number ) const
         {
             return bitmask( value | bit( number ) );
         }
-        bitmask bitmask::operator-( const unsigned int number )
+        bitmask bitmask::operator-( const uint number ) const
         {
-            return bitmask( value & notbit( number ) );
+            return bitmask( value & ~bit( number ) );
         }
-        bitmask bitmask::operator+=( const unsigned int number )
+        bitmask bitmask::operator+=( const uint number )
         {
             value = ( value | bit( number ) );
             return *this;
         }
-        bitmask bitmask::operator-=( const unsigned int number )
+        bitmask bitmask::operator-=( const uint number )
         {
-            value = ( value & notbit( number ) );
+            value = ( value & ~bit( number ) );
             return *this;
         }
 
         // Combine two masks
-        bitmask bitmask::operator&( const bitmask other )
+        bitmask bitmask::operator&( const bitmask other ) const
         {
             return bitmask( value & other.value );
         }
-        bitmask bitmask::operator/( const bitmask other )
+        bitmask bitmask::operator/( const bitmask other ) const
         {
             return bitmask( value & ~other.value );
         }
-        bitmask bitmask::operator|( const bitmask other )
+        bitmask bitmask::operator|( const bitmask other ) const
         {
             return bitmask( value | other.value );
         }
@@ -67,35 +67,46 @@ namespace rnjin
         }
 
         // Check if a bit is set
-        bool bitmask::operator[]( const unsigned int number )
+        bool bitmask::operator[]( const uint number ) const
         {
             return ( value & bit( number ) ) != 0;
         }
 
+        // Check if a bitmask contains a bitmask
+        // If this mask contains all the bits in the other value, then & will return the same thing as the other value
+        const bool bitmask::contains( const uint other_value ) const
+        {
+            return ( value & other_value ) == other_value;
+        }
+        const bool bitmask::contains( const bitmask other ) const
+        {
+            return ( value & other.value ) == other.value;
+        }
+
         // Check if two masks share any bits
-        bool bitmask::operator&&( const bitmask other )
+        bool bitmask::operator&&( const bitmask other ) const
         {
             return ( value & other.value ) != 0;
         }
 
         // Check if two masks are equal
-        bool bitmask::operator==( const bitmask other )
+        bool bitmask::operator==( const bitmask other ) const
         {
             return value == other.value;
         }
 
         // Check if two masks are not equal
-        bool bitmask::operator!=( const bitmask other )
+        bool bitmask::operator!=( const bitmask other ) const
         {
             return value != other.value;
         }
 
-        bool bitmask::operator==( const unsigned int other )
+        bool bitmask::operator==( const uint other ) const
         {
             return value == other;
         }
 
-        bool bitmask::operator!=( const unsigned int other )
+        bool bitmask::operator!=( const uint other ) const
         {
             return value != other;
         }
@@ -114,11 +125,6 @@ namespace rnjin
         bitmask bitmask::none()
         {
             return bitmask( 0u );
-        }
-
-        const unsigned int bitmask::get_value() const
-        {
-            return value;
         }
 
         const char* bitmask::toString( const char set, const char unset ) const
@@ -145,7 +151,7 @@ namespace rnjin
 
         std::ostream& operator<<( std::ostream& stream, const bitmask& mask )
         {
-            stream << "<" << mask.toString( '-', '_' ) << ">(" << mask.get_value() << ")";
+            stream << "<" << mask.toString( '-', '_' ) << ">(" << mask.raw_value() << ")";
             return stream;
         }
     } // namespace core

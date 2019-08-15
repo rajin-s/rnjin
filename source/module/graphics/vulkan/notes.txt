@@ -1,0 +1,68 @@
+Vulkan
+
+Instance
+    Global to _application_
+    "initializes the Vulkan library and allows the application to pass information about itself to the implementation."
+
+    depends on:
+        Validation layer *configuration*
+            Uses target layer names and debug messenger create info (not actual messenger)
+            to validate VkCreateInstance and VkDestroyInstance
+
+    note:
+        doesn't need to know about windowing / glfw / etc...
+    
+Validation
+    depends on:
+        Instance (to create a debug messenger)
+
+Device
+    Seemingly global to application, might as well be target-specific (choosing optimal device requires knowing about swapchain, etc.)
+    contains:
+        Physical device info
+        Vulkan device handle (created with physical device info)
+        Queue info (actual queue handles, and family indices)
+
+    depends on:
+        Instance   (to get physical devices, etc.)
+        Surface    (to get optimal swapchain, etc. support)
+        Validation (to support older Vulkan implementations that need the device creation to specify target layers)
+
+Surface
+    Per graphics target it seems? Maybe only needed for to-screen rendering? Not render textures, etc.?
+    contains:
+        window pointer
+        Vulkan surface
+        Vulkan swapchain
+        Swapchain info (size, format)
+        Swapchain images
+        Swapchain image views
+        Swapchain framebuffers
+
+        currently command pool and command buffer, though maybe move these out?
+
+    depends on:
+        Instance + window (to create)
+        Instance + Device (to destroy)
+        Device            (to create swapchain, image views)
+        Device + Pipeline (to create framebuffers)
+            Uses pipeline render pass
+        Device            (to create command pool)
+            Uses queue family indices
+            Uses command pool and device to allocate command buffers
+
+        Uses image count / etc. to create command buffers
+
+Pipeline
+    depends on:
+        Device
+            Used to generate and destroy shader modules from SPIRV
+                (uses shaders in pipeline creation, done with them after that)
+            Used to create and destroy render pass
+            Used to create and destroy pipeline layout
+            Used to create and destroy pipeline
+        Surface
+            Uses swapchain format and image size
+
+(Renderer)
+    Will submit commands to relevant surfaces

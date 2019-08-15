@@ -54,7 +54,11 @@
         "xmemory0": "cpp",
         "xstddef": "cpp",
         "xtr1common": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "unordered_set": "cpp",
+        "algorithm": "cpp",
+        "array": "cpp",
+        "iterator": "cpp"
     },
     "files.exclude": {
         "**/.git": true,
@@ -91,6 +95,9 @@
         "(\\b(and|or|xor|not)\\b)": {
             "color": "#e06c75"
         },
+        "(\\b(nonconst)\\b)": {
+            "color": "#e06c75"
+        },
         "(\\btypename\\b)": {
             "color": "#e5c07b"
         },
@@ -106,7 +113,7 @@
                 { "color": "#e06c75" },
             ]
         },
-        "(\\[)(.+?)(\\])": {
+        "(\\[)([^\\]]*?)(\\])": {
             "decorations": [
                 { "color": "#e06c75" },
                 {  },

@@ -6,7 +6,7 @@ build_target = "all"
 if len(sys.argv) > 1:
     build_target = sys.argv[1]
 
-output_log = "./scons.log"
+output_log = "./logs/scons.log"
 build_result = 0
 
 build_process = subprocess.Popen("scons make=%s > %s" % (build_target, output_log), shell=True)

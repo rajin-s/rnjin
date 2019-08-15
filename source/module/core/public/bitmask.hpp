@@ -20,42 +20,60 @@
     Macros for computing a mask with one bit set/unset
 
     Uses bitmask::value_type to store value
-        note: unsigned int is word-sized, so different between 64 and 32-bit systems...
+        note: uint is word-sized, so different between 64 and 32-bit systems...
  */
 
 #pragma once
 
+#include "macro.hpp"
+#include "containers.hpp"
 #include <ostream>
-
-#define bit( n ) ( 1 << n )
-#define notbit( n ) ( ~( 1 << n ) )
 
 namespace rnjin
 {
     namespace core
     {
-        struct bitmask;
+        static constexpr uint bit( const uint n )
+        {
+            return 1u << n;
+        }
+
+        template <typename T, typename... Ts>
+        static constexpr uint bits( const T first, const Ts... rest )
+        {
+            return bit( (uint) first ) | bits( rest... );
+        }
+
+        template <typename T>
+        static constexpr uint bits( const T only )
+        {
+            return bit( (uint) only );
+        }
+
+        static constexpr uint all_bits = ~0u;
+        static constexpr uint no_bits  = 0u;
+
         struct bitmask
         {
-            typedef unsigned int value_type;
+            typedef uint value_type;
 
             public:
-            bitmask() : value( ~0 ) {}
             bitmask( value_type value ) : value( value ) {}
+            bitmask() : value( ~0 ) {}
 
             // Is a given bit number valid in a bitmask?
-            static bool is_valid_bit( const unsigned int number );
+            static bool is_valid_bit( const uint number );
 
             // (un)set a single bit
-            bitmask operator+( const unsigned int number );
-            bitmask operator-( const unsigned int number );
-            bitmask operator+=( const unsigned int number );
-            bitmask operator-=( const unsigned int number );
+            bitmask operator+( const uint number ) const;
+            bitmask operator-( const uint number ) const;
+            bitmask operator+=( const uint number );
+            bitmask operator-=( const uint number );
 
             // Combine two masks
-            bitmask operator&( const bitmask other );
-            bitmask operator/( const bitmask other );
-            bitmask operator|( const bitmask other );
+            bitmask operator&( const bitmask other ) const;
+            bitmask operator/( const bitmask other ) const;
+            bitmask operator|( const bitmask other ) const;
             bitmask operator|=( const bitmask other );
             bitmask operator/=( const bitmask other );
 
@@ -63,18 +81,22 @@ namespace rnjin
             bitmask operator~() const;
 
             // Check if a bit is set
-            bool operator[]( const unsigned int number );
+            bool operator[]( const uint number ) const;
+
+            // Check if all bits are set
+            const bool contains( const bitmask other ) const;
+            const bool contains( const uint value ) const;
 
             // Check if two masks share any bits
-            bool operator&&( const bitmask other );
+            bool operator&&( const bitmask other ) const;
 
             // Check if two masks are equal
-            bool operator==( const bitmask other );
+            bool operator==( const bitmask other ) const;
 
             // Check if two masks are not equal
-            bool operator!=( const bitmask other );
-            bool operator==( const unsigned int other );
-            bool operator!=( const unsigned int other );
+            bool operator!=( const bitmask other ) const;
+            bool operator==( const uint other ) const;
+            bool operator!=( const uint other ) const;
 
             bitmask clear();
 
@@ -82,9 +104,10 @@ namespace rnjin
             static bitmask all();
             static bitmask none();
 
-            const unsigned int get_value() const;
-
             const char* toString( const char set, const char unset ) const;
+
+            public: // accessors
+            let raw_value get_value( value );
 
             private:
             value_type value;

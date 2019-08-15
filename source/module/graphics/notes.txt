@@ -1,0 +1,26 @@
+
+#include "glfw.hpp"
+#include "graphics_api/vulkan.hpp"
+
+    window<GLFW> my_window( "my cool window", int2(100, 100) )
+    renderer<Vulkan> vulkan_renderer( my_window, param(initialize_default_render_target) true )
+
+    vulkan vk_api( my_window );
+    renderer vk_renderer( vk_api, my_window );
+
+** *** ** *** ** *** ** ***
+
+window<GLFW> main_window( "rnjin", int2(100, 100) )
+
+vulkan vk_api( "rnjin.vulkan" );
+{
+    vk_api.validation.enable( message_type::errors | message_type::warnings | message_type::verbose );
+    vk_api.extension.enable( ... );
+}
+vk_api.initialize();
+
+renderer vk_renderer( vk_api );
+{
+    vk_renderer.add_target( main_window );
+}
+vk_renderer.initialize();

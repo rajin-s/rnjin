@@ -7,39 +7,44 @@
 #pragma once
 
 #include "conf.h"
+#include "macro.hpp"
+
 
 #if defined( _WIN32 )
-#define platform_specific( if_windows, if_apple, if_linux, fallback ) if_windows
+#    define platform_specific( if_windows, if_apple, if_linux, fallback ) if_windows
 #elif defined( __APPLE__ )
-#define platform_specific( if_windows, if_apple, if_linux, fallback ) if_apple
+#    define platform_specific( if_windows, if_apple, if_linux, fallback ) if_apple
 #elif defined( __linux__ )
-#define platform_specific( if_windows, if_apple, if_linux, fallback ) if_linux
+#    define platform_specific( if_windows, if_apple, if_linux, fallback ) if_linux
 #else
-#define platform_specific( if_windows, if_apple, if_linux, fallback ) fallback
+#    define platform_specific( if_windows, if_apple, if_linux, fallback ) fallback
 #endif
 
 namespace rnjin
 {
     namespace platform
     {
-        enum os
+        enum class os
         {
-            unknown,
-            windows,
-            linux,
-            mac,
+            unknown = 0,
+            windows = 1,
+            linux   = 2,
+            mac     = 3,
 
-            // android,
-            // iOS,
-            // nintendo_switch,
-            // xbox,
-            // playstation,
+            // android = 4,
+            // iOS     = 5,
+
+            // nintendo_switch = 6,
+            // xbox_one        = 7,
+            // playstation_4   = 8,
         };
+
+        const os osys = os::windows;
 
         constexpr os operating_system      = platform_specific( os::windows, os::mac, os::linux, os::unknown );
         constexpr char directory_separator = platform_specific( '\\', '/', '/', '/' );
 
-        enum build_type
+        enum class build_type
         {
             release        = 0,
             test           = 1,

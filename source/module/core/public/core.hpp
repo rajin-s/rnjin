@@ -25,6 +25,12 @@
 // macros
 #include "macro.hpp"
 
+// serialization
+#include "serialization.hpp"
+
+// debugging utilities
+#include "debug.hpp"
+
 // always used namespaces
 // using namespace rnjin;
-// using namespace rnjin::core;
+using namespace rnjin::core;

@@ -40,7 +40,7 @@ namespace rnjin
             struct binding_base
             {
                 public:
-                enum type
+                enum class type
                 {
                     static_function,
                     instance_method,
@@ -411,7 +411,7 @@ namespace rnjin
         struct any
         {
             public:
-            enum type
+            enum class type
             {
                 byte_val   = 0x00,
                 byte_ptr   = 0x01,
@@ -504,7 +504,7 @@ namespace rnjin
             template <typename T>
             T read()
             {
-                type_info type = *( (type_info*)( &source_script.data[program_counter] ) );
+                type_info type = *( (type_info*) ( &source_script.data[program_counter] ) );
                 program_counter += sizeof( type_info );
 
                 if ( type & 0x01 )
@@ -536,49 +536,49 @@ namespace rnjin
             template <>
             any read<any>()
             {
-                type_info type = *( (type_info*)( &source_script.data[program_counter] ) );
+                type_info type = *( (type_info*) ( &source_script.data[program_counter] ) );
                 program_counter += sizeof( type_info );
                 any result;
 
-                switch ( type )
+                switch ( (any::type) type )
                 {
                     case any::type::byte_val:
-                        result.var_type      = any::byte_val;
+                        result.var_type      = any::type::byte_val;
                         result.value.as_byte = read_value<byte>();
                         break;
 
                     case any::type::byte_ptr:
-                        result.var_type      = any::byte_val;
+                        result.var_type      = any::type::byte_val;
                         result.value.as_byte = read_pointer<byte>();
                         break;
 
                     case any::type::int_val:
-                        result.var_type     = any::int_val;
+                        result.var_type     = any::type::int_val;
                         result.value.as_int = read_value<int>();
                         break;
 
                     case any::type::int_ptr:
-                        result.var_type     = any::int_val;
+                        result.var_type     = any::type::int_val;
                         result.value.as_int = read_pointer<int>();
                         break;
 
                     case any::type::float_val:
-                        result.var_type       = any::float_val;
+                        result.var_type       = any::type::float_val;
                         result.value.as_float = read_value<float>();
                         break;
 
                     case any::type::float_ptr:
-                        result.var_type       = any::float_val;
+                        result.var_type       = any::type::float_val;
                         result.value.as_float = read_pointer<float>();
                         break;
 
                     case any::type::double_val:
-                        result.var_type        = any::double_val;
+                        result.var_type        = any::type::double_val;
                         result.value.as_double = read_value<double>();
                         break;
 
                     case any::type::double_ptr:
-                        result.var_type        = any::double_val;
+                        result.var_type        = any::type::double_val;
                         result.value.as_double = read_pointer<double>();
                         break;
 
@@ -594,7 +594,7 @@ namespace rnjin
             template <typename T>
             T read_value()
             {
-                T value = *( (T*)( &source_script.data[program_counter] ) );
+                T value = *( (T*) ( &source_script.data[program_counter] ) );
                 program_counter += sizeof( T );
                 return value;
             }
@@ -604,7 +604,7 @@ namespace rnjin
             template <typename T>
             T read_pointer()
             {
-                var_pointer var = *( (var_pointer*)( &source_script.data[program_counter] ) );
+                var_pointer var = *( (var_pointer*) ( &source_script.data[program_counter] ) );
                 program_counter += sizeof( var_pointer );
                 return lookup<T>( var );
             }
@@ -625,14 +625,14 @@ namespace rnjin
             template <typename T>
             T lookup( var_pointer var )
             {
-                T* pointer = (T*)( vars[var] );
+                T* pointer = (T*) ( vars[var] );
                 return *pointer;
             }
 
             template <typename T>
             void allocate_var( T initial_value )
             {
-                vars[next_var] = (void*)stack_top;
+                vars[next_var] = (void*) stack_top;
                 stack_top += sizeof( T );
                 next_var += 1;
             }
@@ -648,7 +648,7 @@ namespace rnjin
             template <typename T>
             void write_var( var_pointer var, T value )
             {
-                T* pointer = (T*)( vars[var] );
+                T* pointer = (T*) ( vars[var] );
                 *pointer   = value;
             }
 

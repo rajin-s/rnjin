@@ -19,6 +19,8 @@ namespace rnjin
 {
     namespace log
     {
+        class source;
+
         // Log icons for different print_* calls
         namespace icon
         {
@@ -28,20 +30,56 @@ namespace rnjin
             extern const uint size;
         } // namespace icon
 
-        class source;
+        // Utility class for tracking scope entry / exit
+        template <typename log_type>
+        class scope_tracker
+        {
+            public:
+            scope_tracker( log_type& target, const char* scope_name ) : target( target ), scope_name( scope_name ), single_iter_finished( false )
+            {
+                target.print( "Begin \1", scope_name );
+            }
+            ~scope_tracker()
+            {
+                target.print( "Finish \1", scope_name );
+            }
+
+            bool do_single_iter()
+            {
+                if ( single_iter_finished )
+                {
+                    return false;
+                }
+                else
+                {
+                    single_iter_finished = true;
+                    return true;
+                }
+            }
+
+            private:
+            log_type& target;
+            const char* scope_name;
+
+            bool single_iter_finished;
+        };
+
+/* clang-format off */
+        #define tracked_subregion( target_log, name ) for ( rnjin::log::scope_tracker __( target_log, name ); __.do_single_iter(); )
+        /* clang-format on */
 
         // How should the source interact with output destinations?
         // <never> don't write to console / any output files
         // <immediately> write to console / output files as soon as a message is written
         // <in_background> write to console / output files on a background thread (not implemented yet)
-        enum output_mode
+        enum class output_mode
         {
             never,
             immediately,
             in_background,
         };
 
-        enum begin
+        enum class begin
         {
             message,
             additional,
@@ -50,31 +88,62 @@ namespace rnjin
             raw_line,
         };
 
-        extern source main;
+
         extern const string log_directory;
         extern const string log_extension;
 
 // Debug logging utilities
 // Check an error condition and output to the given log if it is met, recording the location
 // Action can be pass, return, continue, break, etc. to handle execution flow
-#define check_error_condition( action, target_log, condition, message_format, ... )                                                                    \
-    if ( condition )                                                                                                                                   \
-    {                                                                                                                                                  \
-        target_log.print_error( message_format, __VA_ARGS__ );                                                                                         \
-        target_log.print_additional( "'" #condition "' @ \1", debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) ); \
-        action;                                                                                                                                        \
-    }
+
+/* clang-format off */
+        #define check_error_condition( action, target_log, condition, message_format, ... )                                                                    \
+            if ( condition )                                                                                                                                   \
+            {                                                                                                                                                  \
+                target_log.print_error( message_format, __VA_ARGS__ );                                                                                         \
+                target_log.print_additional( "'" #condition "' @ \1", debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) ); \
+                action;                                                                                                                                        \
+            }
+
+        #define debug_checkpoint( target_log ) target_log.print( "Reach \1", debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) )
+        /* clang-format on */
 
         // A single log source, capable of writing to any C++ ostream
         // Constructor can set up default output file and stdout, or call add_output
         class source
         {
-            public:
+            public: // constants
+            static constexpr uint invalid_flag = ~0;
+
+            public: // constructors
             source( const string& log_name, const output_mode console_output_mode, const output_mode file_output_mode );
+
+            struct flag_info
+            {
+                const string& name;
+                const uint number;
+                const bool enabled;
+            };
+            source( const string& log_name, const output_mode console_output_mode, const output_mode file_output_mode, const list<flag_info> flags );
+
             ~source();
 
+            public: // management
             void add_output( std::ostream& stream, const output_mode mode );
 
+            void enable_flag( const uint number );
+            void disable_flag( const uint number );
+
+            void name_flag( const uint number, const string& name );
+            const uint get_flag_number( const string& name ) const;
+
+            public: // utility methods
+            scope_tracker<source> track_scope( const char* scope_name )
+            {
+                return scope_tracker( *this, scope_name );
+            }
+
+            public: // general methods (no flags)
             // Output a formatted message. Supports up to 7 arguments (\1 - \7)
             template <typename... Ts>
             void print( const string& format, Ts... args )
@@ -110,16 +179,80 @@ namespace rnjin
             // Stream-like write operator that can be chained.
             // Supports special log tokens begin::message, etc.
             template <typename T>
-            source& operator<<( const T value )
+            source& operator<<( const T& value )
             {
                 write( value );
                 return *this;
             }
 
-            private:
+            public: // masked source
+            class masked
+            {
+                public: // methods
+                masked( source& target, const bitmask mask ) : target( target ), mask( mask ){};
+
+                template <typename... Ts>
+                void print( const string& format, Ts... args )
+                {
+                    if ( target.flag_output_mask.contains( mask ) )
+                    {
+                        target.print( format, args... );
+                    }
+                }
+                template <typename... Ts>
+                void print_additional( const string& format, Ts... args )
+                {
+                    if ( target.flag_output_mask.contains( mask ) )
+                    {
+                        target.print_additional( format, args... );
+                    }
+                }
+                template <typename... Ts>
+                void print_warning( const string& format, Ts... args )
+                {
+                    if ( target.flag_output_mask.contains( mask ) )
+                    {
+                        target.print_warning( format, args... );
+                    }
+                }
+                template <typename... Ts>
+                void print_error( const string& format, Ts... args )
+                {
+                    if ( target.flag_output_mask.contains( mask ) )
+                    {
+                        target.print_error( format, args... );
+                    }
+                }
+                template <typename T>
+                masked& operator<<( const T& value )
+                {
+                    if ( target.flag_output_mask.contains( mask ) )
+                    {
+                        target.operator<<( value );
+                    }
+                    return *this;
+                }
+
+                scope_tracker<masked> track_scope( const char* scope_name )
+                {
+                    return scope_tracker( *this, scope_name );
+                }
+
+                private: // members
+                source& target;
+                const bitmask mask;
+            };
+
+            template <typename... Ts>
+            masked mask( Ts... flags )
+            {
+                masked masked_source( *this, bitmask( bits( flags... ) ) );
+                return masked_source;
+            }
+
+            private: // members
             string name;
             string name_blank;
-            bool first_output = true;
 
             string default_file_name;
             std::ofstream default_file_output_stream;
@@ -129,14 +262,16 @@ namespace rnjin
                 std::ostream& stream;
                 output_mode mode;
             };
-
             list<output_target> outputs;
 
+            bitmask flag_output_mask;
+            dictionary<string, uint> named_flags;
+
+            private: // methods
             // Basic write function (forwards responsibilities to ostream << operator)
             template <typename T>
             void write( const T value )
             {
-                uint i = 0;
                 foreach ( output : outputs )
                 {
                     if ( output.mode == output_mode::immediately )
@@ -192,9 +327,11 @@ namespace rnjin
             // Helper functions for printf
             void write_range( const char** begin, uint* count, const char* reset );
 
+#pragma region printf
             // Printf zone (only printf definitions beyond this point)
             // Each number of arguments needs to be defined as a specialization since arguments can appear an arbitrary number
             // of times at arbitrary positions (so no recursive 'consuming')
+
             template <typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
             void printf( const string& format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7 )
             {
@@ -411,19 +548,19 @@ namespace rnjin
                             write_range( &read_begin, &read_size, c );
                             write( arg4 );
                             break;
+                        }
 
-                            default:
-                            {
-                                read_size++;
-                                break;
-                            }
+                        default:
+                        {
+                            read_size++;
+                            break;
                         }
                     }
+                }
 
-                    if ( read_size > 0 )
-                    {
-                        write_range( &read_begin, &read_size, nullptr );
-                    }
+                if ( read_size > 0 )
+                {
+                    write_range( &read_begin, &read_size, nullptr );
                 }
             }
 
@@ -542,6 +679,12 @@ namespace rnjin
             {
                 write( format );
             }
+
+#pragma endregion
         };
+
+        extern source main;
+        extern source::masked main_verbose;
+        extern source::masked main_errors;
     } // namespace log
 } // namespace rnjin

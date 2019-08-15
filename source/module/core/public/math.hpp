@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "containers.hpp"
 #include <ostream>
 
 namespace rnjin
@@ -28,6 +29,7 @@ namespace rnjin
         template <typename T>
         struct vector2
         {
+            vector2() : x(), y() {}
             vector2( T x, T y ) : x( x ), y( y ) {}
             T x, y;
 
@@ -54,6 +56,7 @@ namespace rnjin
         template <typename T>
         struct vector3
         {
+            vector3() : x(), y(), z() {}
             vector3( T x, T y, T z ) : x( x ), y( y ), z( z ) {}
             T x, y, z;
 
@@ -75,6 +78,7 @@ namespace rnjin
         template <typename T>
         struct vector4
         {
+            vector4() : x(), y(), z(), w() {}
             vector4( T x, T y, T z, T w ) : x( x ), y( y ), z( z ), w( w ) {}
             T x, y, z, w;
 
@@ -120,58 +124,62 @@ namespace rnjin
         using int3 = vector3<int>;
         using int4 = vector4<int>;
 
+        using uint2 = vector2<uint>;
+        using uint3 = vector3<uint>;
+        using uint4 = vector4<uint>;
+
         // Template math functions
-        
+
         // Max of an arbitrary number of comparable items
         template <typename T, typename... Ts>
-        T max( T first, T second, Ts... rest )
+        T tmax( T first, T second, Ts... rest )
         {
-            if (first >= second)
+            if ( first >= second )
             {
-                return max(first, rest...);
+                return tmax( first, rest... );
             }
             else
             {
-                return max(second, rest...);
+                return tmax( second, rest... );
             }
         }
 
         template <typename T>
-        T max( T single )
+        T tmax( T single )
         {
             return single;
         }
-        
+
         // Min of an arbitrary number of comparable items
         template <typename T, typename... Ts>
-        T min( T first, T second, Ts... rest )
+        T tmin( T first, T second, Ts... rest )
         {
-            if (first <= second)
+            if ( first <= second )
             {
-                return min(first, rest...);
+                return tmin( first, rest... );
             }
             else
             {
-                return min(second, rest...);
+                return tmin( second, rest... );
             }
         }
 
         template <typename T>
-        T min( T single )
+        T tmin( T single )
         {
             return single;
         }
 
         template <typename T>
-        T clamp(T value, T min, T max)
+        T clamp( T value, T min_value, T max_value )
         {
-            if (value <= min)
+            if ( value <= min_value )
             {
-                return min;
+                return min_value;
             }
-            else if (value >= max)
+            else if ( value >= max_value )
             {
-                return max;
+                return max_value;
             }
             else
             {

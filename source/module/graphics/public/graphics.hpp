@@ -13,10 +13,18 @@ namespace rnjin
 {
     namespace graphics
     {
+        // Graphics logs flags used in masked log source creation
+        enum class log_flag : uint
+        {
+            verbose = 2,
+            errors  = 3,
+            vulkan  = 4
+        };
+
         // Graphics output log
-        // ch.1 -> windowing
-        extern log::source graphics_log;
-        const unsigned int log_channel_window = 1;
+        extern log::source& get_graphics_log();
+        extern log::source::masked graphics_log_verbose;
+        extern log::source::masked graphics_log_errors;
 
         // A window managed by an aribitrary windowing API (such as GLFW in glfw.hpp)
         template <class API>
@@ -29,13 +37,13 @@ namespace rnjin
             // Create a window (without showing it)
             window( const string title, const int2 size, bool resizable ) : title( title ), size( size ), resizable( resizable ), valid( true ), shown( false )
             {
-                graphics_log.printf( "Create window '\1' (\2 x \3px)", { title, s( size.x ), s( size.y ) }, log_channel_window );
+                graphics_log_verbose.print( "Create window '\1' (\2 x \3px)", title, size.x, size.y );
                 API::create_window( *this );
             }
             // Destroy a window
             ~window()
             {
-                graphics_log.printf( "Destroy window '\1'", { this->title }, log_channel_window );
+                graphics_log_verbose.print( "Destroy window '\1'", this->title );
                 valid = false;
                 API::destroy_window( *this );
             }

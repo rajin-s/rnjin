@@ -6,24 +6,72 @@
 
 #pragma once
 
-#include <glfw.hpp>
+#include "render_api.hpp"
+#include "renderer.hpp"
 
 namespace rnjin
 {
     namespace graphics
     {
-        namespace vulkan
+        extern log::source::masked vulkan_log;
+        extern log::source::masked vulkan_log_verbose;
+        extern log::source::masked vulkan_log_errors;
+
+        class vulkan : public render_api
         {
-            class internal;
-            class instance
+            public:
+            vulkan( const string application_name );
+            ~vulkan();
+
+            void initialize();
+
+            enum class messages
             {
+                verbose  = bit( 0 ),
+                warnings = bit( 1 ),
+                errors   = bit( 2 ),
+                all      = bits( 0, 1, 2 )
+            };
+
+            class validation_management
+            {
+                friend class vulkan;
+
                 public:
-                instance( const window<GLFW>& target_window, const bool use_validation_layers );
-                ~instance();
+                void enable( const messages message_type );
+                void disable( const messages message_type );
 
                 private:
-                vulkan::internal* _internal;
-            };
-        } // namespace vulkan
-    }     // namespace graphics
+                validation_management( const vulkan* parent );
+                const vulkan* parent;
+            } validation;
+
+            class extension_management
+            {
+                friend class vulkan;
+
+                public:
+                void enable();
+                void disable();
+
+                private:
+                extension_management( const vulkan* parent );
+                const vulkan* parent;
+            } extension;
+
+            private:
+            string application_name;
+
+            public:
+            virtual const string& get_name();
+
+            // Internal structure that actually does API calls
+            // note: separated to prevent general engine code from needing to include / being able to access the actual Vulkan library (PIMPL)
+            private:
+            class internal;
+            internal* _internal;
+
+            friend class renderer<vulkan>;
+        };
+    } // namespace graphics
 } // namespace rnjin

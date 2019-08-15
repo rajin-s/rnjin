@@ -16,7 +16,6 @@ ColumnLimit: 200
 CommentPragmas: ''
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth: 0
-ContinuationIndentWidth: 0
 Cpp11BracedListStyle: false
 DerivePointerBinding: false
 IndentCaseLabels: false
@@ -47,9 +46,12 @@ Standard: Cpp11
 TabWidth: 4
 UseTab: Never
 
+AlignAfterOpenBracket: AlwaysBreak
 AlignConsecutiveAssignments: true
 CompactNamespaces: false
+ContinuationIndentWidth: 4
 IndentCaseLabels: true
 SpaceBeforeRangeBasedForLoopColon: true
 ForEachMacros: ['foreach']
+# StatementMacros: ['get_value']
 IndentPPDirectives: AfterHash

@@ -26,14 +26,15 @@ class _unit_test
 
 
 #define note( message ) std::cout << "    (" << __FILENAME__ << ": " << __LINE__ << ") " << message << std::endl
-#define pass( message ) std::cout << "< > (" << __FILENAME__ << ": " << __LINE__ << ") " << message << std::endl
+#define succeed( message ) std::cout << "< > (" << __FILENAME__ << ": " << __LINE__ << ") " << message << std::endl
 #define fail( message ) std::cout << "<!> (" << __FILENAME__ << ": " << __LINE__ << ") " << message << std::endl
 
 #define record( expression ) expression; note(#expression);
-#define assert_equal( A, B ) if ( (A) == (B) ) { pass( #A " = " #B ); } else { fail( #A " = " << (A) << " (expected " << (B) << ")" ); }
+#define assert_equal( A, B ) if ( (A) == (B) ) { succeed( #A " = " #B ); } else { fail( #A " = " << (A) << " (expected " << (B) << ")" ); }
 
 // For tests.generated.hpp
 #define GET_TEST( name ) new unit_test__##name()
 
 // For *.test.hpp
 #define unit_test( name ) class unit_test__##name : public _unit_test
+#define end_test

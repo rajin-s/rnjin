@@ -3,7 +3,7 @@ import os
 include_paths = ["../libs/glfw_include", "../libs/vulkan_include" ]
 source_root = "../source/module"
 library_paths = [ "../libs/vulkan_lib", "../libs/glfw_lib" ]
-libraries = ["glfw3", "vulkan-1", "gdi32", "opengl32", "kernel32", "user32", "shell32"]
+libraries = ["glfw3", "vulkan-1", "gdi32", "opengl32", "kernel32", "user32", "shell32", "shaderc_combined"]
 
 main = "../source/main.cpp"
 
@@ -12,14 +12,19 @@ tests_generated_header = "../source/test/tests.generated.hpp"
 tests_main = "../source/test/main.cpp"
 
 
-def get_files(directory, extension):
+def get_files(directory, extension, ignore_extension = ".old"):
     source_files = []
     for path in os.listdir(directory):
+        if path.endswith(ignore_extension):
+            continue
+        
         path = os.path.join(directory, path)
+
         if path.endswith(extension):
             source_files.append(path)
         elif os.path.isdir(path):
             source_files += get_files(path, extension)
+        
     return source_files
 
 def get_include_folders(directory, valid_folder_names):
