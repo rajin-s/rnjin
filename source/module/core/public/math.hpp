@@ -33,20 +33,20 @@ namespace rnjin
             vector2( T x, T y ) : x( x ), y( y ) {}
             T x, y;
 
-            const vector2<T> operator+( const vector2<T> other )
+            inline const vector2<T> operator+( const vector2<T> other )
             {
                 return vector2<T>( x + other.x, y + other.y );
             }
-            const vector2<T> operator-( const vector2<T> other )
+            inline const vector2<T> operator-( const vector2<T> other )
             {
                 return vector2<T>( x - other.x, y - other.y );
             }
-            const vector2<T> operator*( const T scalar )
+            inline const vector2<T> operator*( const T scalar )
             {
                 return vector2<T>( x * scalar, y * scalar );
             }
 
-            operator vector3<T>() const
+            inline operator vector3<T>() const
             {
                 return vector3<T>( x, y, 0 );
             }
@@ -60,15 +60,15 @@ namespace rnjin
             vector3( T x, T y, T z ) : x( x ), y( y ), z( z ) {}
             T x, y, z;
 
-            const vector3<T> operator+( const vector3<T> other )
+            inline const vector3<T> operator+( const vector3<T> other )
             {
                 return vector3<T>( x + other.x, y + other.y, z + other.z );
             }
-            const vector3<T> operator-( const vector3<T> other )
+            inline const vector3<T> operator-( const vector3<T> other )
             {
                 return vector3<T>( x - other.x, y - other.y, z - other.z );
             }
-            const vector3<T> operator*( const T scalar )
+            inline const vector3<T> operator*( const T scalar )
             {
                 return vector3<T>( x * scalar, y * scalar, z * scalar );
             }
@@ -82,15 +82,15 @@ namespace rnjin
             vector4( T x, T y, T z, T w ) : x( x ), y( y ), z( z ), w( w ) {}
             T x, y, z, w;
 
-            const vector4<T> operator+( const vector4<T> other )
+            inline const vector4<T> operator+( const vector4<T> other )
             {
                 return vector4<T>( x + other.x, y + other.y, z + other.z, w + other.w );
             }
-            const vector4<T> operator-( const vector4<T> other )
+            inline const vector4<T> operator-( const vector4<T> other )
             {
                 return vector4<T>( x - other.x, y - other.y, z - other.z, w - other.w );
             }
-            const vector4<T> operator*( const T scalar )
+            inline const vector4<T> operator*( const T scalar )
             {
                 return vector4<T>( x * scalar, y * scalar, z * scalar, w * scalar );
             }
@@ -132,7 +132,7 @@ namespace rnjin
 
         // Max of an arbitrary number of comparable items
         template <typename T, typename... Ts>
-        T tmax( T first, T second, Ts... rest )
+        inline T tmax( T first, T second, Ts... rest )
         {
             if ( first >= second )
             {
@@ -145,14 +145,14 @@ namespace rnjin
         }
 
         template <typename T>
-        T tmax( T single )
+        inline T tmax( T single )
         {
             return single;
         }
 
         // Min of an arbitrary number of comparable items
         template <typename T, typename... Ts>
-        T tmin( T first, T second, Ts... rest )
+        inline T tmin( T first, T second, Ts... rest )
         {
             if ( first <= second )
             {
@@ -165,13 +165,13 @@ namespace rnjin
         }
 
         template <typename T>
-        T tmin( T single )
+        inline T tmin( T single )
         {
             return single;
         }
 
         template <typename T>
-        T clamp( T value, T min_value, T max_value )
+        inline T clamp( T value, T min_value, T max_value )
         {
             if ( value <= min_value )
             {
