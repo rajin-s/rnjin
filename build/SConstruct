@@ -76,7 +76,6 @@ class module:
         self.test_files = []
         test_files = glob(f"{directory}/**/*.cpp", recursive=True)
         for path in test_files:
-            print(path)
             if is_valid_test(path):
                 self.test_files.append(path)
 
