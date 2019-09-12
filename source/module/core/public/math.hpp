@@ -33,17 +33,26 @@ namespace rnjin
             vector2( T x, T y ) : x( x ), y( y ) {}
             T x, y;
 
-            inline const vector2<T> operator+( const vector2<T> other )
+            inline const vector2<T> operator+( const vector2<T> other ) const
             {
                 return vector2<T>( x + other.x, y + other.y );
             }
-            inline const vector2<T> operator-( const vector2<T> other )
+            inline const vector2<T> operator-( const vector2<T> other ) const
             {
                 return vector2<T>( x - other.x, y - other.y );
             }
-            inline const vector2<T> operator*( const T scalar )
+            inline const vector2<T> operator*( const T scalar ) const
             {
                 return vector2<T>( x * scalar, y * scalar );
+            }
+
+            inline const bool operator!=( const vector2<T> other ) const
+            {
+                return x != other.x || y != other.y;
+            }
+            inline const bool operator==( const vector2<T> other ) const
+            {
+                return !operator!=( other );
             }
 
             inline operator vector3<T>() const
@@ -51,6 +60,12 @@ namespace rnjin
                 return vector3<T>( x, y, 0 );
             }
         };
+
+        template<typename T>
+        inline const vector2<T> operator*( const T scalar, const vector2<T> vector )
+        {
+            return vector * scalar;
+        }
 
         // Three-dimensional container of a given type that supports arithmetic operations
         template <typename T>
@@ -60,19 +75,35 @@ namespace rnjin
             vector3( T x, T y, T z ) : x( x ), y( y ), z( z ) {}
             T x, y, z;
 
-            inline const vector3<T> operator+( const vector3<T> other )
+            inline const vector3<T> operator+( const vector3<T> other ) const
             {
                 return vector3<T>( x + other.x, y + other.y, z + other.z );
             }
-            inline const vector3<T> operator-( const vector3<T> other )
+            inline const vector3<T> operator-( const vector3<T> other ) const
             {
                 return vector3<T>( x - other.x, y - other.y, z - other.z );
             }
-            inline const vector3<T> operator*( const T scalar )
+            inline const vector3<T> operator*( const T scalar ) const
             {
                 return vector3<T>( x * scalar, y * scalar, z * scalar );
             }
+
+            inline const bool operator!=( const vector3<T> other ) const
+            {
+                return x != other.x || y != other.y || z != other.z;
+            }
+            inline const bool operator==( const vector3<T> other ) const
+            {
+                return !operator!=( other );
+            }
+
         };
+
+        template<typename T>
+        inline const vector3<T> operator*( const T scalar, const vector3<T> vector )
+        {
+            return vector * scalar;
+        }
 
         // Four-dimensional container of a given type that supports arithmetic operations
         template <typename T>
@@ -82,34 +113,53 @@ namespace rnjin
             vector4( T x, T y, T z, T w ) : x( x ), y( y ), z( z ), w( w ) {}
             T x, y, z, w;
 
-            inline const vector4<T> operator+( const vector4<T> other )
+            inline const vector4<T> operator+( const vector4<T> other ) const
             {
                 return vector4<T>( x + other.x, y + other.y, z + other.z, w + other.w );
             }
-            inline const vector4<T> operator-( const vector4<T> other )
+            inline const vector4<T> operator-( const vector4<T> other ) const
             {
                 return vector4<T>( x - other.x, y - other.y, z - other.z, w - other.w );
             }
-            inline const vector4<T> operator*( const T scalar )
+            inline const vector4<T> operator*( const T scalar ) const
             {
                 return vector4<T>( x * scalar, y * scalar, z * scalar, w * scalar );
             }
+
+            inline const bool operator!=( const vector4<T> other ) const
+            {
+                return x != other.x || y != other.y || z != other.z || w != other.w;
+            }
+            inline const bool operator==( const vector4<T> other ) const
+            {
+                return !operator!=( other );
+            }
+
         };
+
+        template<typename T>
+        inline const vector4<T> operator*( const T scalar, const vector4<T> vector )
+        {
+            return vector * scalar;
+        }
 
         template <typename T>
         std::ostream& operator<<( std::ostream& stream, vector2<T> v )
         {
             stream << "(" << v.x << ", " << v.y << ")";
+            return stream;
         }
         template <typename T>
         std::ostream& operator<<( std::ostream& stream, vector3<T> v )
         {
             stream << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+            return stream;
         }
         template <typename T>
         std::ostream& operator<<( std::ostream& stream, vector4<T> v )
         {
             stream << "(" << v.x << ", " << v.y << ", " << v.z << ", " << v.w << ")";
+            return stream;
         }
 
         using float2 = vector2<float>;
