@@ -1,81 +1,202 @@
 import os
+from glob import glob
 
-include_paths = ["../libs/glfw_include", "../libs/vulkan_include" ]
-source_root = "../source/module"
-library_paths = [ "../libs/vulkan_lib", "../libs/glfw_lib" ]
-libraries = ["glfw3", "vulkan-1", "gdi32", "opengl32", "kernel32", "user32", "shell32", "shaderc_combined"]
-
-main = "../source/main.cpp"
-
-tests_root = "../source/test/unit_test"
-tests_generated_header = "../source/test/tests.generated.hpp"
-tests_main = "../source/test/main.cpp"
+### Global constant info ###
 
 
-def get_files(directory, extension, ignore_extension = ".old"):
-    source_files = []
-    for path in os.listdir(directory):
-        if path.endswith(ignore_extension):
-            continue
-        
-        path = os.path.join(directory, path)
+class library:
+    include_directories = [
+        "../libs/glfw_include",
+        "../libs/vulkan_include"
+    ]
+    paths = [
+        "../libs/vulkan_lib",
+        "../libs/glfw_lib"
+    ]
+    names = [
+        "glfw3",
+        "vulkan-1",
+        "gdi32",
+        "opengl32",
+        "kernel32",
+        "user32",
+        "shell32",
+        "shaderc_combined",
+    ]
 
-        if path.endswith(extension):
-            source_files.append(path)
-        elif os.path.isdir(path):
-            source_files += get_files(path, extension)
-        
-    return source_files
 
-def get_include_folders(directory, valid_folder_names):
-    include_paths = []
+class project:
+    module_directory = "../source/module"
 
-    for path in os.listdir(directory):
-        is_include_directory = path in valid_folder_names
-        path = os.path.join(directory, path)
-        
-        if os.path.isdir(path):
-            if is_include_directory:
-                include_paths.append(path)
-            include_paths += get_include_folders(path, valid_folder_names)
+    main_source = "../source/main.cpp"
+    tests_source = "../source/test/main.cpp"
+
+    core_object = "rnjin_core.obj"
+
+    engine_main_object = "rnjin_main.obj"
+    engine_executable = "rnjin.exe"
     
-    return include_paths
+    tests_main_object = "rnjin_tests.obj"
+    tests_executable = "tests.exe"
+
+### Module definition ###
 
 
-include_paths += get_include_folders(source_root, ["public"])
-sources = get_files(source_root, ".cpp")
+def is_valid_source(path):
+    return (not ".old" in path) and (not ".test" in path)
 
-env = Environment(CPPPATH=include_paths, CPPFLAGS=["/std:c++17", "/EHsc"], LIBPATH=library_paths, LIBS=libraries)
-o_core = env.Library(target="core.obj", source=sources)
 
-t = ARGUMENTS.get("make", "rnjin")
-if t in ["all", "rnjin"]:
-    o_main = env.Object(target="rnjin.obj", source=main)
-    exe_rnjin = env.Program(target="rnjin", source=["core.obj", "rnjin.obj"])
-    env.Command(target="rnjin", source="rnjin.exe", action="C:/rcedit.exe rnjin.exe --set-icon icon.ico")
+def is_valid_include_directory(path):
+    return (not ".old" in path) and (not "private" in path) and (not ".test" in path)
 
-if t in ["all", "tests"]:
-    tests_includes = []
-    for path in os.listdir(tests_root):
-        if path.endswith(".hpp"):
-            tests_includes.append(path)
 
-    gen = open(tests_generated_header, 'w')
-    gen.write('#include "unit_test.hpp"\n')
-    for include in tests_includes:
-        gen.write('#include "unit_test/' + include + '"\n')
-    gen.write("#define TESTS ")
-    for i in range(len(tests_includes)):
-        include = tests_includes[i]
-        gen.write("GET_TEST(" + include[:-9] + ")") # Remove .test.hpp from file name
-        if i != len(tests_includes) - 1:
-            gen.write(", ")
-    gen.close()
+def is_valid_test(path):
+    return (not ".old" in path) and (".test" in path)
 
-    tests_includes +=  ["../source/test", tests_root]
+
+class module:
+    def __init__(self, directory):
+        self.directory = directory
+
+        # Get *.cpp files from all subdirectories
+        self.source_files = []
+        cpp_files = glob(f"{directory}/**/*.cpp", recursive=True)
+        for path in cpp_files:
+            if is_valid_source(path):
+                self.source_files.append(path)
+
+        # Get */public/ folders in all subdirectories
+        self.include_directories = []
+        public_directories = glob(f"{directory}/**/public", recursive=True)
+        for path in public_directories:
+            if is_valid_include_directory(path):
+                self.include_directories.append(path)
+
+        # Get *.test.cpp files in all subdirectories
+        self.test_files = []
+        test_files = glob(f"{directory}/**/*.cpp", recursive=True)
+        for path in test_files:
+            print(path)
+            if is_valid_test(path):
+                self.test_files.append(path)
+
+    def __repr__(self):
+        return f"<`{self.directory}` [{len(self.source_files)}]>"
+
+
+### Arguments ###
+
+class args:
+    build_tests = False
+    build_engine = True
+    quiet = False
+
+
+build_mode = ARGUMENTS.get("build", "rnjin")
+args.build_tests = build_mode in ["all", "tests"]
+args.build_engine = build_mode in ["all", "rnjin"]
+
+output_mode = ARGUMENTS.get("output", "default")
+args.quiet = output_mode == "quiet"
+
+
+### Main ###
+
+
+modules = []
+for directory in glob(f"{project.module_directory}/*"):
+    if os.path.isdir(directory):
+        modules.append(module(directory))
+
+if not args.quiet:
+    for m in modules:
+        print(f"Module '{m.directory.replace(project.module_directory, '')}'")
+
+        for path in m.include_directories:
+            print(f"   +include '{path.replace(project.module_directory, '')}'")
+        for path in m.source_files:
+            print(f"    source  '{path.replace(project.module_directory, '')}'")
+        for path in m.test_files:
+            print(f"   ?test    '{path.replace(project.module_directory, '')}'")
+    print('')
+
+# Get all source files in modules
+all_source_files = []
+for m in modules:
+    all_source_files += m.source_files
+
+# Get all include directories in modules
+all_include_directories = library.include_directories
+for m in modules:
+    all_include_directories += m.include_directories
+
+# Create build environment with include directories and libraries
+environment = Environment(
+    CPPPATH=all_include_directories,
+    CPPFLAGS=["/std:c++17", "/EHsc"],
+    LIBPATH=library.paths,
+    LIBS=library.names
+)
+
+# Build the core library that can be linked against a "main" object (engine or test)
+core_object = environment.Library(
+    target=project.core_object,
+    source=all_source_files
+)
+
+if not args.quiet:
+    print(f"Build '{project.core_object}'")
+
+
+if args.build_engine:
+    # Build engine main object and link against core to produce rnjin.exe
+    engine_main_object = environment.Object(
+        target=project.engine_main_object,
+        source=project.main_source
+    )
+
+    if not args.quiet:
+        print(f"Build '{project.engine_main_object}'")
+
+    engine_executable = environment.Program(
+        target=project.engine_executable,
+        source=[project.engine_main_object, project.core_object]
+    )
+
+    if not args.quiet:
+        print(f"Build '{project.engine_executable}'")
+
+    # Set application icon
+    environment.Command(
+        target="",
+        source=project.engine_executable,
+        action=f"C:/rcedit.exe {project.engine_executable} --set-icon icon.ico"
+    )
     
-    tests_env = env.Clone()
-    tests_env.Append(CPPPATH=tests_includes)
-    o_tests = tests_env.Object(target="tests.obj", source=tests_main)
-    exe_tests = env.Program(target="tests", source=["core.obj", "tests.obj"])
-    env.Command(target="tests", source="tests.exe", action="C:/rcedit.exe tests.exe --set-icon icon.ico")
+    if not args.quiet:
+        print("Set application icon")
+
+
+if args.build_tests:
+    all_test_files = []
+    for m in modules:
+        all_test_files += m.test_files
+
+    tests_main_object = environment.Object(
+        target=project.tests_main_object,
+        source=project.tests_source
+    )
+
+    if not args.quiet:
+        print(f"Build '{project.tests_main_object}'")
+
+    tests_executable = environment.Program(
+        target=project.tests_executable,
+        source=[project.tests_main_object, project.core_object] + all_test_files
+    )
+
+    if not args.quiet:
+        print(f"Build '{project.tests_executable}'")
+
+if not args.quiet:
+    print('')
