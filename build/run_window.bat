@@ -1,1 +1,0 @@
-rnjin -w -af default.params > logs/_run.log
