@@ -26,16 +26,20 @@
         _fail( #A " = " << ( A ) << " (expected " << ( B ) << ")" ); \
     }
 
-#define test( name )                                                                \
-    struct test_##name##_container                                                  \
-    {                                                                               \
-        static constexpr char* current_test_name = "" #name;                        \
-        void run();                                                                 \
-        test_##name##_container()                                                   \
-        {                                                                           \
-            std::cout << "Running test '" #name "' in '" __FILE__ "'" << std::endl; \
-            run();                                                                  \
-        }                                                                           \
-    };                                                                              \
-    static test_##name##_container _test_##name;                                    \
-    void test_##name##_container::run()
+#define test( name )                                                                    \
+    namespace                                                                           \
+    {                                                                                   \
+        struct test_##name##_container                                                  \
+        {                                                                               \
+            static constexpr char* current_test_name = "" #name;                        \
+            void run();                                                                 \
+            test_##name##_container()                                                   \
+            {                                                                           \
+                std::cout << "Running test '" #name "' in '" __FILE__ "'" << std::endl; \
+                run();                                                                  \
+                std::cout << std::endl;                                                 \
+            }                                                                           \
+        };                                                                              \
+        static test_##name##_container _test_##name;                                    \
+    }                                                                                   \
+    void ::test_##name##_container::run()
