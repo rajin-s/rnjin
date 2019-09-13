@@ -3,6 +3,7 @@
         "*.shader": "hlsl",
         "*.pad": "python",
         "SConstruct": "python",
+        "*.putt": "json",
         "ostream": "cpp",
         "xhash": "cpp",
         "xstring": "cpp",
@@ -58,7 +59,8 @@
         "unordered_set": "cpp",
         "algorithm": "cpp",
         "array": "cpp",
-        "iterator": "cpp"
+        "iterator": "cpp",
+        "start": "cpp"
     },
     "files.exclude": {
         "**/.git": true,
