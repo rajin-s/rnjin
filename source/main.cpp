@@ -39,15 +39,15 @@ void main( int argc, char* argv[] )
 
             window<GLFW> main_window( "RNJIN", int2( 128, 128 ), true );
 
-            vulkan vk_api( "rnjin.vulkan" );
+            vulkan::api vk_api( "rnjin.vulkan" );
             {
-                vk_api.validation.enable( vulkan::messages::all );
+                vk_api.validation.enable( vulkan::api::messages::all );
                 vk_api.extension.enable();
                 vk_api.initialize();
             }
 
             debug_checkpoint( log::main );
-            renderer<vulkan> vk_renderer( vk_api );
+            vulkan::renderer vk_renderer( vk_api );
             {
                 vk_renderer.add_target( main_window );
                 vk_renderer.initialize();
