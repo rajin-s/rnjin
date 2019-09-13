@@ -17,6 +17,7 @@ namespace rnjin
         // A render_view should be translatable to rendering commands for any API
         class render_view
         {
+            private:
             struct item
             {
                 const shader& vertex_shader;
