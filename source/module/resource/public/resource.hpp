@@ -25,7 +25,7 @@ namespace rnjin
                 new_resource.force_reload();
                 return new_resource;
             }
-            
+
             public: // methods
             resource();
             ~resource();
@@ -38,7 +38,11 @@ namespace rnjin
 
             void set_path( const string& new_path ); // Set the resource file path
 
+            public: // structures
+            using id = uint;
+
             public: // accessors
+            inline let get_id get_value( unique_id );
             let has_file get_value( not file_path.empty() );
 
             protected:
@@ -55,6 +59,7 @@ namespace rnjin
 
             private: // members
             string file_path;
+            id unique_id;
         };
     } // namespace core
 } // namespace rnjin
