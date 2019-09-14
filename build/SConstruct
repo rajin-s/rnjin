@@ -49,6 +49,8 @@ def is_valid_source(path):
 def is_valid_include_directory(path):
     return (not ".old" in path) and (not "private" in path) and (not ".test" in path)
 
+def is_valid_internal_directory(path):
+    return (not ".old" in path) and (not ".test" in path)
 
 def is_valid_test(path):
     return (not ".old" in path) and (".test" in path)
@@ -71,6 +73,13 @@ class module:
         for path in public_directories:
             if is_valid_include_directory(path):
                 self.include_directories.append(path)
+        
+        # Get */internal/ folders in all subdirectories
+        self.internal_directories = []
+        internal_directories = glob(f"{directory}/**/internal", recursive=True)
+        for path in internal_directories:
+            if is_valid_internal_directory(path):
+                self.internal_directories.append(path)
 
         # Get *.test.cpp files in all subdirectories
         self.test_files = []
@@ -100,8 +109,6 @@ args.quiet = output_mode == "quiet"
 
 
 ### Main ###
-
-
 modules = []
 for directory in glob(f"{project.module_directory}/*"):
     if os.path.isdir(directory):
@@ -111,18 +118,27 @@ if not args.quiet:
     for m in modules:
         print(f"Module '{m.directory.replace(project.module_directory, '')}'")
 
+        if len(m.include_directories): print("    include:")
         for path in m.include_directories:
-            print(f"   +include '{path.replace(project.module_directory, '')}'")
+            print(f"        '{path.replace(project.module_directory, '')}'")
+
+        if len(m.internal_directories): print("    internal:")
+        for path in m.include_directories:
+            print(f"        '{path.replace(project.module_directory, '')}'")
+
+        if len(m.source_files) > 0: print("    source:")
         for path in m.source_files:
-            print(f"    source  '{path.replace(project.module_directory, '')}'")
+            print(f"        '{path.replace(project.module_directory, '')}'")
+
+        if len(m.test_files) > 0: print("    test:")
         for path in m.test_files:
-            print(f"   ?test    '{path.replace(project.module_directory, '')}'")
+            print(f"        '{path.replace(project.module_directory, '')}'")
     print('')
 
 # Get all source files in modules
-all_source_files = []
-for m in modules:
-    all_source_files += m.source_files
+# all_source_files = []
+# for m in modules:
+#     all_source_files += m.source_files
 
 # Get all include directories in modules
 all_include_directories = library.include_directories
@@ -132,15 +148,34 @@ for m in modules:
 # Create build environment with include directories and libraries
 environment = Environment(
     CPPPATH=all_include_directories,
-    CPPFLAGS=["/std:c++17", "/EHsc"],
+    CPPFLAGS=[
+        "/std:c++17",
+        "/EHsc",
+    ],
     LIBPATH=library.paths,
     LIBS=library.names
 )
 
+all_module_objects = []
+for m in modules:
+    if len(m.source_files) == 0: continue
+
+    module_environment = environment
+    module_environment.Append(CPPPATH=m.internal_directories)
+
+    output_path = f"{m.directory}/module.obj"
+    module_object = module_environment.Library(
+        target=output_path,
+        source=m.source_files
+    )
+    all_module_objects.append(output_path)
+    if not args.quiet:
+        print(f"Build '{output_path}'")
+
 # Build the core library that can be linked against a "main" object (engine or test)
 core_object = environment.Library(
     target=project.core_object,
-    source=all_source_files
+    source=all_module_objects
 )
 
 if not args.quiet:
