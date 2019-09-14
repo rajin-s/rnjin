@@ -8,9 +8,11 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "resource_database.hpp"
 #include "shader.hpp"
-#include "vulkan_renderer.hpp"
 #include "vulkan_api_internal.hpp"
+#include "vulkan_renderer.hpp"
+
 
 namespace rnjin::graphics::vulkan
 {
@@ -68,7 +70,10 @@ namespace rnjin::graphics::vulkan
         device;
 
         list<window_surface> window_targets;
+        resource_database resources{ *this };
+
         friend class window_surface;
+        friend class resource_database;
     };
 
     // Helper functions and constant data

@@ -4,13 +4,19 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
+#pragma once
+
 #include <vulkan/vulkan.hpp>
 
 #include "mesh.hpp"
-#include "vulkan_renderer_internal.hpp"
+// #include "vulkan_renderer_internal.hpp"
+
 
 namespace rnjin::graphics::vulkan
 {
+    // forward declarations
+    class renderer_internal;
+
     class resource_database : child_class<renderer_internal>
     {
         public: // methods
@@ -18,30 +24,20 @@ namespace rnjin::graphics::vulkan
         ~resource_database();
 
         public: // structures
-        group meshes
+        struct mesh_entry
         {
-            struct entry
-            {
-                entry( vk::Buffer vertex_buffer, vk::DeviceMemory vertex_buffer_memory );
-                const vk::Buffer vertex_buffer;
-                const vk::DeviceMemory vertex_buffer_memory;
-            };
+            vk::Buffer vertex_buffer;
+            vk::DeviceMemory vertex_buffer_memory;
 
-            const entry& get( const resource::id resource_id ) const;
-            const entry& create( const mesh& mesh_resource );
-            void release( const mesh& mesh_resource );
+            vk::Buffer index_buffer;
+            vk::DeviceMemory index_buffer_memory;
+        };
 
-            private:
-            dictionary<resource::id, entry> entries;
-        }
-        mesh_data;
+        const mesh_entry& get_mesh_data( const resource::id resource_id ) const;
+        const mesh_entry& store_mesh_data( const mesh& mesh_resource );
+        void release_mesh_data( const mesh& mesh_resource );
 
-        struct foo
-        {
-            foo( resource_database* c ) : c( c ) {}
-
-            private:
-            resource_database* c;
-        } bar{ this };
+        private: // members
+        dictionary<resource::id, mesh_entry> mesh_data;
     };
 } // namespace rnjin::graphics::vulkan
