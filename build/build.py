@@ -3,13 +3,25 @@ import subprocess
 
 build_target = "all"
 
-if len(sys.argv) > 1:
-    build_target = sys.argv[1]
+if "rnjin" in sys.argv:
+    build_target = "rnjin"
+
+if "tests" in sys.argv:
+    if build_target == "rnjin":
+        build_target = "all"
+    else:
+        build_target = "tests"
 
 output_log = "./logs/_scons.log"
 build_result = 0
 
-build_process = subprocess.Popen("scons build=%s > %s" % (build_target, output_log), shell=True)
+args = f"build={build_target}"
+
+if "quiet" in sys.argv:
+    args += " output=quiet"
+
+command = "scons %s > %s" % (args, output_log)
+build_process = subprocess.Popen(command, shell=True)
 
 build_process.wait()
 build_result = build_process.returncode    
