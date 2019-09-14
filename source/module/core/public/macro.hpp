@@ -8,11 +8,6 @@
 
 #include "containers.hpp"
 
-// Common macros (these aren't that great...)
-// #define s( value ) std::to_string( value )
-// #define text( name, value ) const string message__##name = value
-// #define get_text( name ) message__##name
-
 // More descriptive forms of common patterns
 #define group struct
 #define subregion for ( bool __ = true; __; __ = false )
