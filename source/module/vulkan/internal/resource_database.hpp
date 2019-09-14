@@ -42,6 +42,6 @@ namespace rnjin::graphics::vulkan
 
             private:
             resource_database* c;
-        } bar{ c = this };
+        } bar{ this };
     };
 } // namespace rnjin::graphics::vulkan
