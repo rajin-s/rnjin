@@ -41,3 +41,6 @@
 
 # Backups
 *.old
+
+# Test file io
+build/test/*
