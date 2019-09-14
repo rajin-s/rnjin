@@ -123,7 +123,7 @@ if not args.quiet:
             print(f"        '{path.replace(project.module_directory, '')}'")
 
         if len(m.internal_directories): print("    internal:")
-        for path in m.include_directories:
+        for path in m.internal_directories:
             print(f"        '{path.replace(project.module_directory, '')}'")
 
         if len(m.source_files) > 0: print("    source:")
