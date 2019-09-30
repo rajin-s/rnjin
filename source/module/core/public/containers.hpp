@@ -16,9 +16,11 @@
 namespace rnjin
 {
     // numeric types
-    using byte  = uint8_t;
-    using uint  = uint32_t;
-    using ulong = uint64_t;
+    using byte = uint8_t;
+    using uint = uint32_t;
+
+    using uint64 = uint64_t;
+    using uint16 = uint16_t;
 
     // strings
     using string = std::string;
@@ -67,4 +69,7 @@ namespace rnjin
         protected: // members
         T& parent;
     };
+
+    // Simple function pointers
+    using action = void ( * )( void );
 } // namespace rnjin
