@@ -83,3 +83,35 @@ test( file_io )
         }
     }
 }
+
+test( endian )
+{
+    const uint number = 0x01020304;
+    let first         = ( (byte*) &number )[0];
+
+    if ( first == 0x01 )
+    {
+        note( "System is Big-Endian" );
+        assert_equal( first, 0x01 );
+    }
+    else
+    {
+        note( "System is Little-Endian" );
+        assert_equal( first, 0x04 );
+    }
+
+    subregion // writing
+    {
+        file write_file( "test/write", file::mode::write );
+        write_file.write_var( number );
+        note( "Wrote 0x010203004" );
+    }
+    subregion
+    {
+        file read_file( "test/write", file::mode::read );
+        let read_number = read_file.read_var<uint>();
+        note( "Read uint" );
+
+        assert_equal( number, read_number );
+    }
+}

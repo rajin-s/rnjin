@@ -148,10 +148,11 @@ namespace rnjin
             check_error_condition( return, file_log_errors, not file_mode.contains( (uint) mode::write ), "File '\1' not opened for writing", path );
 
             const uint string_size     = value.size();
+            const uint char_size       = sizeof( string::value_type );
             const byte* buffer_pointer = (const byte*) value.c_str();
 
             write_var( string_size );
-            write_bytes( string_size, buffer_pointer );
+            write_bytes( string_size, char_size, buffer_pointer );
         }
         void file::write_string( const string& value )
         {
@@ -172,10 +173,11 @@ namespace rnjin
             check_error_condition( return value, file_log_errors, not file_mode.contains( (uint) mode::read ), "File '\1' not opened for reading", path );
 
             let string_size = read_var<uint>();
+            let char_size   = sizeof( string::value_type );
             value.resize( string_size );
 
             let buffer_pointer = (byte*) value.data();
-            read_bytes( string_size, buffer_pointer );
+            read_bytes( string_size, char_size, buffer_pointer );
 
             return value;
         }
@@ -220,32 +222,97 @@ namespace rnjin
             return values;
         }
 
+        const bool _system_is_big_endian()
+        {
+            const uint number = 0x01020304;
+            const byte first  = *( (byte*) &number );
+            return first == 0x01;
+        }
+
+// Enable a debug flag to force byte reversal to test that it works
+// #define RNJIN_FORCE_REVERSE_BYTES
+
+#ifdef RNJIN_FORCE_REVERSE_BYTES
+        const bool _need_to_reverse_bytes = true;
+#else
+        const bool _need_to_reverse_bytes = _system_is_big_endian();
+#endif
+
         // Write bytes from an arbitrary data buffer
         // note: called from higher level read/write that check size, etc.
-        void file::write_bytes( const uint count, const byte* source )
+        //       count is the size in bytes, stride is the number of bytes per entry
+        //       (in case endianness needs to be swapped)
+        void file::write_bytes( const uint count, const uint stride, const byte* source )
         {
             if ( count == 0 ) return;
 
             auto out = (std::ostream*) stream;
-            out->write( (const char*) source, count );
+
+            if ( _need_to_reverse_bytes and stride > 1 )
+            {
+                // System is big endian and elements are multiple bytes, so we need to reverse
+                let element_count = count / stride;
+
+                for ( uint i : range( element_count ) )
+                {
+                    // Get the start of the source data of this element (most significant byte)
+                    const byte* element_data = &source[i * stride];
+
+                    // Write each byte individually from the end of the element, moving backward to the start
+                    //   ie. the first byte written is the last byte of the element
+                    for ( uint offset = stride; offset > 0; offset-- )
+                    {
+                        out->write( (const char*) ( &element_data[offset - 1] ), 1 );
+                    }
+                }
+            }
+            else
+            {
+                out->write( (const char*) source, count );
+            }
         }
 
         // Read bytes into an arbitrary data buffer
         // note: called from higher level read/write that check size, etc.
-        void file::read_bytes( const uint count, nonconst byte* destination )
+        //       count is the size in bytes, stride is the number of bytes per entry
+        //       (in case endianness needs to be swapped)
+        void file::read_bytes( const uint count, const uint stride, nonconst byte* destination )
         {
             if ( count == 0 ) return;
 
             auto in = (std::istream*) stream;
-            in->read( (char*) destination, count );
+            if ( _need_to_reverse_bytes and stride > 1 )
+            {
+                // System is big endian and elements are multiple bytes, so we need to reverse
+                let element_count = count / stride;
+
+                for ( uint i : range( element_count ) )
+                {
+                    // Get the start of the source data of this element (most significant byte)
+                    nonconst byte* element_data = &destination[i * stride];
+
+                    // Read in each byte individually into the element, moving backward from end to the start
+                    //   ie. the first byte read is the last byte of the element
+                    for ( uint offset = stride; offset > 0; offset-- )
+                    {
+                        in->read( (char*) ( &element_data[offset - 1] ), 1 );
+                    }
+                }
+            }
+            else
+            {
+                in->read( (char*) destination, count );
+            }
         }
 
         // Write a text file
         void file::write_all_text( const string& text )
         {
-            let string_size    = text.size() * sizeof( char );
+            let char_size      = sizeof( string::value_type );
+            let string_size    = text.size() * char_size;
             let buffer_pointer = (const byte*) text.c_str();
-            write_bytes( string_size, buffer_pointer );
+
+            write_bytes( string_size, char_size, buffer_pointer );
 
             file_log_verbose.print( "Write \1B of text to '\2'", string_size, path );
         }
@@ -253,11 +320,14 @@ namespace rnjin
         // Read a text file
         string file::read_all_text()
         {
+            let char_size = sizeof( string::value_type );
+
             string text;
-            text.resize( size / sizeof( char ) );
+            text.resize( size / char_size );
 
             let buffer_pointer = (nonconst byte*) text.c_str();
-            read_bytes( size, buffer_pointer );
+
+            read_bytes( size, char_size, buffer_pointer );
 
             file_log_verbose.print( "Read \1B of text from '\2'", size, path );
             return text;

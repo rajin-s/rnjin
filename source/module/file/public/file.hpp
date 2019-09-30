@@ -67,7 +67,7 @@ namespace rnjin
                 let var_size      = sizeof( T );
                 let value_pointer = (byte*) &value;
 
-                write_bytes( var_size, value_pointer );
+                write_bytes( var_size, var_size, value_pointer );
             }
             template <>
             void write_var<string>( const string& value );
@@ -86,7 +86,7 @@ namespace rnjin
                 let var_size      = sizeof( T );
                 let value_pointer = (byte*) &value;
 
-                read_bytes( var_size, value_pointer );
+                read_bytes( var_size, var_size, value_pointer );
 
                 return value;
             }
@@ -102,11 +102,12 @@ namespace rnjin
                 check_error_condition( return, file_log_errors, not file_mode.contains( (uint) mode::write ), "File '\1' not opened for writing", path );
 
                 const uint buffer_length   = values.size();
-                const uint buffer_size     = sizeof( T ) * buffer_length;
+                const uint element_size    = sizeof( T );
+                const uint buffer_size     = element_size * buffer_length;
                 const byte* buffer_pointer = (byte*) values.data();
 
                 write_var( buffer_length );
-                write_bytes( buffer_size, buffer_pointer );
+                write_bytes( buffer_size, element_size, buffer_pointer );
             }
             template <>
             void write_buffer<string>( const list<string>& values );
@@ -128,7 +129,7 @@ namespace rnjin
 
                 nonconst byte* buffer_pointer = (byte*) values.data();
 
-                read_bytes( buffer_size, buffer_pointer );
+                read_bytes( buffer_size, element_size, buffer_pointer );
 
                 return values;
             }
@@ -140,8 +141,8 @@ namespace rnjin
 
             private: // methods
             void open();
-            void write_bytes( const uint count, const byte* source );
-            void read_bytes( const uint count, nonconst byte* destination );
+            void write_bytes( const uint count, const uint stride, const byte* source );
+            void read_bytes( const uint count, const uint stride, nonconst byte* destination );
 
             private: // members
             bool valid;
