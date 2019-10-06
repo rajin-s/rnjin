@@ -333,8 +333,8 @@ namespace rnjin
             return text;
         }
 
-        // We need these template specializations to be instantiated here, since having them elsewhere won't trigger it
-        // This function otherwise does nothing
+        // We need these template specializations to be instantiated here, since having them elsewhere
+        // won't trigger their compilation... This function otherwise does nothing
         void __()
         {
             file f( "__", file::mode::write );
