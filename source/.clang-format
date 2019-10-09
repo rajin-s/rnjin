@@ -15,7 +15,7 @@ BreakConstructorInitializersBeforeComma: false
 ColumnLimit: 200
 CommentPragmas: ''
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
-ConstructorInitializerIndentWidth: 0
+ConstructorInitializerIndentWidth: 2
 Cpp11BracedListStyle: false
 DerivePointerBinding: false
 IndentCaseLabels: false
@@ -56,3 +56,25 @@ ForEachMacros: ['foreach']
 # StatementMacros: ['get_value']
 IndentPPDirectives: AfterHash
 SortIncludes: false
+
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+AllowShortBlocksOnASingleLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+    SplitEmptyNamespace: false
+    SplitEmptyRecord: false
+    SplitEmptyFunction: false
+    IndentBraces: false
+    BeforeElse: true
+    BeforeCatch: true
+    AfterExternBlock: true
+    AfterUnion: true
+    AfterStruct: true
+    AfterNamespace: true
+    AfterObjCDeclaration: true 
+    AfterFunction: true
+    AfterEnum: true
+    AfterControlStatement: true
+    AfterClass: true
