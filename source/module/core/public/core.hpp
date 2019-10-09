@@ -21,6 +21,7 @@
 // core data structures
 #include "bitmask.hpp"
 #include "math.hpp"
+#include "event.hpp"
 
 // macros
 #include "macro.hpp"
