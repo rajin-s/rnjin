@@ -17,8 +17,11 @@ build_result = 0
 
 args = f"build={build_target}"
 
-if "quiet" in sys.argv:
+if "quietly" in sys.argv:
     args += " output=quiet"
+
+if not "singlecore" in sys.argv:
+    args += " -j 4"
 
 command = "scons %s > %s" % (args, output_log)
 build_process = subprocess.Popen(command, shell=True)
