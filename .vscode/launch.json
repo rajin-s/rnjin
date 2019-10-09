@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Tests (Windows)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}\\build\\tests.exe",
+            "symbolSearchPath": "${workspaceRoot}\\build;C:\\Program Files (x86)\\Microsoft Visual Studio 14.0",
+            "externalConsole": false,
+            "logging": {
+                "moduleLoad": false,
+                "trace": true
+            },
+            "cwd": "${workspaceRoot}\\build",
+            "args": ["object_events"]
+            // "visualizerFile": "${workspaceRoot}/my.natvis",
+            // "showDisplayString": true
+        }
+    ]
+}

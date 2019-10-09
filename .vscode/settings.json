@@ -122,5 +122,20 @@
                 { "color": "#e06c75" },
             ]
         },
+    },
+    "spellright.language": [
+        "en"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext",
+        "hlsl",
+        "cpp"
+    ],
+    "spellright.parserByClass": {
+        "hlsl": {
+            "parser": "code"
+        }
     }
 }
