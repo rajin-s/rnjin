@@ -33,6 +33,12 @@
 **/logs/
 *.log
 
+# Debugging symbols
+*.pdb
+
+# Intermediate files
+*.ilk
+
 # VS Code
 .vscode/ipch
 
