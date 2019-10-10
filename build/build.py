@@ -12,7 +12,13 @@ if "tests" in sys.argv:
     else:
         build_target = "tests"
 
-output_log = "./logs/_scons.log"
+output_log     = "./logs/_scons.log"
+engine_run_log = "./logs/_run.log"
+tests_run_log  = "./logs/_tests.log"
+
+engine_executable = "rnjin.exe"
+tests_executable  = "tests.exe"
+
 build_result = 0
 
 args = f"build={build_target}"
@@ -23,14 +29,33 @@ if "quietly" in sys.argv:
 if not "singlecore" in sys.argv:
     args += " -j 4"
 
-command = "scons %s > %s" % (args, output_log)
+command       = "scons %s > %s" % (args, output_log)
 build_process = subprocess.Popen(command, shell=True)
 
 build_process.wait()
-build_result = build_process.returncode    
+build_result = build_process.returncode
 
-if "run" in sys.argv and build_result == 0:
-    if "tests" in sys.argv:
-        run_process = subprocess.Popen(".\\tests.exe > logs\\_tests.log", shell=True)
-    else:
-        run_process = subprocess.Popen(".\\rnjin.exe", shell=True)
+if build_result == 0:
+    print("Build succeeded")
+    if "run" in sys.argv:
+        # Get arguments to pass to executable (anything after --)
+        start = -1
+        for (i, arg) in enumerate(sys.argv):
+            if arg == "--":
+                start = i + 1
+                break
+
+        run_args = ""
+        if start >= 0 and start < len(sys.argv):
+            for arg in sys.argv[start:]:
+                run_args = f"{run_args} {arg}"
+
+        if "tests" in sys.argv:
+            command = f"{tests_executable}{run_args} > {tests_run_log}"
+        else:
+            command = f"{engine_executable}{run_args} > {engine_run_log}"
+
+        print(f"running {command}")
+        run_process = subprocess.Popen(command, shell=True)
+else:
+    print("Build failed")
