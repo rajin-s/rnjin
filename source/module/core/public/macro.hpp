@@ -33,7 +33,7 @@
 #define pass
 #define nonconst
 
-#define cast( arg, type ) reinterpret_cast<type>( object )
+#define cast( arg, type ) reinterpret_cast<type>( arg )
 
 // Constructors and such
 #define pass_member( name ) name( name )
