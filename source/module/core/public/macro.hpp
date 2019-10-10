@@ -10,6 +10,7 @@
 
 // More descriptive forms of common patterns
 #define group struct
+#define define_static_group( name ) decltype( name ) name{}
 #define subregion for ( bool __ = true; __; __ = false )
 #define forward_declare_class( _namespace, _class ) \
     namespace _namespace                            \
@@ -27,9 +28,15 @@
 // C++ language extensions
 #define foreach( iteration ) for ( const auto& iteration )
 #define let const auto
+#define let_mutable auto
 #define is_abstract = 0
 #define pass
 #define nonconst
+
+#define cast( arg, type ) reinterpret_cast<type>( object )
+
+// Constructors and such
+#define pass_member( name ) name( name )
 
 /* clang-format off */
 #define and &&
@@ -45,6 +52,11 @@
     () const               \
     {                      \
         return value;      \
+    }
+#define get_mutable_value( value ) \
+    ()                             \
+    {                              \
+        return value;              \
     }
 
 // Introspection utilities
