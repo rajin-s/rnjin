@@ -9,16 +9,13 @@
 #include <vulkan/vulkan.hpp>
 
 #include "resource_database.hpp"
-#include "shader.hpp"
+#include "vulkan_window_surface.hpp"
+
 #include "vulkan_api_internal.hpp"
 #include "vulkan_renderer.hpp"
 
-
 namespace rnjin::graphics::vulkan
 {
-    // forward declarations
-    class window_surface;
-
     /// Private Renderer API (used in vulkan_renderer.cpp) ///
     class renderer_internal
     {
@@ -28,7 +25,8 @@ namespace rnjin::graphics::vulkan
 
         void initialize();
         void clean_up();
-        void add_window_target( window<GLFW>& target );
+        void wait_for_device_idle() const;
+        void register_window_target( window<GLFW>& target );
 
         void render( const render_view& view );
 
@@ -38,6 +36,7 @@ namespace rnjin::graphics::vulkan
 
         private: // accessors
         let& get_vulkan_instance get_value( api_instance.internal->instance.vulkan_instance );
+        let& get_render_pass get_value( window_target.get_render_pass() );
 
         private: // members
         api& api_instance;
@@ -69,7 +68,7 @@ namespace rnjin::graphics::vulkan
         }
         device;
 
-        list<window_surface> window_targets;
+        window_surface window_target{ *this };
         resource_database resources{ *this };
 
         friend class window_surface;

@@ -33,7 +33,7 @@ namespace rnjin
         {
             spirv.clear();
 
-            check_error_condition( return, graphics_log_errors, not has_glsl(), "Can't compile shader without GLSL (\1)", get_name() );
+            check_error_condition( return, graphics_log_errors, not has_glsl(), "Can't compile shader without GLSL ('\1')", get_name() );
 
             shaderc::Compiler compiler;
             shaderc_shader_kind shader_kind;
@@ -53,7 +53,7 @@ namespace rnjin
                 default:
                 {
                     let invalid_shader_type = true;
-                    check_error_condition( return, graphics_log_errors, invalid_shader_type == true, "Invalid shader type for compilation (\1)", get_name() );
+                    check_error_condition( return, graphics_log_errors, invalid_shader_type == true, "Invalid shader type for compilation ('\1')", get_name() );
                     break;
                 }
             }
@@ -63,7 +63,7 @@ namespace rnjin
 
             if ( success )
             {
-                graphics_log_verbose.print( "Compiled GLSL to SPIR-V (\1: \2 warnings)", get_name(), result.GetNumWarnings() );
+                graphics_log_verbose.print( "Compiled GLSL to SPIR-V ('\1': \2 warnings)", get_name(), result.GetNumWarnings() );
                 for ( const spirv_char code : result )
                 {
                     spirv.push_back( code );
@@ -71,7 +71,7 @@ namespace rnjin
             }
             else
             {
-                graphics_log_errors.print_error( "Failed to compile GLSL to SPIR-V (\1: \2 errors)", get_name(), result.GetNumErrors() );
+                graphics_log_errors.print_error( "Failed to compile GLSL to SPIR-V ('\1': \2 errors)", get_name(), result.GetNumErrors() );
                 graphics_log_errors << "\n" << result.GetErrorMessage();
             }
         }

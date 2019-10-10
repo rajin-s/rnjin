@@ -26,8 +26,9 @@ namespace rnjin
             };
 
             public: // methods
-            shader( const string& name, const type shader_type );
             shader();
+            shader( const string& name, const type shader_type );
+            
             ~shader();
 
             text_resource& get_glsl_resource();

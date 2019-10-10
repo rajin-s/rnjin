@@ -22,47 +22,31 @@ namespace rnjin::graphics::vulkan
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan renderer initialization" );
 
-        let has_window_targets = window_targets.size() > 0;
-        if ( has_window_targets )
-        {
-            let& reference_surface = window_targets[0].get_vulkan_surface();
-            create_device( &reference_surface );
+        let& reference_surface = window_target.get_vulkan_surface();
+        create_device( &reference_surface );
 
-            check_error_condition( return, vulkan_log_errors, device.initialized == false, "Vulkan device wasn't successfully initialized" );
+        check_error_condition( return, vulkan_log_errors, device.initialized == false, "Vulkan device wasn't successfully initialized" );
 
-            for ( auto& target : window_targets )
-            {
-                target.create_swapchain();
-                target.create_render_pass();
-                target.create_frame_buffers();
-                target.create_command_buffers();
-                target.initialize_synchronization();
-            }
-        }
-        else
-        {
-            vulkan_log_verbose.print_warning( "Renderer initialized without window target(s), will not support presentation" );
-            create_device( nullptr );
-        }
+        window_target.initialize();
+        resources.initialize();
     }
 
     void renderer_internal::clean_up()
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan renderer cleanup" );
 
-        // Wait for all current rendering operations to be finished before freeing resources
-        device.vulkan_device.waitIdle();
+        // Wait for all pending operations to complete before cleaning up resources
+        // (so no structures are destroyed while in use by command buffers)
+        wait_for_device_idle();
 
-        for ( auto& target : window_targets )
-        {
-            target.destroy_pipelines();
-            target.destroy_synchronization();
-            target.destroy_frame_buffers();
-            target.destroy_render_pass();
-            target.destroy_swapchain();
-            target.destroy_surface();
-        }
+        resources.clean_up();
+        window_target.clean_up();
         destroy_device();
+    }
+
+    void renderer_internal::wait_for_device_idle() const
+    {
+        device.vulkan_device.waitIdle();
     }
 
     /***********************************
@@ -138,10 +122,7 @@ namespace rnjin::graphics::vulkan
 
             // Get list of needed extensions
             list<const char*> enabled_extensions( required_device_extensions.begin(), required_device_extensions.end() );
-            if ( require_present )
-            {
-                enabled_extensions.insert( enabled_extensions.end(), device_present_extensions.begin(), device_present_extensions.end() );
-            }
+            if ( require_present ) { enabled_extensions.insert( enabled_extensions.end(), device_present_extensions.begin(), device_present_extensions.end() ); }
 
             // Create logical device
             vk::DeviceCreateInfo create_info(
@@ -160,10 +141,7 @@ namespace rnjin::graphics::vulkan
             const uint queue_index = 0;
             device.queue.graphics  = device.vulkan_device.getQueue( device.queue.family_index.graphics, queue_index );
 
-            if ( device.queue.family_index.present >= 0 )
-            {
-                device.queue.present = device.vulkan_device.getQueue( device.queue.family_index.present, queue_index );
-            }
+            if ( device.queue.family_index.present >= 0 ) { device.queue.present = device.vulkan_device.getQueue( device.queue.family_index.present, queue_index ); }
         }
 
         // Create command pool
@@ -207,28 +185,16 @@ namespace rnjin::graphics::vulkan
                 let supports_compute  = family.queueFlags & vk::QueueFlagBits::eCompute;
                 let supports_present  = surface != nullptr and physical_device.getSurfaceSupportKHR( i, *surface );
 
-                if ( supports_graphics and queue.family_index.graphics < 0 )
-                {
-                    queue.family_index.graphics = i;
-                }
-                if ( supports_present and queue.family_index.present < 0 )
-                {
-                    queue.family_index.present = i;
-                }
-                if ( supports_compute and queue.family_index.compute < 0 )
-                {
-                    queue.family_index.compute = i;
-                }
+                if ( supports_graphics and queue.family_index.graphics < 0 ) { queue.family_index.graphics = i; }
+                if ( supports_present and queue.family_index.present < 0 ) { queue.family_index.present = i; }
+                if ( supports_compute and queue.family_index.compute < 0 ) { queue.family_index.compute = i; }
             }
 
             let found_graphics = queue.family_index.graphics >= 0;
             let found_present  = queue.family_index.present >= 0;
             let found_compute  = queue.family_index.compute >= 0;
 
-            if ( found_graphics and found_compute and ( surface == nullptr or found_present ) )
-            {
-                break;
-            }
+            if ( found_graphics and found_compute and ( surface == nullptr or found_present ) ) { break; }
         }
     }
 
@@ -262,18 +228,9 @@ namespace rnjin::graphics::vulkan
                 let supports_compute  = family.queueFlags & vk::QueueFlagBits::eCompute;
                 let supports_present  = surface != nullptr and device.getSurfaceSupportKHR( i, *surface );
 
-                if ( supports_graphics )
-                {
-                    support.graphics = true;
-                }
-                if ( supports_compute )
-                {
-                    support.compute = true;
-                }
-                if ( supports_present )
-                {
-                    support.present = true;
-                }
+                if ( supports_graphics ) { support.graphics = true; }
+                if ( supports_compute ) { support.compute = true; }
+                if ( supports_present ) { support.present = true; }
             }
         }
 
@@ -286,10 +243,7 @@ namespace rnjin::graphics::vulkan
         set<string> unsupported_extensions;
 
         vulkan_log_verbose.print( "\1 required extension(s)", required_device_extensions.size() );
-        for ( uint i : range( required_device_extensions.size() ) )
-        {
-            unsupported_extensions.insert( string( required_device_extensions[i] ) );
-        }
+        for ( uint i : range( required_device_extensions.size() ) ) { unsupported_extensions.insert( string( required_device_extensions[i] ) ); }
 
         // Required presentation-specific extensions if needed
         if ( require_present )
@@ -309,10 +263,7 @@ namespace rnjin::graphics::vulkan
 
         // Report extension support information
         let unsupported_extension_count = unsupported_extensions.size();
-        if ( unsupported_extension_count == 0 )
-        {
-            vulkan_log_verbose.print_additional( "All extensions supported" );
-        }
+        if ( unsupported_extension_count == 0 ) { vulkan_log_verbose.print_additional( "All extensions supported" ); }
         else
         {
             vulkan_log_errors.print_additional( "\1 unsupported extensions", unsupported_extension_count );

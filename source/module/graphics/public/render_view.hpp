@@ -7,7 +7,8 @@
 #pragma once
 
 #include "graphics.hpp"
-#include "shader.hpp"
+#include "mesh.hpp"
+#include "material.hpp"
 
 namespace rnjin
 {
@@ -17,20 +18,25 @@ namespace rnjin
         // A render_view should be translatable to rendering commands for any API
         class render_view
         {
-            private:
+            private: // structures
             struct item
             {
-                const shader& vertex_shader;
-                const shader& fragment_shader;
-
-                const list<float3>& vertices;
-                const list<int>& indices;
+                item( const mesh& mesh_resource, const material& material_resource ) : pass_member( mesh_resource ), pass_member( material_resource ){};
+                const mesh& mesh_resource;
+                const material& material_resource;
             };
 
-            list<item> items;
+            public: // methods
+            void add_item( const mesh& mesh_resource, const material& material_resource )
+            {
+                items.emplace_back( mesh_resource, material_resource );
+            }
 
-            public:
+            public: // accessors
             let& get_items get_value( items );
+
+            private: // members
+            list<item> items;
         };
     } // namespace graphics
 } // namespace rnjin

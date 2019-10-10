@@ -4,245 +4,115 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "render_view.hpp"
 #include "vulkan_renderer_internal.hpp"
 #include "vulkan_window_surface.hpp"
 
 namespace rnjin::graphics::vulkan
 {
-    /**************************
-     * Creation / Destruction *
-     **************************/
-    window_surface::window_surface( const renderer_internal& parent ) : child_class( parent )
+    // Create an uninitialized window surface that has a reference to its parent renderer
+    window_surface::window_surface( const renderer_internal& parent ) : render_target( parent )
     {
         vulkan_log_verbose.print_additional( "Created Vulkan window surface" );
     }
+    // Destroy an uninitialized window surface
+    // note: clean_up should have already been called
     window_surface::~window_surface()
     {
         vulkan_log_verbose.print_additional( "Destroyed Vulkan window surface" );
     }
 
-    /*************
-     * Rendering *
-     *************/
-    struct test_vertex
-    {
-        float2 position;
-        float3 color;
+    /// Rendering
 
-        static const vk::VertexInputBindingDescription get_binding_description()
+    // Perform draw calls based on a provided render_view
+    // note: all pre-draw-call optimization should happen during
+    //       render_view generation, as this just blindly iterates
+    //       over all elements.
+    void window_surface::render( const render_view& view )
+    {
+        let static no_fence = vk::Fence();
+        let static timeout  = std::numeric_limits<uint64_t>::max();
+        let& device         = parent.device.vulkan_device;
+
+        // Acquire next swapchain element, respecting synchronization
+        let frame_synchronization = swapchain.synchronization.get_current_frame_info();
+
+        // Wait for the current frame to be finished (no longer in flight from a previous render call)
+        device.waitForFences( 1, &frame_synchronization.in_flight, true, timeout );
+
+        // Get the next image from the swapchain
+        let acquired_image = device.acquireNextImageKHR( swapchain.vulkan_swapchain, timeout, frame_synchronization.image_available, no_fence );
+
+        // Detect and handle resizing (skip this render call)
+        if ( acquired_image.result == vk::Result::eErrorOutOfDateKHR )
         {
-            return vk::VertexInputBindingDescription(
-                0,                           // binding
-                sizeof( test_vertex ),       // stride
-                vk::VertexInputRate::eVertex // inputRate
-            );
+            handle_out_of_date_swapchain();
+            return;
         }
 
-        static const vk::VertexInputAttributeDescription* get_attribute_descriptions()
+        // Mark the current frame as in flight and get swapchain element data
+        device.resetFences( 1, &frame_synchronization.in_flight );
+        let next_image_index    = acquired_image.value;
+        auto& swapchain_element = swapchain.elements[next_image_index];
+
+        // Begin the current frame's command buffer
+        tracked_subregion( vulkan_log_verbose, "Begin command buffer" )
         {
-            static const vk::VertexInputAttributeDescription descriptions[] = {
-                vk::VertexInputAttributeDescription(
-                    0,                                // location
-                    0,                                // binding
-                    vk::Format::eR32G32Sfloat,        // format
-                    offsetof( test_vertex, position ) // offset
-                    ),
-                vk::VertexInputAttributeDescription(
-                    1,                             // location
-                    0,                             // binding
-                    vk::Format::eR32G32B32Sfloat,  // format
-                    offsetof( test_vertex, color ) // offset
-                    ),
+            let begin_info = begin_frame_info{
+                render_pass,                    // render_pass
+                swapchain_element.frame_buffer, // frame_buffer
+                swapchain.image_size,           // image_size
+                true,                           // clear
+                vk::ClearValue()                // clear_value
             };
-
-            return descriptions;
-        }
-    };
-
-    uint test_find_memory_type( vk::PhysicalDevice device, uint type_filter, vk::MemoryPropertyFlags properties )
-    {
-        vk::PhysicalDeviceMemoryProperties memory_properties = device.getMemoryProperties();
-        for ( uint i : range( memory_properties.memoryTypeCount ) )
-        {
-            bool pass_filter     = type_filter & ( 1 << i );
-            bool same_properties = ( memory_properties.memoryTypes[i].propertyFlags & properties ) == properties;
-
-            if ( pass_filter and same_properties )
-            {
-                return i;
-            }
+            begin_frame( begin_info, swapchain_element.command_buffer );
         }
 
-        const bool failed_to_find_value = true;
-        check_error_condition( return 0, vulkan_log_errors, failed_to_find_value == true, "Failed to find a suitable memory type" );
-    }
-
-    static vk::DeviceMemory test_vertex_buffer_memory;
-    static vk::Buffer test_vertex_buffer;
-
-    void window_surface::render()
-    {
-        static shader test_vertex_shader( "TestVertexShader", shader::type::vertex );
-        static shader test_fragment_shader( "TestFragmentShader", shader::type::fragment );
-        static vk::Pipeline test_pipeline;
-
-        let static test_vertices = {
-            test_vertex{ { 0.0, -0.5 }, { 1.0, 1.0, 0.0 } }, //
-            test_vertex{ { 0.5, 0.5 }, { 0.0, 1.0, 1.0 } },  //
-            test_vertex{ { -0.5, 0.5 }, { 0.0, 1.0, 1.0 } }, //
-        };
-
-        if ( not test_pipeline )
+        // Do draw calls
+        tracked_subregion( vulkan_log_verbose, "Record command buffer" )
         {
-            let task = vulkan_log_verbose.track_scope( "Test pipeline creation" );
-
-            test_vertex_shader.set_glsl( // VERTEX
-                "#version 450\n"
-                "#extension GL_ARB_separate_shader_objects : enable\n"
-                "\n"
-                "layout(location = 0) in vec2 inPosition;\n"
-                "layout(location = 1) in vec3 inColor;\n"
-                "\n"
-                "layout(location = 0) out vec3 fragColor;\n"
-                "\n"
-                "void main() {\n"
-                "    gl_Position = vec4(inPosition, 0.0, 1.0);\n"
-                "    fragColor = inColor;\n"
-                "}\n" );
-            test_fragment_shader.set_glsl( // FRAGMENT
-                "#version 450\n"
-                "#extension GL_ARB_separate_shader_objects : enable\n"
-                "layout(location = 0) in vec3 fragColor;\n"
-                "layout(location = 0) out vec4 outColor;\n"
-                "void main() {\n"
-                "    outColor = vec4(fragColor, 1.0);\n"
-                "}\n" //
-            );
-
-            test_vertex_shader.compile();
-            test_fragment_shader.compile();
-
-            let pipeline_id = create_pipeline( test_vertex_shader, test_fragment_shader );
-            test_pipeline   = pipelines[pipeline_id].vulkan_pipeline;
-
-            vk::BufferCreateInfo buffer_info(
-                {},                                           // flags
-                sizeof( test_vertex ) * test_vertices.size(), // size
-                vk::BufferUsageFlagBits::eVertexBuffer,       // usage
-                vk::SharingMode::eExclusive                   // sharingMode
-            );
-
-            let& device        = parent.device.vulkan_device;
-            test_vertex_buffer = device.createBuffer( buffer_info );
-
-            let memory_requirements = device.getBufferMemoryRequirements( test_vertex_buffer );
-            vk::MemoryAllocateInfo allocate_info(
-                memory_requirements.size, // allocationSize
-                test_find_memory_type( parent.device.physical_device, memory_requirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent ) // memoryTypeIndex
-            );
-            test_vertex_buffer_memory = device.allocateMemory( allocate_info );
-            device.bindBufferMemory( test_vertex_buffer, test_vertex_buffer_memory, 0 );
-
-            void* data;
-            device.mapMemory( test_vertex_buffer_memory, 0, buffer_info.size, {}, &data );
-            memcpy( data, test_vertices.begin(), buffer_info.size );
-            device.unmapMemory( test_vertex_buffer_memory );
-        }
-
-        check_error_condition( return, vulkan_log_errors, not test_pipeline, "Test pipeline is invalid" );
-
-        tracked_subregion( vulkan_log_verbose, "Submit Vulkan command buffer" ) // acquire next image and submit appropriate command buffer
-        {
-            let static no_fence = vk::Fence();                          // Null handle to specify that no fence should be used for a call
-            let static timeout  = std::numeric_limits<uint64_t>::max(); // max value to sepcify no timeout for function calls
-
-            let& device = parent.device.vulkan_device;
-
-            // Get semaphores for current frame in flight
-            let& image_available = swapchain.synchronization.frames[swapchain.synchronization.current_frame].image_available;
-            let& render_finished = swapchain.synchronization.frames[swapchain.synchronization.current_frame].render_finished;
-            let& in_flight       = swapchain.synchronization.frames[swapchain.synchronization.current_frame].in_flight;
-
-            // Wait for the current frame to be available (not in flight)
-            device.waitForFences( 1, &in_flight, true, timeout );
-
-            // Get the next image from the swapchain
-            let next_image = device.acquireNextImageKHR( swapchain.vulkan_swapchain, timeout, image_available, no_fence );
-
-            // Detect and handle resizing (don't render anything)
-            if ( next_image.result == vk::Result::eErrorOutOfDateKHR )
+            // TODO: Support instance batching
+            foreach ( item : view.get_items() )
             {
-                handle_out_of_date_swapchain();
-                return;
-            }
+                let& mesh_data     = parent.resources.get_mesh_data( item.mesh_resource.get_id() );
+                let& material_data = parent.resources.get_material_data( item.material_resource.get_id() );
 
-            // Mark the current frame as in flight
-            device.resetFences( 1, &in_flight );
+                check_error_condition( continue, vulkan_log_errors, mesh_data.is_valid == false, "Can't draw without resource_database mesh data (id=\1)", item.mesh_resource.get_id() );
+                check_error_condition( continue, vulkan_log_errors, material_data.is_valid == false, "Can't draw without resource_database material data (id=\1)", item.mesh_resource.get_id() );
 
-            let next_image_index = next_image.value;
-            let& command_buffer  = swapchain.elements[next_image_index].command_buffer;
-
-            subregion // Record command buffer
-            {
-                let& frame_buffer = swapchain.elements[next_image_index].frame_buffer;
-
-                const vk::CommandBufferBeginInfo begin_info(
-                    {},     // flags
-                    nullptr // pInheritanceInfo
-                );
-
-                const vk::ClearValue clear_value;
-
-                const vk::Rect2D render_area(
-                    vk::Offset2D(),                                                // offset
-                    vk::Extent2D( swapchain.image_size.x, swapchain.image_size.y ) // size
-                );
-
-                list<vk::Viewport> viewports = {
-                    vk::Viewport( 0.0, 0.0, swapchain.image_size.x, swapchain.image_size.y, 0.0, 1.0 ) //
+                let draw_info = draw_call_info{
+                    mesh_data.vertex_buffer, // vertex_buffer
+                    mesh_data.index_buffer,  // index_buffer
+                    material_data.pipeline,  // pipeline
+                    mesh_data.vertex_count,  // vertex_count
+                    mesh_data.index_count,   // index_count
                 };
-
-                static const list<vk::Buffer> vertex_buffers{ test_vertex_buffer };
-                static const list<vk::DeviceSize> offsets{ 0 };
-
-                vk::RenderPassBeginInfo render_pass_info(
-                    render_pass,  // renderPass
-                    frame_buffer, // framebuffer
-                    render_area,  // renderArea
-                    1,            // clearValueCount
-                    &clear_value  // pClearValues
-                );
-
-                command_buffer.begin( begin_info );
-                command_buffer.beginRenderPass( render_pass_info, vk::SubpassContents::eInline );
-                command_buffer.bindPipeline( vk::PipelineBindPoint::eGraphics, test_pipeline );
-
-                command_buffer.setViewport( 0, viewports );
-                command_buffer.setScissor( 0, render_area );
-
-                command_buffer.bindVertexBuffers( 0, vertex_buffers, offsets );
-                command_buffer.draw( test_vertices.size(), 1, 0, 0 );
-
-                command_buffer.endRenderPass();
-                command_buffer.end();
+                draw( draw_info, swapchain_element.command_buffer );
             }
+        }
 
-            const vk::Semaphore submit_wait_semaphores[]   = { image_available };
-            const vk::Semaphore submit_signal_semaphores[] = { render_finished };
+        // End the current frame's command buffer
+        tracked_subregion( vulkan_log_verbose, "End command buffer" )
+        {
+            end_frame( swapchain_element.command_buffer );
+        }
 
-            const vk::PipelineStageFlags wait_stages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+        // Submit the current frame's command buffer
+        tracked_subregion( vulkan_log_verbose, "Submit Vulkan command buffer" )
+        {
+            const vk::Semaphore submit_wait_semaphores[]   = { frame_synchronization.image_available };
+            const vk::Semaphore submit_signal_semaphores[] = { frame_synchronization.render_finished };
+            const vk::PipelineStageFlags wait_stages[]     = { { vk::PipelineStageFlagBits::eColorAttachmentOutput } };
 
             vk::SubmitInfo submit_info(
-                1,                       // waitSemaphoreCount
-                submit_wait_semaphores,  // pWaitSemaphores
-                wait_stages,             // pWaitDstStageMask
-                1,                       // commandBufferCount
-                &command_buffer,         // pCommandBuffers
-                1,                       // signalSemaphoreCount
-                submit_signal_semaphores // pSignalSemaphores
+                1,                                 // waitSemaphoreCount
+                submit_wait_semaphores,            // pWaitSemaphores
+                wait_stages,                       // pWaitDstStageMask
+                1,                                 // commandBufferCount
+                &swapchain_element.command_buffer, // pCommandBuffers
+                1,                                 // signalSemaphoreCount
+                submit_signal_semaphores           // pSignalSemaphores
             );
-            parent.device.queue.graphics.submit( 1, &submit_info, in_flight );
+            parent.device.queue.graphics.submit( 1, &submit_info, frame_synchronization.in_flight );
 
             vk::SwapchainKHR swapchains[] = { swapchain.vulkan_swapchain };
             vk::PresentInfoKHR present_info(
@@ -264,14 +134,13 @@ namespace rnjin::graphics::vulkan
             }
 
             // Advance to next frame in flight
-            swapchain.synchronization.current_frame = ( swapchain.synchronization.current_frame + 1 ) % swapchain.synchronization.max_frames_in_flight;
+            swapchain.synchronization.advance_frame();
         }
     }
 
-    /***************************************
-     * Vulkan structure initialization     *
-     * (called from internal::initialize() *
-     ***************************************/
+    // Create a Vulkan surface object from the provided window
+    // note: this is called before initialization, as having a surface
+    //       is useful for the renderer to pick the best physical device
     void window_surface::create_surface( window<GLFW>& target )
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan window surface initialization" );
@@ -283,6 +152,27 @@ namespace rnjin::graphics::vulkan
         let create_surface_result = glfwCreateWindowSurface( instance, target.get_api_window(), nullptr, (VkSurfaceKHR*) &vulkan_surface );
 
         check_error_condition( return, vulkan_log_errors, create_surface_result != VK_SUCCESS, "Failed to create Vulkan surface from GLFW window" );
+    }
+
+    // note: called from renderer_internal::initialize()
+    void window_surface::initialize()
+    {
+        create_swapchain();
+        create_render_pass();
+        create_frame_buffers();
+        create_command_buffers();
+        initialize_synchronization();
+    }
+
+    // note: called from renderer_internal::clean_up()
+    void window_surface::clean_up()
+    {
+        // destroy_pipelines();
+        destroy_synchronization();
+        destroy_frame_buffers();
+        destroy_render_pass();
+        destroy_swapchain();
+        destroy_surface();
     }
 
     void window_surface::create_swapchain()
@@ -310,12 +200,10 @@ namespace rnjin::graphics::vulkan
 
         // Don't exceed the maximum image count
         swapchain.image_count = capabilities.minImageCount + 1;
-        if ( capabilities.maxImageCount > 0 and swapchain.image_count > capabilities.maxImageCount )
-        {
-            swapchain.image_count = capabilities.maxImageCount;
-        }
+        if ( capabilities.maxImageCount > 0 and swapchain.image_count > capabilities.maxImageCount ) { swapchain.image_count = capabilities.maxImageCount; }
 
-        uint queue_indices[] = { parent.device.queue.family_index.graphics, parent.device.queue.family_index.present };
+        // note: queue indices have already been checked to ensure they're non-negative
+        uint queue_indices[] = { (uint) parent.device.queue.family_index.graphics, (uint) parent.device.queue.family_index.present };
 
         // Try to be concurrent by default
         vk::SharingMode sharing_mode  = vk::SharingMode::eConcurrent;
@@ -476,10 +364,7 @@ namespace rnjin::graphics::vulkan
         let command_buffers = parent.device.vulkan_device.allocateCommandBuffers( allocate_info );
         check_error_condition( return, vulkan_log_errors, command_buffers.empty(), "Failed to create Vulkan command buffers" );
 
-        for ( uint i : range( swapchain.image_count ) )
-        {
-            swapchain.elements[i].command_buffer = command_buffers[i];
-        }
+        for ( uint i : range( swapchain.image_count ) ) { swapchain.elements[i].command_buffer = command_buffers[i]; }
     }
 
     void window_surface::initialize_synchronization()
@@ -502,194 +387,6 @@ namespace rnjin::graphics::vulkan
         }
 
         swapchain.synchronization.current_frame = 0;
-    }
-
-    uint window_surface::create_pipeline( const shader& vertex_shader, const shader& fragment_shader )
-    {
-        static const uint invalid_pipeline_id = ~0;
-
-        let task = vulkan_log_verbose.track_scope( "Vulkan pipeline creation" );
-
-        const uint next_index      = pipelines.size();
-        pipeline_info& result      = pipelines.emplace_back();
-        vk::PipelineLayout& layout = result.layout;
-        vk::Pipeline& pipeline     = result.vulkan_pipeline;
-
-        let& device = parent.device.vulkan_device;
-
-        // Get shader binaries from shaders
-        // note: has_spirv() should be checked before getting here
-        let& vertex_shader_binary   = vertex_shader.get_spirv();
-        let& fragment_shader_binary = fragment_shader.get_spirv();
-
-        // Get shader bytecode for each stage
-        vk::ShaderModuleCreateInfo vertex_shader_info(
-            {},                                                         // flags
-            vertex_shader_binary.size() * sizeof( shader::spirv_char ), // codeSize
-            vertex_shader_binary.data()                                 // pCode
-        );
-        vk::ShaderModuleCreateInfo fragment_shader_info(
-            {},                                                           // flags
-            fragment_shader_binary.size() * sizeof( shader::spirv_char ), // codeSize
-            fragment_shader_binary.data()                                 // pCode
-        );
-
-        // Create vulkan shader modules
-        // note: these will be cleaned up automatically since they're made with a createUnique call
-        let vertex_shader_module   = device.createShaderModuleUnique( vertex_shader_info );
-        let fragment_shader_module = device.createShaderModuleUnique( fragment_shader_info );
-
-        check_error_condition( return invalid_pipeline_id, vulkan_log_errors, not vertex_shader_module, "Failed to create vertex shader module from shader '\1'", vertex_shader.get_name() );
-        check_error_condition( return invalid_pipeline_id, vulkan_log_errors, not fragment_shader_module, "Failed to create vertex shader module from shader '\1'", fragment_shader.get_name() );
-
-        vk::PipelineShaderStageCreateInfo vertex_shader_stage_info(
-            {},                               // flags
-            vk::ShaderStageFlagBits::eVertex, // stage
-            *vertex_shader_module,            // module
-            "main",                           // pName
-            nullptr                           // pSpecializationInfo
-        );
-        vk::PipelineShaderStageCreateInfo fragment_shader_stage_info(
-            {},                                 // flags
-            vk::ShaderStageFlagBits::eFragment, // stage
-            *fragment_shader_module,            // module
-            "main",                             // pName
-            nullptr                             // pSpecializationInfo
-        );
-
-        vk::PipelineShaderStageCreateInfo shader_stages[] = { vertex_shader_stage_info, fragment_shader_stage_info };
-
-        let binding_description    = test_vertex::get_binding_description();
-        let attribute_descriptions = test_vertex::get_attribute_descriptions();
-
-        vk::PipelineVertexInputStateCreateInfo vertex_input_info(
-            {},                    // flags
-            1,                     // vertexBindingDescriptionCount
-            &binding_description,  // pVertexBindingDescriptions
-            2,                     // vertexAttributeDescriptionCount
-            attribute_descriptions // pVertexAttributeDescriptions
-        );
-
-        vk::PipelineInputAssemblyStateCreateInfo input_assembly(
-            {},                                   // flags
-            vk::PrimitiveTopology::eTriangleList, // topology
-            false                                 // primitiveRestartEnable
-        );
-
-        let viewport_size = swapchain.image_size;
-        vk::Viewport viewport(
-            0.0,             // x
-            0.0,             // y
-            viewport_size.x, // width
-            viewport_size.y, // height
-            0.0,             // minDepth
-            1.0              // maxDepth
-        );
-        vk::Rect2D scissor(
-            vk::Offset2D( 0, 0 ),                            // offset
-            vk::Extent2D( viewport_size.x, viewport_size.y ) // extent
-        );
-        vk::PipelineViewportStateCreateInfo viewport_state(
-            {},        // flags
-            1,         // viewportCount
-            &viewport, // pViewports
-            1,         // scissorCount
-            &scissor   // pScissors
-        );
-
-        vk::PipelineRasterizationStateCreateInfo rasterizer(
-            {},                          // flags
-            false,                       // depthClampEnable
-            false,                       // rasterizerDiscardEnable
-            vk::PolygonMode::eFill,      // polygonMode
-            vk::CullModeFlagBits::eBack, // cullMode
-            vk::FrontFace::eClockwise,   // frontFace
-            false,                       // depthBiasEnable
-            0.0,                         // depthBiasConstantFactor
-            0.0,                         // depthBiasClamp
-            0.0,                         // depthBiasSlopeFactor
-            1.0                          // lineWidth
-        );
-
-        vk::PipelineMultisampleStateCreateInfo multisampling(
-            {},                          // flags
-            vk::SampleCountFlagBits::e1, // rasterizationSamples
-            false,                       // sampleShadingEnable
-            1.0,                         // minSampleShading
-            nullptr,                     // pSampleMask
-            false,                       // alphaToCoverageEnable
-            false                        // alphaToOneEnable
-        );
-
-        let color_write_all = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
-        vk::PipelineColorBlendAttachmentState color_blend_attachment(
-            false,                  // blendEnable
-            vk::BlendFactor::eOne,  // srcColorBlendFactor
-            vk::BlendFactor::eZero, // dstColorBlendFactor
-            vk::BlendOp::eAdd,      // colorBlendOp
-            vk::BlendFactor::eOne,  // srcAlphaBlendFactor
-            vk::BlendFactor::eZero, // dstAlphaBlendFactor
-            vk::BlendOp::eAdd,      // alphaBlendOp
-            color_write_all         // colorWriteMask
-        );
-
-        vk::PipelineColorBlendStateCreateInfo color_blending(
-            {},                      // flags
-            false,                   // logicOpEnable
-            vk::LogicOp::eCopy,      // logicOp
-            1,                       // attachmentCount
-            &color_blend_attachment, // pAttachments
-            { 0.0, 0.0, 0.0, 0.0 }   // blendConstants
-        );
-
-        // Dynamic state???
-
-        vk::PipelineLayoutCreateInfo pipeline_layout_info(
-            {},      // flags
-            0,       // setLayoutCount
-            nullptr, // pSetLayouts
-            0,       // pushConstantRangeCount
-            nullptr  // pPushConstantRanges
-        );
-
-        layout = device.createPipelineLayout( pipeline_layout_info );
-        check_error_condition( return invalid_pipeline_id, vulkan_log_errors, not layout, "Failed to create Vulkan pipeline layout" );
-
-        vulkan_log_verbose.print_additional( "Created pipeline layout" );
-
-        static let pipeline_dynamic = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
-        vk::PipelineDynamicStateCreateInfo dynamic_state(
-            {},                      // flags
-            pipeline_dynamic.size(), // dynamicStateCount
-            pipeline_dynamic.begin() // pDynamicStates
-        );
-
-        // Create pipeline
-        vk::GraphicsPipelineCreateInfo graphics_pipeline_info(
-            {},                 // flags
-            2,                  // stageCount
-            shader_stages,      // pStages
-            &vertex_input_info, // pVertexInputState
-            &input_assembly,    // pInputAssemblyState
-            nullptr,            // pTessellationState
-            &viewport_state,    // pViewportState
-            &rasterizer,        // pRasterizationState
-            &multisampling,     // pMultisampleState
-            nullptr,            // pDepthStencilState
-            &color_blending,    // pColorBlendState
-            &dynamic_state,     // pDynamicState
-            layout,             // layout
-            render_pass         // renderPass
-                                // subpass            = 0
-                                // basePipelineHandle = null
-                                // basePipelineIndex  = 0
-        );
-
-        pipeline = device.createGraphicsPipelines( vk::PipelineCache(), { graphics_pipeline_info } )[0];
-        check_error_condition( return invalid_pipeline_id, vulkan_log_errors, not pipeline, "Failed to create Vulkan pipeline" );
-
-        vulkan_log_verbose.print_additional( "Created graphics pipeline (id: \1)", next_index );
-        return next_index;
     }
 
     /***************************
@@ -744,20 +441,20 @@ namespace rnjin::graphics::vulkan
         }
     }
 
-    void window_surface::destroy_pipelines()
-    {
-        let task = vulkan_log_verbose.track_scope( "Vulkan pipeline cleanup" );
+    // void window_surface::destroy_pipelines()
+    // {
+    //     let task = vulkan_log_verbose.track_scope( "Vulkan pipeline cleanup" );
 
-        let& device = parent.device.vulkan_device;
-        foreach ( pipeline : pipelines )
-        {
-            device.destroyPipeline( pipeline.vulkan_pipeline );
-            device.destroyPipelineLayout( pipeline.layout );
-        }
+    //     let& device = parent.device.vulkan_device;
+    //     foreach ( pipeline : pipelines )
+    //     {
+    //         device.destroyPipeline( pipeline.vulkan_pipeline );
+    //         device.destroyPipelineLayout( pipeline.layout );
+    //     }
 
-        device.destroyBuffer( test_vertex_buffer );
-        device.freeMemory( test_vertex_buffer_memory );
-    }
+    //     device.destroyBuffer( test_vertex_buffer );
+    //     device.freeMemory( test_vertex_buffer_memory );
+    // }
 
     /********************************
      * Vulkan structure re-creation *
@@ -800,10 +497,7 @@ namespace rnjin::graphics::vulkan
         // Find a common easy-to-use format
         foreach ( format : available_formats )
         {
-            if ( format.format == vk::Format::eB8G8R8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear )
-            {
-                return format;
-            }
+            if ( format.format == vk::Format::eB8G8R8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear ) { return format; }
         }
 
         // Default to first format
@@ -819,10 +513,7 @@ namespace rnjin::graphics::vulkan
         // See if any of the available present modes are triple buffered, or if immediate is needed
         foreach ( present_mode : available_present_modes )
         {
-            if ( present_mode == vk::PresentModeKHR::eMailbox )
-            {
-                return present_mode;
-            }
+            if ( present_mode == vk::PresentModeKHR::eMailbox ) { return present_mode; }
             else if ( present_mode == vk::PresentModeKHR::eImmediate )
             {
                 fallback = present_mode;

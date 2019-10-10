@@ -43,6 +43,7 @@ namespace rnjin
 
             public: // accessors
             inline let get_id get_value( unique_id );
+            let& get_path get_value( file_path );
             let has_file get_value( not file_path.empty() );
 
             protected:

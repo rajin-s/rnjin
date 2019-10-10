@@ -6,17 +6,24 @@
 
 #pragma once
 
-#include "vulkan_renderer_internal.hpp"
+#include "glfw.hpp"
+#include "vulkan_render_target.hpp"
 
 namespace rnjin::graphics::vulkan
 {
-    class window_surface : child_class<const renderer_internal>
+    class window_surface : public render_target
     {
         public: // methods
         window_surface( const renderer_internal& parent );
         ~window_surface();
 
-        void create_surface( window<GLFW>& reference_window );
+        void create_surface( window<GLFW>& target );
+
+        void initialize();
+        void render( const render_view& view );
+        void clean_up();
+
+        protected: // methods
         void destroy_surface();
 
         void create_swapchain();
@@ -33,16 +40,15 @@ namespace rnjin::graphics::vulkan
         void initialize_synchronization();
         void destroy_synchronization();
 
-        uint create_pipeline( const shader& vertex_shader, const shader& fragment_shader );
-        void destroy_pipelines();
-
-        void render();
+        // uint create_pipeline( const shader& vertex_shader, const shader& fragment_shader );
+        // void destroy_pipelines();
 
         void handle_out_of_date_swapchain();
         void handle_resize( const uint2 new_size );
 
         public: // accessors
         let& get_vulkan_surface get_value( vulkan_surface );
+        let& get_render_pass get_value( render_pass );
 
         private: // members
         uint2 window_size;
@@ -52,14 +58,14 @@ namespace rnjin::graphics::vulkan
 
         vk::RenderPass render_pass;
 
-        struct pipeline_info
-        {
-            vk::PipelineLayout layout;
-            vk::Pipeline vulkan_pipeline;
-        };
-        list<pipeline_info> pipelines;
+        // struct pipeline_info
+        // {
+        //     vk::PipelineLayout layout;
+        //     vk::Pipeline vulkan_pipeline;
+        // };
+        // list<pipeline_info> pipelines;
 
-        group
+        group swapchain_info
         {
             vk::SwapchainKHR vulkan_swapchain;
             vk::SurfaceFormatKHR format;
@@ -79,6 +85,16 @@ namespace rnjin::graphics::vulkan
                     vk::Semaphore render_finished;
                     vk::Fence in_flight;
                 };
+
+                const frame_info& get_current_frame_info() const
+                {
+                    return frames[current_frame];
+                }
+
+                void advance_frame() nonconst
+                {
+                    current_frame = ( current_frame + 1 ) % max_frames_in_flight;
+                }
 
                 list<frame_info> frames;
             }

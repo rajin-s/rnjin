@@ -29,7 +29,7 @@ namespace rnjin::graphics::vulkan
     void renderer::add_target( window<GLFW>& target )
     {
         vulkan_log_verbose.print( "Bind GLFW window to Vulkan renderer" );
-        internal->add_window_target( target );
+        internal->register_window_target( target );
     }
 
     void renderer::render( const render_view& view )
