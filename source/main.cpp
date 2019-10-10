@@ -18,18 +18,26 @@
 
 #include "console.hpp"
 
+#include "primitives.hpp"
+
 using namespace rnjin;
 using namespace rnjin::core;
 
 static bool window_enabled = false;
+
 void main( int argc, char* argv[] )
 {
-    list<string> args( argc - 1 );
-    for ( uint i : range( 1, argc ) )
+
+
+    subregion // parse command line arguments
     {
-        args[i - 1] = string( argv[i] );
+        list<string> args( argc - 1 );
+        for ( uint i : range( 1, argc ) )
+        {
+            args[i - 1] = string( argv[i] );
+        }
+        console::parse_arguments( args );
     }
-    console::parse_arguments( args );
 
     if ( window_enabled )
     {
@@ -52,9 +60,28 @@ void main( int argc, char* argv[] )
                 vk_renderer.add_target( main_window );
                 vk_renderer.initialize();
             }
+
+            debug_checkpoint( log::main );
+            graphics::mesh new_cube = graphics::primitives::cube( 0.25 );
+            new_cube.set_path( "test/cube.mesh" );
+            new_cube.save();
+
+            graphics::shader test_vertex   = graphics::shader( "Test Vertex Shader", shader::type::vertex );
+            graphics::shader test_fragment = graphics::shader( "Test Fragment Shader", shader::type::fragment );
+            test_vertex.set_glsl( io::file( "test/test_vsh.glsl", io::file::mode::read ).read_all_text() );
+            test_fragment.set_glsl( io::file( "test/test_fsh.glsl", io::file::mode::read ).read_all_text() );
+            test_vertex.compile();
+            test_fragment.compile();
+
+            graphics::material new_material = graphics::material( "Test Material", test_vertex, test_fragment );
+            new_material.set_path( "test/new.material" );
+            new_material.save();
+
             debug_checkpoint( log::main );
 
             render_view test_view;
+            test_view.add_item( new_cube, new_material );
+
             bool do_render = false;
             while ( not glfwWindowShouldClose( main_window.get_api_window() ) )
             {
