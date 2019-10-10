@@ -2,6 +2,22 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Engine (Windows)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}\\build\\rnjin.exe",
+            "symbolSearchPath": "${workspaceRoot}\\build;C:\\Program Files (x86)\\Microsoft Visual Studio 14.0",
+            "externalConsole": false,
+            "logging": {
+                "moduleLoad": false,
+                "trace": true
+            },
+            "cwd": "${workspaceRoot}\\build",
+            "args": ["-af", "params\\gfx-test"]
+            // "visualizerFile": "${workspaceRoot}/my.natvis",
+            // "showDisplayString": true
+        }
+        {
             "name": "Tests (Windows)",
             "type": "cppvsdbg",
             "request": "launch",
