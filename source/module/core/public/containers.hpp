@@ -16,8 +16,9 @@
 namespace rnjin
 {
     // numeric types
-    using byte = uint8_t;
-    using uint = uint32_t;
+    using byte  = uint8_t;
+    using uint  = uint32_t;
+    using usize = std::size_t;
 
     using uint64 = uint64_t;
     using uint16 = uint16_t;
