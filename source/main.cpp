@@ -53,6 +53,12 @@ void main( int argc, char* argv[] )
 
         ecs::test_system sys;
         sys.test_update();
+        
+        // test_system is defined on { component_a, component_b }
+        // so it will only iterate over entities with both component types (in order of ID)
+        // expected output:
+        //      test_system: (4, 5.5) <- ent2
+        //      test_system: (8, 9.5) <- ent4
     }
 
     if ( window_enabled )
