@@ -56,6 +56,10 @@ class test_system : public ecs::system<read_from<component_a>, write_to<componen
         let bar = components.readable<component_a>().bar;
         let foo = components.writable<component_b>().foo;
 
+        // Invalid, since the system is only defined on read_from<component_a>
+        // this will generate a type error at compile-time
+        // let& write_a = components.writable<component_a>();
+
         log::main.print( "test_system: (\1, \2)", bar, foo );
     }
 };

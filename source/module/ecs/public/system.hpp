@@ -12,6 +12,8 @@
 
 namespace rnjin::ecs
 {
+    // Wrapper type for constant references to component data
+    // note: used in system template specialization (system<read_from<T>, ...>)
     template <typename component_type>
     struct read_from
     {
@@ -19,6 +21,8 @@ namespace rnjin::ecs
         const component_type& source;
     };
 
+    // Wrapper type for mutable references to component data
+    // note: used in system template specialization (system<write_to<T>, ...>)
     template <typename component_type>
     struct write_to
     {
@@ -26,6 +30,10 @@ namespace rnjin::ecs
         nonconst component_type& destination;
     };
 
+    // Base class to derive new systems from
+    // note: systems are defined on the set of components they work with, tagged
+    //       with read_from<T> or write_to<T> depending on how each component needs
+    //       to be accessed (ex. my_system : public system<read_from<my_component>, write_to<other_component>>)
     template <typename... accessor_types>
     class system
     {
@@ -104,7 +112,8 @@ namespace rnjin::ecs
 
         private: // helpers
         // Terminal case (no accessors left)
-        // note: could still have invalid template parameters, but that should already error elsewhere
+        // note: could still have invalid template parameters (not read_from or write_to), but that
+        //       should already give an error elsewhere
         template <typename... Ts>
         struct entity_iterator
         {
@@ -191,6 +200,8 @@ namespace rnjin::ecs
                 return false;
             }
 
+            // Go through each iterator and collect all current entries into an entity_components structure
+            // note: called on 'top-level' entity_iterator, calls get_next_append to aggregate references into final structure
             inline entity_components get_next()
             {
                 entity_components result = others.get_next_append( read_from( ( *component_iterator ).component_data ) );
@@ -198,6 +209,8 @@ namespace rnjin::ecs
                 return result;
             }
 
+            // Go through each remaining iterator and collect current entries into an entity_components structure
+            // note: called on 'child' entity_iterators from get_next in the 'top-level' one
             template <typename... Ts>
             inline entity_components get_next_append( Ts... previous )
             {
@@ -215,12 +228,14 @@ namespace rnjin::ecs
         template <typename T_first, typename... T_rest>
         struct entity_iterator<write_to<T_first>, T_rest...>
         {
+            // note: these lines vary between read_from and write_to cases
             entity_iterator() : component_iterator( T_first::get_mutable_iterator() ) {}
             mutable_iterator<typename component<T_first>::owned_component> component_iterator;
 
             // Move all iterators along until they are all at the same ID.
             // returns true if such an entry exists, false otherwise
-            // note: meant to only be called on the 'top-level' entity_iterator
+            // note: only called on the 'top-level' entity_iterator
+            // note: this method doesn't vary between read_from and write_to cases
             inline bool has_next()
             {
                 // Keep going in this iterator until it's invalid
@@ -253,7 +268,8 @@ namespace rnjin::ecs
 
             // Move all iterators forward until they match the target ID or we know they will never match
             // (points to higher ID, or is invalid). Returns true if all iterators were able to align, false otherwise
-            // note: meant to only be called on 'child' associated_iterators, called from has_next of the 'top-level'
+            // note: only called on 'child' entity_iterators, called from has_next of the 'top-level'
+            // note: this method doesn't vary between read_from and write_to cases
             inline bool has( entity::id target )
             {
                 while ( component_iterator.is_valid() )
@@ -281,6 +297,9 @@ namespace rnjin::ecs
                 return false;
             }
 
+            // Go through each iterator and collect all current entries into an entity_components structure
+            // note: called on 'top-level' entity_iterator, calls get_next_append to aggregate references into final structure
+            // note: this method varies between read_from and write_to cases
             inline entity_components get_next()
             {
                 entity_components result = others.get_next_append( write_to( ( *component_iterator ).component_data ) );
@@ -288,6 +307,9 @@ namespace rnjin::ecs
                 return result;
             }
 
+            // Go through each remaining iterator and collect current entries into an entity_components structure
+            // note: called on 'child' entity_iterators from get_next in the 'top-level' one
+            // note: this method varies between read_from and write_to cases
             template <typename... Ts>
             inline entity_components get_next_append( Ts... previous )
             {
