@@ -301,17 +301,4 @@ namespace rnjin::ecs
             associated_iterator<T_rest...> others;
         };
     };
-
-    class test_system : public system<read_from<component_a>, write_to<component_b>>
-    {
-        void define() {}
-        void initialize() {}
-        void update( entity_components& components )
-        {
-            let bar = components.get_read<component_a>().bar;
-            let foo = components.get_write<component_b>().foo;
-
-            log::main.print( "test_system: (\1, \2)", bar, foo );
-        }
-    };
 } // namespace rnjin::ecs

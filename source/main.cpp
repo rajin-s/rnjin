@@ -24,8 +24,41 @@
 
 using namespace rnjin;
 using namespace rnjin::core;
+using namespace rnjin::ecs;
 
 static bool window_enabled = false;
+
+component_class( component_a )
+{
+    public:
+    component_a( int bar ) : pass_member( bar ) {}
+    ~component_a() {}
+
+    int bar;
+};
+
+component_class( component_b )
+{
+    public:
+    component_b( float foo ) : pass_member( foo ) {}
+    ~component_b() {}
+
+    float foo;
+};
+
+class test_system : public ecs::system<read_from<component_a>, write_to<component_b>>
+{
+    void define() {}
+    void initialize() {}
+    
+    void update( entity_components& components )
+    {
+        let bar = components.get_read<component_a>().bar;
+        let foo = components.get_write<component_b>().foo;
+
+        log::main.print( "test_system: (\1, \2)", bar, foo );
+    }
+};
 
 void main( int argc, char* argv[] )
 {
@@ -43,15 +76,15 @@ void main( int argc, char* argv[] )
     {
         ecs::entity ent1, ent2, ent3, ent4;
 
-        ent3.add<ecs::component_a>( 6 );
-        ent2.add<ecs::component_a>( 4 );
-        ent4.add<ecs::component_a>( 8 );
+        ent3.add<component_a>( 6 );
+        ent2.add<component_a>( 4 );
+        ent4.add<component_a>( 8 );
 
-        ent1.add<ecs::component_b>( 7.5 );
-        ent2.add<ecs::component_b>( 5.5 );
-        ent4.add<ecs::component_b>( 9.5 );
+        ent1.add<component_b>( 7.5 );
+        ent2.add<component_b>( 5.5 );
+        ent4.add<component_b>( 9.5 );
 
-        ecs::test_system sys;
+        test_system sys;
         sys.test_update();
 
         // test_system is defined on { component_a, component_b }

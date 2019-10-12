@@ -152,22 +152,4 @@ namespace rnjin::ecs
     list<typename component<T>::owned_component> component<T>::components{};
 
 #define component_class( name ) class name : public component<name>
-
-    component_class( component_a )
-    {
-        public:
-        component_a( int bar ) : pass_member( bar ) {}
-        ~component_a() {}
-
-        int bar;
-    };
-
-    component_class( component_b )
-    {
-        public:
-        component_b( float foo ) : pass_member( foo ) {}
-        ~component_b() {}
-
-        float foo;
-    };
 } // namespace rnjin::ecs
