@@ -43,17 +43,17 @@ void main( int argc, char* argv[] )
     {
         ecs::entity ent1, ent2, ent3, ent4;
 
-        ecs::component_a::add_to( ent3, 6 );
-        ecs::component_a::add_to( ent2, 4 );
-        ecs::component_a::add_to( ent4, 8 );
-        
-        ecs::component_b::add_to( ent1, 7.5 );
-        ecs::component_b::add_to( ent2, 5.5 );
-        ecs::component_b::add_to( ent4, 9.5 );
+        ent3.add<ecs::component_a>( 6 );
+        ent2.add<ecs::component_a>( 4 );
+        ent4.add<ecs::component_a>( 8 );
+
+        ent1.add<ecs::component_b>( 7.5 );
+        ent2.add<ecs::component_b>( 5.5 );
+        ent4.add<ecs::component_b>( 9.5 );
 
         ecs::test_system sys;
         sys.test_update();
-        
+
         // test_system is defined on { component_a, component_b }
         // so it will only iterate over entities with both component types (in order of ID)
         // expected output:

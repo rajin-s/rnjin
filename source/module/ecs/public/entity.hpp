@@ -20,6 +20,12 @@ namespace rnjin::ecs
         entity() {}
         ~entity() {}
 
+        template <typename component_type, typename... arg_types>
+        void add( arg_types... args )
+        {
+            component_type::add_to( *this, args... );
+        }
+
         public: // accessors
         let get_id get_value( entity_id );
 
