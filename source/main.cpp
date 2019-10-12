@@ -53,8 +53,8 @@ class test_system : public ecs::system<read_from<component_a>, write_to<componen
 
     void update( entity_components& components )
     {
-        let bar = components.get_read<component_a>().bar;
-        let foo = components.get_write<component_b>().foo;
+        let bar = components.readable<component_a>().bar;
+        let foo = components.writable<component_b>().foo;
 
         log::main.print( "test_system: (\1, \2)", bar, foo );
     }

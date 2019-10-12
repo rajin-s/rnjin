@@ -40,7 +40,7 @@ namespace rnjin::ecs
             // Get a constant reference to the collection member of type T
             // note: will fail type checking if the system is not defined on read_from<T>
             template <typename T>
-            const T& get_read()
+            const T& readable()
             {
                 let& accessor = std::get<get_tuple_index_by_type<read_from<T>, 0, accessor_types...>::index>( accessors );
                 return accessor.source;
@@ -49,7 +49,7 @@ namespace rnjin::ecs
             // Get a mutable reference to the collection member of type T
             // note: will fail type checking if the system is not defined on write_to<T>
             template <typename T>
-            nonconst T& get_write()
+            nonconst T& writable()
             {
                 let& accessor = std::get<get_tuple_index_by_type<write_to<T>, 0, accessor_types...>::index>( accessors );
                 return accessor.destination;
