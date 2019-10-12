@@ -22,6 +22,7 @@
 #include "bitmask.hpp"
 #include "math.hpp"
 #include "event.hpp"
+#include "guid.hpp"
 
 // macros
 #include "macro.hpp"
