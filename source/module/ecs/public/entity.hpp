@@ -26,6 +26,12 @@ namespace rnjin::ecs
             component_type::add_to( *this, args... );
         }
 
+        template <typename component_type>
+        void remove()
+        {
+            component_type::remove_from( *this );
+        }
+
         public: // accessors
         let get_id get_value( entity_id );
 

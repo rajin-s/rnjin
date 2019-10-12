@@ -50,7 +50,7 @@ class test_system : public ecs::system<read_from<component_a>, write_to<componen
 {
     void define() {}
     void initialize() {}
-    
+
     void update( entity_components& components )
     {
         let bar = components.get_read<component_a>().bar;
@@ -85,6 +85,9 @@ void main( int argc, char* argv[] )
         ent4.add<component_b>( 9.5 );
 
         test_system sys;
+        sys.test_update();
+
+        ent2.remove<component_b>();
         sys.test_update();
 
         // test_system is defined on { component_a, component_b }

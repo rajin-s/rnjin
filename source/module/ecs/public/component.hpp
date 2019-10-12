@@ -14,7 +14,22 @@ namespace rnjin::ecs
     template <typename T>
     class component
     {
-        public: // methods
+        public: // structures
+        class owned_component
+        {
+            public: // methods
+            owned_component( const entity::id& owner_id, const T& component_data ) : pass_member( owner_id ), pass_member( component_data ) {}
+            ~owned_component() {}
+
+            public: // members, accessors
+            T component_data;
+            let get_owner_id get_value( owner_id );
+
+            private: // members
+            entity::id owner_id;
+        };
+
+        public: // static methods
         // Create a new component, adding it to the components global listing of all instances
         // note: constructs and copies the component into `components` since constructing in-place
         //       isn't possible with the intermediate `owned_component` struct
@@ -75,62 +90,60 @@ namespace rnjin::ecs
 
             return components.back().component_data;
         }
+
         static void remove_from( const entity& owner )
         {
             let owner_id = owner.get_id();
 
-            // perform a binary search to find the index associated with the entity
-            uint start = 0;
-            uint end   = components.size();
-            while ( start != end - 1 )
+            // No components have been registered yet
+            if ( components.empty() )
             {
-                let middle    = start + ( end - start ) / 2;
-                let middle_id = components.at( middle ).get_owner_id();
-                if ( owner_id < middle_id )
+                // TODO: emit warning
+            }
+            // New component is at end of list
+            // note: would be handled by binary search below, but this is a common case that can be easily optimized
+            else if ( owner_id == components.back().get_owner_id() )
+            {
+                components.pop_back();
+            }
+            // New component is somewhere in the list, perform a
+            // binary search to get the appropriate location to remove
+            else
+            {
+                // such that the `components` list remains sorted by owner IDs
+                uint start = 0;
+                uint end   = components.size();
+                while ( start != end )
                 {
-                    // continue search in left side
-                    end = middle;
+                    let middle    = start + ( end - start ) / 2;
+                    let middle_id = components.at( middle ).get_owner_id();
+                    if ( owner_id < middle_id )
+                    {
+                        // continue search in left side
+                        end = middle;
+                    }
+                    else if ( owner_id > middle_id )
+                    {
+                        // continue search in right side
+                        start = middle + 1;
+                    }
+                    else
+                    {
+                        start = middle;
+                        break;
+                    }
                 }
-                else if ( owner_id > middle_id )
+
+                if ( owner_id == components.at( start ).get_owner_id() )
                 {
-                    // continue search in right side
-                    start = middle;
+                    components.erase( components.begin() + start );
                 }
                 else
                 {
-                    // a match has been found
-                    break;
+                    // TODO: emit warning
                 }
             }
-
-            // Make sure we actually found the correct entity
-            if ( owner_id == components.at( start ).owner_id )
-            {
-                // Remove the component associated with the entity
-                components.erase( components.begin() + start );
-            }
-            else
-            {
-                // TODO: emit a warning message
-            }
         }
-
-        public: // structures
-        class owned_component
-        {
-            public: // methods
-            owned_component( const entity::id& owner_id, const T& component_data ) : pass_member( owner_id ), pass_member( component_data ) {}
-            ~owned_component() {}
-
-            public: // members, accessors
-            T component_data;
-            let get_owner_id get_value( owner_id );
-
-            private: // members
-            entity::id owner_id;
-        };
-
-        public: // static methods
         // Get an iterator over all components associated with entities using constant references
         static const_iterator<owned_component> get_const_iterator()
         {
