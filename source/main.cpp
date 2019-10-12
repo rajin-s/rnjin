@@ -68,8 +68,8 @@ void main( int argc, char* argv[] )
 
             graphics::shader test_vertex   = graphics::shader( "Test Vertex Shader", shader::type::vertex );
             graphics::shader test_fragment = graphics::shader( "Test Fragment Shader", shader::type::fragment );
-            test_vertex.set_glsl( io::file( "test/test_vsh.glsl", io::file::mode::read ).read_all_text() );
-            test_fragment.set_glsl( io::file( "test/test_fsh.glsl", io::file::mode::read ).read_all_text() );
+            test_vertex.set_glsl( io::file( "shaders/test_vsh.glsl", io::file::mode::read ).read_all_text() );
+            test_fragment.set_glsl( io::file( "shaders/test_fsh.glsl", io::file::mode::read ).read_all_text() );
             test_vertex.compile();
             test_fragment.compile();
 
