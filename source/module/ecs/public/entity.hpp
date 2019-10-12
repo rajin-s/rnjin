@@ -17,7 +17,12 @@ namespace rnjin::ecs
 
         public: // methods
         entity() {}
-        ~entity() {}
+        ~entity()
+        {
+            // TODO: when an entity is destroyed, all it's associated components
+            //       should be destroyed as well. Currently components will remain
+            //       active and systems will act on them, since they only require an ID
+        }
 
         // Add a component to this entity
         // note: actually forwards call to component::add_to, since

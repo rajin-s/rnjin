@@ -97,7 +97,10 @@ namespace rnjin::ecs
 
         protected: // methods
         template <typename system_type>
-        void depends_on(){};
+        void depends_on()
+        {
+            // TODO: Handle dependency graph generation between systems that rely on the output of other systems
+        }
 
         public:
         // Call `update` method on all groupings of entity-owned components that this system operates on
