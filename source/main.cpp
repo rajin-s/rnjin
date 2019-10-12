@@ -20,6 +20,8 @@
 
 #include "primitives.hpp"
 
+#include "ecs.hpp"
+
 using namespace rnjin;
 using namespace rnjin::core;
 
@@ -27,8 +29,6 @@ static bool window_enabled = false;
 
 void main( int argc, char* argv[] )
 {
-
-
     subregion // parse command line arguments
     {
         list<string> args( argc - 1 );
@@ -37,6 +37,22 @@ void main( int argc, char* argv[] )
             args[i - 1] = string( argv[i] );
         }
         console::parse_arguments( args );
+    }
+
+    subregion
+    {
+        ecs::entity ent1, ent2, ent3, ent4;
+
+        ecs::component_a::add_to( ent3, 6 );
+        ecs::component_a::add_to( ent2, 4 );
+        ecs::component_a::add_to( ent4, 8 );
+        
+        ecs::component_b::add_to( ent1, 7.5 );
+        ecs::component_b::add_to( ent2, 5.5 );
+        ecs::component_b::add_to( ent4, 9.5 );
+
+        ecs::test_system sys;
+        sys.test_update();
     }
 
     if ( window_enabled )

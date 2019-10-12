@@ -127,6 +127,7 @@ namespace rnjin
             return bitmask( 0u );
         }
 
+        // TODO: fix memory leak
         const char* bitmask::toString( const char set, const char unset ) const
         {
             const size_t n = sizeof( value_type ) * 8;

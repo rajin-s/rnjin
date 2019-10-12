@@ -7,230 +7,167 @@
 #pragma once
 
 #include "core.hpp"
+#include "entity.hpp"
 
 namespace rnjin::ecs
 {
     template <typename T>
-    class component_base
+    class component
     {
         public: // methods
+        // Create a new component, adding it to the components global listing of all instances
+        // note: constructs and copies the component into `components` since constructing in-place
+        //       isn't possible with the intermediate `owned_component` struct
         template <typename... arg_types>
-        static const T& create( arg_types... args )
+        static T& add_to( const entity& owner, arg_types... args )
         {
-            data.emplace_back( args... );
-            return data.back();
+            let owner_id       = owner.get_id();
+            let component_data = T( args... );
+
+            // No components have been registered yet
+            if ( components.empty() )
+            {
+                components.push_back( owned_component( owner_id, component_data ) );
+            }
+            // New component should go at end of list
+            // note: would be handled by binary search below, but this is a common case that can be easily optimized
+            else if ( owner_id > components.back().get_owner_id() )
+            {
+                components.push_back( owned_component( owner_id, component_data ) );
+            }
+            // New component goes somewhere in the list, perform a
+            // binary search to get the appropriate location to insert
+            else
+            {
+                // such that the `components` list remains sorted by owner IDs
+                uint start = 0;
+                uint end   = components.size();
+                while ( start != end )
+                {
+                    let middle    = start + ( end - start ) / 2;
+                    let middle_id = components.at( middle ).get_owner_id();
+                    if ( owner_id < middle_id )
+                    {
+                        // continue search in left side
+                        end = middle;
+                    }
+                    else if ( owner_id > middle_id )
+                    {
+                        // continue search in right side
+                        start = middle + 1;
+                    }
+                    else
+                    {
+                        // ID is equal to some other id (ie the same component is added to an entity twice)
+                        // this isn't allowed, but continue and notify the user
+                        start = middle;
+
+                        let owner_id_already_exists = true;
+                        // TODO: fix includes to get error checking working
+                        // check_error_condition( pass, ecs_log_errors, owner_id_already_exists == true, "Can't add multiple instances of the same component to entity (\1)", owner_id );
+
+                        break;
+                    }
+                }
+
+                components.insert( components.begin() + start, owned_component( owner_id, component_data ) );
+            }
+
+            return components.back().component_data;
+        }
+        static void remove_from( const entity& owner )
+        {
+            let owner_id = owner.get_id();
+
+            // perform a binary search to find the index associated with the entity
+            uint start = 0;
+            uint end   = components.size();
+            while ( start != end - 1 )
+            {
+                let middle    = start + ( end - start ) / 2;
+                let middle_id = components.at( middle ).get_owner_id();
+                if ( owner_id < middle_id )
+                {
+                    // continue search in left side
+                    end = middle;
+                }
+                else if ( owner_id > middle_id )
+                {
+                    // continue search in right side
+                    start = middle;
+                }
+                else
+                {
+                    // a match has been found
+                    break;
+                }
+            }
+
+            // Make sure we actually found the correct entity
+            if ( owner_id == components.at( start ).owner_id )
+            {
+                // Remove the component associated with the entity
+                components.erase( components.begin() + start );
+            }
+            else
+            {
+                // TODO: emit a warning message
+            }
         }
 
-        protected:
-        static list<T> data;
+        public: // structures
+        class owned_component
+        {
+            public: // methods
+            owned_component( const entity::id& owner_id, const T& component_data ) : pass_member( owner_id ), pass_member( component_data ) {}
+            ~owned_component() {}
+
+            public: // members, accessors
+            T component_data;
+            let get_owner_id get_value( owner_id );
+
+            private: // members
+            entity::id owner_id;
+        };
+
+        public: // static methods
+        // Get an iterator over all components associated with entities using constant references
+        static const_iterator<owned_component> get_const_iterator()
+        {
+            return const_iterator<owned_component>( components );
+        }
+
+        // Get an iterator over all components associated with entities using mutable references
+        static mutable_iterator<owned_component> get_mutable_iterator()
+        {
+            return mutable_iterator<owned_component>( components );
+        }
+
+        protected: // static members
+        // A contiguous array storing component data for efficient iteration
+        static list<owned_component> components;
     };
 
-    class test_component : component_base<test_component>
+    template <typename T>
+    list<typename component<T>::owned_component> component<T>::components{};
+
+#define component_class( name ) class name : public component<name>
+
+    component_class( component_a )
     {
         public:
-        test_component( float foo, int bar ) : pass_member( foo ), pass_member( bar ) {}
-        ~test_component();
+        component_a( int bar ) : pass_member( bar ) {}
+        ~component_a() {}
 
-        float foo;
         int bar;
     };
 
-    // class entity;
+    component_class( component_b )
+    {
+        public:
+        component_b( float foo ) : pass_member( foo ) {}
+        ~component_b() {}
 
-    // template <typename data_type>
-    // class component
-    // {
-    //     public: // methods
-    //     component( const entity& owner ) : pass_member( owner )
-    //     {
-    //         id = component::data.get_next_id();
-    //         ownership.add_new_owned_component( owner, this );
-    //     }
-    //     ~component()
-    //     {
-    //         component::data.invalidate( id );
-    //         ownership.remove_owned_component( owner );
-    //     }
-
-    //     public: // accessors
-    //     let& get_data get_value( data.get_data( id ) );
-
-    //     private: // members
-    //     const entity& owner;
-    //     uint id;
-
-    //     public: // static methods
-    //     component* owned_by( const entity& owner )
-    //     {
-    //         return component::ownership.get_component_owned_by( owner );
-    //     }
-
-    //     private: // static members
-    //     static group
-    //     {
-    //         public: // methods
-    //         void add_new_owned_component( const entity& owner, component* new_component )
-    //         {
-    //             let owner_id = owner.get_id();
-
-    //             // TODO: check includes to allow error checking
-    //             // check_error_condition( pass, ecs_log_errors, owned_components.count( owner_id ) > 0, "Adding multiple components of the same type to a single owner is not supported" );
-
-    //             owned_components.insert( owner_id, new_component );
-    //         }
-
-    //         void remove_owned_component( const entity& owner )
-    //         {
-    //             let owner_id = owner.get_id();
-
-    //             // TODO: check includes to allow error checking
-    //             // check_error_condition( pass, ecs_log_errors, owned_components.count( owner_id ) > 0, "Trying to remove component without valid owner" );
-
-    //             owned_components.erase( owner_id );
-    //         }
-
-    //         component* get_component_owned_by( const entity& owner )
-    //         {
-    //             if ( owned_components.count( owner.get_id() ) == 0 )
-    //             {
-    //                 return nullptr;
-    //             }
-    //             else
-    //             {
-    //                 return owned_components.at( owner.get_id() );
-    //             }
-    //         }
-
-    //         private: // members
-    //         dictionary<uint, component*> owned_components;
-    //     }
-    //     ownership{};
-
-    //     static group
-    //     {
-    //         public: // methods
-    //         // Fetch the data associated with a component id
-    //         data_type& get_data( const uint id )
-    //         {
-    //             return entries[id].data;
-    //         }
-
-    //         // Get the index of the next available component data, which means
-    //         //      validated a previously invalidated data entry
-    //         //      creating a new (valid) data entry
-    //         uint get_next_id()
-    //         {
-    //             // Record that another live component has been created
-    //             // note: this could be called from the component constructor,
-    //             //       currently that is the only place get_next_id is called,
-    //             //       so it's effectively the same
-    //             record_component_created();
-
-    //             // Short-circuit if there aren't any invalid entries,
-    //             // inserting a new element and reallocating as needed
-    //             if ( next_invalid_entry == no_invalid_entry )
-    //             {
-    //                 uint result = entries.size();
-    //                 entries.emplace_back();
-
-    //                 return result;
-    //             }
-    //             else
-    //             {
-    //                 let result = next_invalid_entry;
-
-    //                 // Refresh the last found invalid entry
-    //                 data_entry& invalid_entry = entries[next_invalid_entry];
-    //                 invalid_entry.valid       = true;
-    //                 invalid_entry.data.reset();
-
-    //                 // Scan all entries, recording the next invalid one found
-    //                 bool found_invalid_entry = false;
-    //                 for ( uint i : range( entries.size() ) )
-    //                 {
-    //                     if ( not entries[i].valid )
-    //                     {
-    //                         found_invalid_entry = true;
-    //                         next_invalid_entry  = i;
-    //                         break;
-    //                     }
-    //                 }
-
-    //                 // If no other invalid elements were found, reset next_invalid_entry
-    //                 if ( not found_invalid_entry )
-    //                 {
-    //                     next_invalid_entry = no_invalid_entry;
-    //                 }
-
-    //                 return result;
-    //             }
-    //         }
-
-    //         // Mark the entry at index=id as invalid
-    //         void invalidate( const uint id )
-    //         {
-    //             entries[id].valid = false;
-    //             if ( next_invalid_entry == no_invalid_entry )
-    //             {
-    //                 next_invalid_entry = id;
-    //             }
-
-    //             // Record that a live component has been destroyed
-    //             // note: this could be called from the component destructor,
-    //             //       currently that is the only place invalidate is called,
-    //             //       so it's effectively the same
-    //             record_component_destroyed();
-    //         }
-
-    //         private: // methods
-    //         void record_component_created()
-    //         {
-    //             // Increment the total number of live components
-    //             live_count += 1;
-    //         }
-    //         void record_component_destroyed()
-    //         {
-    //             // Decrement the total number of live components
-    //             live_count -= 1;
-
-    //             // If there are less than zero live components, something has gone wrong
-    //             // TODO: check includes to allow error logging
-    //             // check_error_condition( pass, ecs_log_errors, live_count < 0, "More components have been destroyed than have been created" );
-
-    //             // Free memory if no live components remain
-    //             // note: otherwise, memory used by data would remain allocated forever
-    //             // note: this can probably be more dynamic, reallocating once half of the entries
-    //             //       are invalidated, etc...
-    //             if ( live_count <= 0 )
-    //             {
-    //                 clear_entries();
-    //             }
-    //         }
-
-    //         // Release memory used for all data entries
-    //         // note: called when all component instances are destroyed
-    //         void clear_entries()
-    //         {
-    //             entries.resize( 0 );
-    //         }
-
-    //         private: // members
-    //         struct data_entry
-    //         {
-    //             data_entry() : valid( true ), data_type() {}
-
-    //             bool valid;
-    //             data_type data;
-    //         };
-
-    //         // Number of components actively using data entries
-    //         int live_count = 0;
-
-    //         const uint no_invalid_entry = ~0;
-    //         uint next_invalid_entry     = no_invalid_entry;
-
-    //         list<data_entry> entries;
-    //     }
-    //     data{};
-    // };
+        float foo;
+    };
 } // namespace rnjin::ecs

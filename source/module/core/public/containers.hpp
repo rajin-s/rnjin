@@ -42,18 +42,125 @@ namespace rnjin
     class range
     {
         public:
-        range( const uint first, const uint limit ) : start_i( first ), end_i( limit ) {}
-        range( const uint limit ) : start_i( 0 ), end_i( limit ) {}
+        inline range( const uint first, const uint limit ) : start_i( first ), end_i( limit ) {}
+        inline range( const uint limit ) : start_i( 0 ), end_i( limit ) {}
 
-        range& begin();
-        range& end();
-        const uint operator*();
-        const bool operator!=( const range& other );
-        range& operator++();
+        inline range& begin()
+        {
+            return *this;
+        }
+        inline range& end()
+        {
+            return *this;
+        }
+        inline const uint operator*()
+        {
+            return start_i;
+        }
+        inline const bool operator!=( const range& other )
+        {
+            return start_i < end_i;
+        }
+        inline range& operator++()
+        {
+            start_i++;
+            return *this;
+        }
 
         private:
         uint start_i;
         const uint end_i;
+    };
+
+    // A Rust-style iterator object that can be used in a for loop
+    // ie. for(T& : iterator<T&>(T*, T*))
+    template <typename T>
+    class mutable_iterator
+    {
+        private: // types
+        using list_type          = list<T>;
+        using list_iterator_type = typename list<T>::iterator;
+
+        public: // methods
+        inline mutable_iterator( list_type& source ) : start_iterator( source.begin() ), end_iterator( source.end() ) {}
+        inline mutable_iterator& begin()
+        {
+            return *this;
+        }
+        inline mutable_iterator& end()
+        {
+            return *this;
+        }
+        inline T& operator*()
+        {
+            return *start_iterator;
+        }
+        inline const bool operator!=( const mutable_iterator& other )
+        {
+            return start_iterator != end_iterator;
+        }
+        inline mutable_iterator& operator++()
+        {
+            start_iterator++;
+            return *this;
+        }
+
+        inline bool is_valid()
+        {
+            return start_iterator != end_iterator;
+        }
+        inline void advance()
+        {
+            start_iterator++;
+        }
+
+        private:
+        list_iterator_type start_iterator;
+        const list_iterator_type end_iterator;
+    };
+    template <typename T>
+    class const_iterator
+    {
+        private: // types
+        using list_type          = list<T>;
+        using list_iterator_type = typename list<T>::iterator;
+
+        public: // methods
+        inline const_iterator( list_type& source ) : start_iterator( source.begin() ), end_iterator( source.end() ) {}
+        inline const_iterator& begin()
+        {
+            return *this;
+        }
+        inline const_iterator& end()
+        {
+            return *this;
+        }
+        inline const T& operator*()
+        {
+            return *start_iterator;
+        }
+        inline const bool operator!=( const const_iterator& other )
+        {
+            return start_iterator != end_iterator;
+        }
+        inline const_iterator& operator++()
+        {
+            start_iterator++;
+            return *this;
+        }
+
+        inline bool is_valid()
+        {
+            return start_iterator != end_iterator;
+        }
+        inline void advance()
+        {
+            start_iterator++;
+        }
+
+        private:
+        list_iterator_type start_iterator;
+        const list_iterator_type end_iterator;
     };
 
     template <typename T>

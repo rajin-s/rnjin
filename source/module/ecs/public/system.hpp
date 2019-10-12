@@ -15,23 +15,27 @@ namespace rnjin::ecs
     template <typename component_type>
     struct read_from
     {
-        const component_type& component;
+        read_from( const component_type& source ) : pass_member( source ) {}
+        const component_type& source;
     };
 
     template <typename component_type>
     struct write_to
     {
-        nonconst component_type& component;
+        write_to( nonconst component_type& destination ) : pass_member( destination ) {}
+        nonconst component_type& destination;
     };
 
     template <typename... accessor_types>
     class system
     {
         protected: // types
-        class component_collection
+        // A grouping of associated components this system operates on, accessible through access types (read_to, write_from)
+        // note: components are associated if they're owned by the same entity
+        class entity_components
         {
             public: // methods
-            component_collection( accessor_types... accessors ) : accessors( accessors... ) {}
+            entity_components( accessor_types... accessors ) : accessors( accessors... ) {}
 
             // Get a constant reference to the collection member of type T
             // note: will fail type checking if the system is not defined on read_from<T>
@@ -39,7 +43,7 @@ namespace rnjin::ecs
             const T& get_read()
             {
                 let& accessor = std::get<get_tuple_index_by_type<read_from<T>, 0, accessor_types...>::index>( accessors );
-                return accessor.component;
+                return accessor.source;
             }
 
             // Get a mutable reference to the collection member of type T
@@ -48,7 +52,7 @@ namespace rnjin::ecs
             nonconst T& get_write()
             {
                 let& accessor = std::get<get_tuple_index_by_type<write_to<T>, 0, accessor_types...>::index>( accessors );
-                return accessor.component;
+                return accessor.destination;
             }
 
             private: // members
@@ -81,17 +85,233 @@ namespace rnjin::ecs
         protected: // virtual methods
         virtual void define() is_abstract;
         virtual void initialize() is_abstract;
-        virtual void update_collection( component_collection& collection ) is_abstract;
+        virtual void update( entity_components& components ) is_abstract;
 
         protected: // methods
         template <typename system_type>
         void depends_on(){};
+
+        public:
+        void test_update()
+        {
+            associated_iterator<accessor_types...> iter;
+
+            while ( iter.has_next() )
+            {
+                auto bar = iter.get_next();
+                update( bar );
+            }
+        }
+
+        private: // helpers
+        // Terminal case (no accessors left)
+        // note: could still have invalid template parameters, but that should already error elsewhere
+        template <typename... Ts>
+        struct associated_iterator
+        {
+            // If we've gotten here, all parent iterators have returned true
+            inline bool has( entity::id target )
+            {
+                return true;
+            }
+
+            // All parent iterators have constructed parameters, so return the final structure
+            template <typename... Ts>
+            inline entity_components get_next_append( Ts... previous )
+            {
+                return entity_components( previous... );
+            }
+        };
+
+        template <typename T_first, typename... T_rest>
+        struct associated_iterator<read_from<T_first>, T_rest...>
+        {
+            associated_iterator() : component_iterator( T_first::get_const_iterator() ) {}
+            const_iterator<typename component<T_first>::owned_component> component_iterator;
+
+            // Move all iterators along until they are all at the same ID.
+            // returns true if such an entry exists, false otherwise
+            // note: meant to only be called on the 'top-level' associated_iterator
+            inline bool has_next()
+            {
+                // Keep going in this iterator until it's invalid
+                // TODO: short circuit if any other iterators become invalid
+                while ( component_iterator.is_valid() )
+                {
+                    // Get the current entry for this component access iterator
+                    let next_id = ( *component_iterator ).get_owner_id();
+
+                    // Advance other iterators as needed until a match is found or we know one won't be found
+                    // (other iterator points to a higher ID, or is invalid)
+                    bool others_have_id = others.has( next_id );
+
+                    if ( others_have_id )
+                    {
+                        // All other iterators have the same ID, so leave state as-is and return true
+                        return true;
+                    }
+                    else
+                    {
+                        // Other iterators don't have this ID, so advance this one and try the next entry
+                        // TODO: advance this iterator to the max position of others' iterators, since nothing between will be shared
+                        component_iterator.advance();
+                    }
+                }
+
+                // This iterator is invalid, so no other entries can exist as shared
+                return false;
+            }
+
+            // Move all iterators forward until they match the target ID or we know they will never match
+            // (points to higher ID, or is invalid). Returns true if all iterators were able to align, false otherwise
+            // note: meant to only be called on 'child' associated_iterators, called from has_next of the 'top-level'
+            inline bool has( entity::id target )
+            {
+                while ( component_iterator.is_valid() )
+                {
+                    let next_id = ( *component_iterator ).get_owner_id();
+
+                    if ( next_id == target )
+                    {
+                        // This iterator has aligned, so leave state as-is and check the next
+                        return others.has( target );
+                    }
+                    else if ( next_id > target )
+                    {
+                        // This iterator has passed the target, so leave state as-is and report that no alignment is possible
+                        return false;
+                    }
+                    else
+                    {
+                        // The target could still be found, so advance this iterator and repeat
+                        component_iterator.advance();
+                    }
+                }
+
+                // This iterator is invalid, so no alignment is possible
+                return false;
+            }
+
+            inline entity_components get_next()
+            {
+                entity_components result = others.get_next_append( read_from( ( *component_iterator ).component_data ) );
+                component_iterator.advance();
+                return result;
+            }
+
+            template <typename... Ts>
+            inline entity_components get_next_append( Ts... previous )
+            {
+                entity_components result = others.get_next_append( previous..., read_from( ( *component_iterator ).component_data ) );
+                component_iterator.advance();
+                return result;
+            }
+
+            private:
+            associated_iterator<T_rest...> others;
+        };
+
+        // note: virtually the same as above
+        // TODO: create a single base template that these can specialize, if possible
+        template <typename T_first, typename... T_rest>
+        struct associated_iterator<write_to<T_first>, T_rest...>
+        {
+            associated_iterator() : component_iterator( T_first::get_mutable_iterator() ) {}
+            mutable_iterator<typename component<T_first>::owned_component> component_iterator;
+
+            // Move all iterators along until they are all at the same ID.
+            // returns true if such an entry exists, false otherwise
+            // note: meant to only be called on the 'top-level' associated_iterator
+            inline bool has_next()
+            {
+                // Keep going in this iterator until it's invalid
+                // TODO: short circuit if any other iterators become invalid
+                while ( component_iterator.is_valid() )
+                {
+                    // Get the current entry for this component access iterator
+                    let next_id = ( *component_iterator ).get_owner_id();
+
+                    // Advance other iterators as needed until a match is found or we know one won't be found
+                    // (other iterator points to a higher ID, or is invalid)
+                    bool others_have_id = others.has( next_id );
+
+                    if ( others_have_id )
+                    {
+                        // All other iterators have the same ID, so leave state as-is and return true
+                        return true;
+                    }
+                    else
+                    {
+                        // Other iterators don't have this ID, so advance this one and try the next entry
+                        // TODO: advance this iterator to the max position of others' iterators, since nothing between will be shared
+                        component_iterator.advance();
+                    }
+                }
+
+                // This iterator is invalid, so no other entries can exist as shared
+                return false;
+            }
+
+            // Move all iterators forward until they match the target ID or we know they will never match
+            // (points to higher ID, or is invalid). Returns true if all iterators were able to align, false otherwise
+            // note: meant to only be called on 'child' associated_iterators, called from has_next of the 'top-level'
+            inline bool has( entity::id target )
+            {
+                while ( component_iterator.is_valid() )
+                {
+                    let next_id = ( *component_iterator ).get_owner_id();
+
+                    if ( next_id == target )
+                    {
+                        // This iterator has aligned, so leave state as-is and check the next
+                        return others.has( target );
+                    }
+                    else if ( next_id > target )
+                    {
+                        // This iterator has passed the target, so leave state as-is and report that no alignment is possible
+                        return false;
+                    }
+                    else
+                    {
+                        // The target could still be found, so advance this iterator and repeat
+                        component_iterator.advance();
+                    }
+                }
+
+                // This iterator is invalid, so no alignment is possible
+                return false;
+            }
+
+            inline entity_components get_next()
+            {
+                entity_components result = others.get_next_append( write_to( ( *component_iterator ).component_data ) );
+                component_iterator.advance();
+                return result;
+            }
+
+            template <typename... Ts>
+            inline entity_components get_next_append( Ts... previous )
+            {
+                entity_components result = others.get_next_append( previous..., write_to( ( *component_iterator ).component_data ) );
+                component_iterator.advance();
+                return result;
+            }
+
+            private:
+            associated_iterator<T_rest...> others;
+        };
     };
 
-    class test_system : system<read_from<test_component>>
+    class test_system : public system<read_from<component_a>, write_to<component_b>>
     {
         void define() {}
         void initialize() {}
-        void update_collection( component_collection& collection ) {}
+        void update( entity_components& components )
+        {
+            let bar = components.get_read<component_a>().bar;
+            let foo = components.get_write<component_b>().foo;
+
+            log::main.print( "test_system: (\1, \2)", bar, foo );
+        }
     };
 } // namespace rnjin::ecs

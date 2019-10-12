@@ -38,26 +38,4 @@ namespace rnjin
 
         return result;
     }
-
-    range& range::begin()
-    {
-        return *this;
-    }
-    range& range::end()
-    {
-        return *this;
-    }
-    const uint range::operator*()
-    {
-        return start_i;
-    }
-    const bool range::operator!=( const range& other )
-    {
-        return start_i < end_i;
-    }
-    range& range::operator++()
-    {
-        start_i++;
-        return *this;
-    }
 } // namespace rnjin
