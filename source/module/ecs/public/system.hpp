@@ -92,14 +92,13 @@ namespace rnjin::ecs
         void depends_on(){};
 
         public:
-        void test_update()
+        // Call `update` method on all groupings of entity-owned components that this system operates on
+        void update_all()
         {
-            associated_iterator<accessor_types...> iter;
-
-            while ( iter.has_next() )
+            entity_iterator<accessor_types...> all;
+            while ( all.has_next() )
             {
-                auto bar = iter.get_next();
-                update( bar );
+                update( all.get_next() );
             }
         }
 
@@ -107,7 +106,7 @@ namespace rnjin::ecs
         // Terminal case (no accessors left)
         // note: could still have invalid template parameters, but that should already error elsewhere
         template <typename... Ts>
-        struct associated_iterator
+        struct entity_iterator
         {
             // If we've gotten here, all parent iterators have returned true
             inline bool has( entity::id target )
@@ -124,14 +123,14 @@ namespace rnjin::ecs
         };
 
         template <typename T_first, typename... T_rest>
-        struct associated_iterator<read_from<T_first>, T_rest...>
+        struct entity_iterator<read_from<T_first>, T_rest...>
         {
-            associated_iterator() : component_iterator( T_first::get_const_iterator() ) {}
+            entity_iterator() : component_iterator( T_first::get_const_iterator() ) {}
             const_iterator<typename component<T_first>::owned_component> component_iterator;
 
             // Move all iterators along until they are all at the same ID.
             // returns true if such an entry exists, false otherwise
-            // note: meant to only be called on the 'top-level' associated_iterator
+            // note: meant to only be called on the 'top-level' entity_iterator
             inline bool has_next()
             {
                 // Keep going in this iterator until it's invalid
@@ -208,20 +207,20 @@ namespace rnjin::ecs
             }
 
             private:
-            associated_iterator<T_rest...> others;
+            entity_iterator<T_rest...> others;
         };
 
         // note: virtually the same as above
         // TODO: create a single base template that these can specialize, if possible
         template <typename T_first, typename... T_rest>
-        struct associated_iterator<write_to<T_first>, T_rest...>
+        struct entity_iterator<write_to<T_first>, T_rest...>
         {
-            associated_iterator() : component_iterator( T_first::get_mutable_iterator() ) {}
+            entity_iterator() : component_iterator( T_first::get_mutable_iterator() ) {}
             mutable_iterator<typename component<T_first>::owned_component> component_iterator;
 
             // Move all iterators along until they are all at the same ID.
             // returns true if such an entry exists, false otherwise
-            // note: meant to only be called on the 'top-level' associated_iterator
+            // note: meant to only be called on the 'top-level' entity_iterator
             inline bool has_next()
             {
                 // Keep going in this iterator until it's invalid
@@ -298,7 +297,7 @@ namespace rnjin::ecs
             }
 
             private:
-            associated_iterator<T_rest...> others;
+            entity_iterator<T_rest...> others;
         };
     };
 } // namespace rnjin::ecs
