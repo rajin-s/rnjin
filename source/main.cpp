@@ -90,6 +90,9 @@ void main( int argc, char* argv[] )
         ent2.remove<component_b>();
         sys.test_update();
 
+        ent4.remove<component_a>();
+        sys.test_update();
+
         // test_system is defined on { component_a, component_b }
         // so it will only iterate over entities with both component types (in order of ID)
         // expected output:
