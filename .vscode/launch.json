@@ -13,7 +13,8 @@
                 "trace": true
             },
             "cwd": "${workspaceRoot}\\build",
-            "args": ["-af", "params\\gfx-test"]
+            // "args": ["-af", "params\\gfx-test"]
+            "args": []
             // "visualizerFile": "${workspaceRoot}/my.natvis",
             // "showDisplayString": true
         }
