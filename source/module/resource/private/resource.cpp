@@ -11,13 +11,7 @@ namespace rnjin
 {
     namespace core
     {
-        resource::resource()
-        {
-            static id next_unique_id = 0;
-
-            next_unique_id += 1;
-            unique_id = next_unique_id;
-        }
+        resource::resource() {}
         resource::~resource() {}
 
         // Called from derived class write_data

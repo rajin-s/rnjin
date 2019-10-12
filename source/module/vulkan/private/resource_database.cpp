@@ -27,9 +27,11 @@ namespace rnjin::graphics::vulkan
             pipeline_cache = device.createPipelineCache( pipeline_cache_info );
         }
 
+        // Handle global mesh load/unload events
         this->handle_event( mesh::events.mesh_loaded(), &resource_database::on_mesh_loaded );
         this->handle_event( mesh::events.mesh_destroyed(), &resource_database::on_mesh_destroyed );
 
+        // Handle global material load/unload events
         this->handle_event( material::events.material_loaded(), &resource_database::on_material_loaded );
         this->handle_event( material::events.material_destroyed(), &resource_database::on_material_destroyed );
     }
@@ -43,13 +45,13 @@ namespace rnjin::graphics::vulkan
         {
             // Collect remaining mesh resource IDs
             let mesh_count = mesh_data.size();
-            list<resource::id> mesh_resource_ids( mesh_count );
 
-            uint i = 0;
+            list<resource::id> mesh_resource_ids;
+            mesh_resource_ids.resize( mesh_count );
+
             foreach ( entry : mesh_data )
             {
-                mesh_resource_ids[i] = entry.first;
-                i += 1;
+                mesh_resource_ids.emplace_back( entry.first );
             }
 
             // Release remaining mesh resources
@@ -63,13 +65,13 @@ namespace rnjin::graphics::vulkan
         {
             // Collect remaining material resource IDs
             let material_count = material_data.size();
-            list<resource::id> material_resource_ids( material_count );
 
-            uint i = 0;
+            list<resource::id> material_resource_ids;
+            material_resource_ids.resize( material_count );
+
             foreach ( entry : mesh_data )
             {
-                material_resource_ids[i] = entry.first;
-                i += 1;
+                material_resource_ids.emplace_back( entry.first );
             }
 
             // Release remaining material resources

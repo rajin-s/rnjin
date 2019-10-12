@@ -22,7 +22,7 @@
 #include "bitmask.hpp"
 #include "math.hpp"
 #include "event.hpp"
-#include "guid.hpp"
+#include "unique_id.hpp"
 
 // macros
 #include "macro.hpp"

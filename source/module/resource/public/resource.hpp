@@ -15,16 +15,8 @@ namespace rnjin
     {
         class resource
         {
-            public: // static methods
-            // Create a resource and immediately load it from a path
-            template <typename T>
-            static T load( const string& path )
-            {
-                T new_resource;
-                new_resource.file_path = path;
-                new_resource.force_reload();
-                return new_resource;
-            }
+            public: // types
+            using id = unique_id<resource>;
 
             public: // methods
             resource();
@@ -38,11 +30,8 @@ namespace rnjin
 
             void set_path( const string& new_path ); // Set the resource file path
 
-            public: // structures
-            using id = uint;
-
             public: // accessors
-            inline let get_id get_value( unique_id );
+            inline let get_id get_value( resource_id );
             let& get_path get_value( file_path );
             let has_file get_value( not file_path.empty() );
 
@@ -60,7 +49,18 @@ namespace rnjin
 
             private: // members
             string file_path;
-            id unique_id;
+            id resource_id;
+
+            public: // static methods
+            // Create a resource and immediately load it from a path
+            template <typename T>
+            static T load( const string& path )
+            {
+                T new_resource;
+                new_resource.file_path = path;
+                new_resource.force_reload();
+                return new_resource;
+            }
         };
     } // namespace core
 } // namespace rnjin
