@@ -102,6 +102,8 @@ void main( int argc, char* argv[] )
         // expected output:
         //      test_system: (4, 5.5) <- ent2
         //      test_system: (8, 9.5) <- ent4
+        //      test_system: (8, 9.5) <- ent4 (after removing component_b from ent2)
+        //      end                   <- no valid entities left after removing component_a from ent4
     }
 
     if ( window_enabled )
