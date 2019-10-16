@@ -93,7 +93,11 @@ namespace rnjin::ecs
         protected: // virtual methods
         virtual void define() is_abstract;
         virtual void initialize() is_abstract;
+
         virtual void update( entity_components& components ) is_abstract;
+        
+        virtual void before_update() {}
+        virtual void after_update() {}
 
         protected: // methods
         template <typename system_type>
@@ -106,11 +110,15 @@ namespace rnjin::ecs
         // Call `update` method on all groupings of entity-owned components that this system operates on
         void update_all()
         {
+            before_update();
+
             entity_iterator<accessor_types...> all;
             while ( all.has_next() )
             {
                 update( all.get_next() );
             }
+
+            after_update();
         }
 
         private: // helpers

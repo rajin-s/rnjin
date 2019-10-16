@@ -14,7 +14,25 @@ namespace rnjin::ecs
     template <typename T>
     class component
     {
-        public: // structures
+        private: // methods
+        void set_owner( const entity& owner )
+        {
+            owner_pointer = &owner;
+        }
+
+        public: // accessors
+        const entity& get_owner() const
+        {
+            const static entity invalid_owner{};
+            check_error_condition( return invalid_owner, ecs_log_errors, owner_pointer == nullptr, "Entity doesn't have a valid owner pointer" );
+
+            return *owner_pointer;
+        }
+
+        private: // members
+        const entity* owner_pointer;
+
+        public: // helper structures
         class owned_component
         {
             public: // methods
@@ -34,21 +52,28 @@ namespace rnjin::ecs
         // note: constructs and copies the component into `components` since constructing in-place
         //       isn't possible with the intermediate `owned_component` struct
         template <typename... arg_types>
-        static T& add_to( const entity& owner, arg_types... args )
+        static void add_to( const entity& owner, arg_types... args )
         {
-            let owner_id       = owner.get_id();
-            let component_data = T( args... );
+            let owner_id               = owner.get_id();
+            let_mutable component_data = T( args... );
+            component_data.set_owner( owner );
+
+            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) > 0, "Can't add multiple instances of the same component to an entity (\1)", owner_id );
 
             // No components have been registered yet
             if ( components.empty() )
             {
                 components.push_back( owned_component( owner_id, component_data ) );
+                // Potentially notify others that a component of type T has been added to an entity (after it is added)
+                component<T>::events.added().send( components.back().component_data, owner );
             }
             // New component should go at end of list
             // note: would be handled by binary search below, but this is a common case that can be easily optimized
             else if ( owner_id > components.back().get_owner_id() )
             {
                 components.push_back( owned_component( owner_id, component_data ) );
+                // Potentially notify others that a component of type T has been added to an entity (after it is added)
+                component<T>::events.added().send( components.back().component_data, owner );
             }
             // New component goes somewhere in the list, perform a
             // binary search to get the appropriate location to insert
@@ -73,44 +98,61 @@ namespace rnjin::ecs
                     }
                     else
                     {
-                        // ID is equal to some other id (ie the same component is added to an entity twice)
-                        // this isn't allowed, but continue and notify the user
+                        // ID is equal to some other id (ie the same component is added to an entity twice) this isn't allowed, but continue and notify the user
+                        // note: this case should already have been covered by an earlier check of the owners set
                         start = middle;
 
                         let owner_id_already_exists = true;
-                        // TODO: fix includes to get error checking working
-                        // check_error_condition( pass, ecs_log_errors, owner_id_already_exists == true, "Can't add multiple instances of the same component to entity (\1)", owner_id );
 
+                        check_error_condition( pass, ecs_log_errors, owner_id_already_exists == true, "Component already associated with an entity (\1)", owner_id );
                         break;
                     }
                 }
 
                 components.insert( components.begin() + start, owned_component( owner_id, component_data ) );
+                // Potentially notify others that a component of type T has been added to an entity (after it is added)
+                component<T>::events.added().send( components.at( start ).component_data, owner );
             }
 
-            return components.back().component_data;
+            owners.insert( owner_id );
+        }
+
+        // Check if this component type already has an entry associated with the given entity, if not, add one, otherwise just pass through
+        template <typename... arg_types>
+        static void add_unique( const entity& owner, arg_types... args )
+        {
+            let owner_id = owner.get_id();
+            if ( owners.count( owner_id ) == 0 )
+            {
+                add_to( owner, args... );
+            }
         }
 
         static void remove_from( const entity& owner )
         {
             let owner_id = owner.get_id();
 
-            // No components have been registered yet
-            if ( components.empty() )
-            {
-                // TODO: emit warning
-            }
-            // New component is at end of list
+            // Check if no components have been registered yet
+            check_error_condition( return, ecs_log_errors, components.empty(), "Component type is not attached to any entities, can't remove (\1)", owner_id );
+            // Check that the entity is actually an owner
+            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) == 0, "Can't remove component from an entity it's not attached to (\1)", owner_id );
+
+            // Remove the entity from the set of owners
+            owners.erase( owner_id );
+
+            // Associated component is at end of list
             // note: would be handled by binary search below, but this is a common case that can be easily optimized
-            else if ( owner_id == components.back().get_owner_id() )
+            if ( owner_id == components.back().get_owner_id() )
             {
+                // Potentially notify others that a component of type T has been removed from an entity (before it is destroyed)
+                events.removed().send( components.back().component_data, owner );
                 components.pop_back();
             }
             // New component is somewhere in the list, perform a
             // binary search to get the appropriate location to remove
+            // such that the `components` list remains sorted by owner IDs
             else
             {
-                // such that the `components` list remains sorted by owner IDs
                 uint start = 0;
                 uint end   = components.size();
                 while ( start != end )
@@ -136,14 +178,65 @@ namespace rnjin::ecs
 
                 if ( owner_id == components.at( start ).get_owner_id() )
                 {
+                    // Potentially notify others that a component of type T has been removed from an entity (before it is destroyed)
+                    events.removed().send( components.at( start ).component_data, owner );
                     components.erase( components.begin() + start );
                 }
                 else
                 {
-                    // TODO: emit warning
+                    let owner_id_not_found = true;
+                    check_error_condition( pass, ecs_log_errors, owner_id_not_found == true, "Component not associated with entity (\1)", owner_id );
                 }
             }
         }
+
+        static const T* owned_by( const entity& owner )
+        {
+            let owner_id = owner.get_id();
+            check_error_condition( return nullptr, ecs_log_errors, owners.count( owner_id ) == 0, "No components are attached to entity (\1)", owner_id );
+
+            // Associated component is at end of list
+            // note: would be handled by binary search below, but this is a common case that can be easily optimized
+            if ( owner_id == components.back().get_owner_id() )
+            {
+                return &( components.back().component_data );
+            }
+            // Associated component is somewhere in the list, perform a
+            // binary search to get the appropriate location to remove
+            else
+            {
+                uint start = 0;
+                uint end   = components.size();
+                while ( start != end )
+                {
+                    let middle    = start + ( end - start ) / 2;
+                    let middle_id = components.at( middle ).get_owner_id();
+                    if ( owner_id < middle_id )
+                    {
+                        // continue search in left side
+                        end = middle;
+                    }
+                    else if ( owner_id > middle_id )
+                    {
+                        // continue search in right side
+                        start = middle + 1;
+                    }
+                    else
+                    {
+                        start = middle;
+                        break;
+                    }
+                }
+
+                if ( owner_id == components.at( start ).get_owner_id() )
+                {
+                    return &( components.at( start ).component_data );
+                }
+            }
+
+            return nullptr;
+        }
+
         // Get an iterator over all components associated with entities using constant references
         static const_iterator<owned_component> get_const_iterator()
         {
@@ -156,13 +249,32 @@ namespace rnjin::ecs
             return mutable_iterator<owned_component>( components );
         }
 
+        // Events for easily performing actions on component add/remove
+        static group component_events
+        {
+            public: // accessors
+            let_mutable& added get_mutable_value( component_added_event );
+            let_mutable& removed get_mutable_value( component_removed_event );
+
+            private: // members
+            event<T&, const entity&> component_added_event{ "component added" };
+            event<const T&, const entity&> component_removed_event{ "component removed" };
+        }
+        events;
+
         protected: // static members
         // A contiguous array storing component data for efficient iteration
         static list<owned_component> components;
+        // A set of owner id values, used to efficiently check if a given entity is an owner
+        static set<entity::id> owners;
     };
 
     template <typename T>
-    list<typename component<T>::owned_component> component<T>::components{};
+    list<typename component<T>::owned_component> component<T>::components;
+    template <typename T>
+    typename component<T>::component_events component<T>::events;
+    template <typename T>
+    set<typename entity::id> component<T>::owners;
 
-#define component_class( name ) class name : public component<name>
+#define component_class( name ) class name : public rnjin::ecs::component<name>
 } // namespace rnjin::ecs
