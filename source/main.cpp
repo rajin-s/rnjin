@@ -12,9 +12,11 @@
 #include "glfw.hpp"
 #include "render_view.hpp"
 #include "visual.hpp"
+#include "visual_ecs.hpp"
 
 #include "vulkan_api.hpp"
 #include "vulkan_renderer.hpp"
+#include "vulkan_ecs.hpp"
 
 #include "console.hpp"
 
@@ -24,45 +26,8 @@
 
 using namespace rnjin;
 using namespace rnjin::core;
-using namespace rnjin::ecs;
 
 static bool window_enabled = false;
-
-component_class( component_a )
-{
-    public:
-    component_a( int bar ) : pass_member( bar ) {}
-    ~component_a() {}
-
-    int bar;
-};
-
-component_class( component_b )
-{
-    public:
-    component_b( float foo ) : pass_member( foo ) {}
-    ~component_b() {}
-
-    float foo;
-};
-
-class test_system : public ecs::system<read_from<component_a>, write_to<component_b>>
-{
-    void define() {}
-    void initialize() {}
-
-    void update( entity_components& components )
-    {
-        let bar = components.readable<component_a>().bar;
-        let foo = components.writable<component_b>().foo;
-
-        // Invalid, since the system is only defined on read_from<component_a>
-        // this will generate a type error at compile-time
-        // let& write_a = components.writable<component_a>();
-
-        log::main.print( "test_system: (\1, \2)", bar, foo );
-    }
-};
 
 void main( int argc, char* argv[] )
 {
@@ -74,36 +39,6 @@ void main( int argc, char* argv[] )
             args[i - 1] = string( argv[i] );
         }
         console::parse_arguments( args );
-    }
-
-    subregion
-    {
-        ecs::entity ent1, ent2, ent3, ent4;
-
-        ent3.add<component_a>( 6 );
-        ent2.add<component_a>( 4 );
-        ent4.add<component_a>( 8 );
-
-        ent1.add<component_b>( 7.5 );
-        ent2.add<component_b>( 5.5 );
-        ent4.add<component_b>( 9.5 );
-
-        test_system sys;
-        sys.update_all();
-
-        ent2.remove<component_b>();
-        sys.update_all();
-
-        ent4.remove<component_a>();
-        sys.update_all();
-
-        // test_system is defined on { component_a, component_b }
-        // so it will only iterate over entities with both component types (in order of ID)
-        // expected output:
-        //      test_system: (4, 5.5) <- ent2
-        //      test_system: (8, 9.5) <- ent4
-        //      test_system: (8, 9.5) <- ent4 (after removing component_b from ent2)
-        //      end                   <- no valid entities left after removing component_a from ent4
     }
 
     if ( window_enabled )
@@ -121,33 +56,50 @@ void main( int argc, char* argv[] )
                 vk_api.initialize();
             }
 
-            debug_checkpoint( log::main );
             vulkan::renderer vk_renderer( vk_api );
             {
+                debug_checkpoint( log::main );
                 vk_renderer.add_target( main_window );
                 vk_renderer.initialize();
+                debug_checkpoint( log::main );
             }
 
+            tracked_subregion( log::main, "Resource creation" )
+            {
+                graphics::mesh new_cube = graphics::primitives::cube( 0.25 );
+                new_cube.set_path( "test/cube.mesh" );
+                new_cube.save();
+
+                graphics::shader test_vertex   = graphics::shader( "Test Vertex Shader", shader::type::vertex );
+                graphics::shader test_fragment = graphics::shader( "Test Fragment Shader", shader::type::fragment );
+                test_vertex.set_glsl( io::file( "shaders/test_vsh.glsl", io::file::mode::read ).read_all_text() );
+                test_vertex.compile();
+                test_vertex.set_path( "test/vertex.shader" );
+                test_vertex.save();
+
+                test_fragment.set_glsl( io::file( "shaders/test_fsh.glsl", io::file::mode::read ).read_all_text() );
+                test_fragment.compile();
+                test_fragment.set_path( "test/fragment.shader" );
+                test_fragment.save();
+
+                graphics::material new_material = graphics::material( "Test Material", test_vertex, test_fragment );
+                new_material.set_path( "test/new.material" );
+                new_material.save();
+            }
             debug_checkpoint( log::main );
-            graphics::mesh new_cube = graphics::primitives::cube( 0.25 );
-            new_cube.set_path( "test/cube.mesh" );
-            new_cube.save();
 
-            graphics::shader test_vertex   = graphics::shader( "Test Vertex Shader", shader::type::vertex );
-            graphics::shader test_fragment = graphics::shader( "Test Fragment Shader", shader::type::fragment );
-            test_vertex.set_glsl( io::file( "shaders/test_vsh.glsl", io::file::mode::read ).read_all_text() );
-            test_fragment.set_glsl( io::file( "shaders/test_fsh.glsl", io::file::mode::read ).read_all_text() );
-            test_vertex.compile();
-            test_fragment.compile();
-
-            graphics::material new_material = graphics::material( "Test Material", test_vertex, test_fragment );
-            new_material.set_path( "test/new.material" );
-            new_material.save();
-
-            debug_checkpoint( log::main );
-
+            // ECS definitions
             render_view test_view;
-            test_view.add_item( new_cube, new_material );
+            // test_view.add_item( new_cube, new_material );
+
+            // entity test_entity;
+            // test_entity.add<model>( "test/cube.mesh", "test/new.material" );
+
+            // vulkan::model_prep prep_vulkan_models{};
+            // vulkan::resource_collector collect_vulkan_model_resources{};
+            // graphics::render_view_collector collect_render_view( test_view );
+
+            // collect_render_view.update_all();
 
             bool do_render = false;
             while ( not glfwWindowShouldClose( main_window.get_api_window() ) )
@@ -159,6 +111,8 @@ void main( int argc, char* argv[] )
                 {
                     if ( do_render or run )
                     {
+                        // prep_vulkan_models.update_all();
+                        // collect_vulkan_model_resources.update_all();
                         vk_renderer.render( test_view );
                         do_render = false;
                     }
