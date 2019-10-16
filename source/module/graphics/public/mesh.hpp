@@ -61,17 +61,17 @@ namespace rnjin::graphics
         list<vertex> vertices;
         list<index> indices;
 
-        public: // static data
-        static group
-        {
-            public: // accessors
-            let_mutable& mesh_loaded get_mutable_value( mesh_loaded_event );
-            let_mutable& mesh_destroyed get_mutable_value( mesh_destroyed_event );
+        // public: // static data
+        // static group
+        // {
+        //     public: // accessors
+        //     let_mutable& mesh_loaded get_mutable_value( mesh_loaded_event );
+        //     let_mutable& mesh_destroyed get_mutable_value( mesh_destroyed_event );
 
-            private: // members
-            event<const mesh&> mesh_loaded_event{ "Mesh Loaded" };
-            event<const mesh&> mesh_destroyed_event{ "Mesh Destroyed" };
-        }
-        events;
+        //     private: // members
+        //     event<const mesh&> mesh_loaded_event{ "Mesh Loaded" };
+        //     event<const mesh&> mesh_destroyed_event{ "Mesh Destroyed" };
+        // }
+        // events;
     };
 } // namespace rnjin::graphics

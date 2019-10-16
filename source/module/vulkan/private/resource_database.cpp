@@ -27,13 +27,13 @@ namespace rnjin::graphics::vulkan
             pipeline_cache = device.createPipelineCache( pipeline_cache_info );
         }
 
-        // Handle global mesh load/unload events
-        this->handle_event( mesh::events.mesh_loaded(), &resource_database::on_mesh_loaded );
-        this->handle_event( mesh::events.mesh_destroyed(), &resource_database::on_mesh_destroyed );
+        // // Handle global mesh load/unload events
+        // this->handle_event( mesh::events.mesh_loaded(), &resource_database::on_mesh_loaded );
+        // this->handle_event( mesh::events.mesh_destroyed(), &resource_database::on_mesh_destroyed );
 
-        // Handle global material load/unload events
-        this->handle_event( material::events.material_loaded(), &resource_database::on_material_loaded );
-        this->handle_event( material::events.material_destroyed(), &resource_database::on_material_destroyed );
+        // // Handle global material load/unload events
+        // this->handle_event( material::events.material_loaded(), &resource_database::on_material_loaded );
+        // this->handle_event( material::events.material_destroyed(), &resource_database::on_material_destroyed );
     }
 
     // Clean up and release data used by the database and its entries
@@ -90,26 +90,26 @@ namespace rnjin::graphics::vulkan
     // Store mesh data every time a mesh is loaded
     void resource_database::on_mesh_loaded( const mesh& mesh_resource )
     {
-        vulkan_log_verbose.print( "resource_database: handle load mesh (id=\1, path='\2')", mesh_resource.get_id(), mesh_resource.get_path() );
+        vulkan_log_verbose.print( "resource_database: handle load mesh (\1, path='\2')", mesh_resource.get_id(), mesh_resource.get_path() );
         store_mesh_data( mesh_resource );
     }
 
     // Release mesh data when a mesh is destroyed
     void resource_database::on_mesh_destroyed( const mesh& mesh_resource )
     {
-        vulkan_log_verbose.print( "resource_database: handle destroy mesh (id=\1, path='\2')", mesh_resource.get_id(), mesh_resource.get_path() );
+        vulkan_log_verbose.print( "resource_database: handle destroy mesh (\1, path='\2')", mesh_resource.get_id(), mesh_resource.get_path() );
         release_mesh_data( mesh_resource.get_id() );
     }
     void resource_database::on_material_loaded( const material& material_resource )
     {
-        vulkan_log_verbose.print( "resource_database: handle load material (id=\1, path='\2')", material_resource.get_id(), material_resource.get_path() );
+        vulkan_log_verbose.print( "resource_database: handle load material (\1, path='\2')", material_resource.get_id(), material_resource.get_path() );
         store_material_data( material_resource );
     }
 
     // Release mesh data when a mesh is destroyed
     void resource_database::on_material_destroyed( const material& material_resource )
     {
-        vulkan_log_verbose.print( "resource_database: handle destroy material (id=\1, path='\2')", material_resource.get_id(), material_resource.get_path() );
+        vulkan_log_verbose.print( "resource_database: handle destroy material (\1, path='\2')", material_resource.get_id(), material_resource.get_path() );
         release_material_data( material_resource.get_id() );
     }
 
@@ -125,10 +125,101 @@ namespace rnjin::graphics::vulkan
     // note: declared here, defined below
     static const uint find_best_memory_type( vk::PhysicalDevice device, bitmask type_filter, vk::MemoryPropertyFlags target_properties );
 
+    // Create an arbitrary buffer and allocate device memory
+    // note: no data is transferred into the buffer by this method
+    resource_database::create_buffer_result resource_database::create_buffer( usize size, vk::BufferUsageFlags usage_flags, vk::MemoryPropertyFlags memory_property_flags )
+    {
+        let& device = parent.device.vulkan_device;
+
+        let buffer_sharing_mode = vk::SharingMode::eExclusive;
+        let buffer_memory_flags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+
+        vk::Buffer new_buffer;
+        vk::DeviceMemory new_buffer_memory;
+
+        // Create the buffer (no memory allocated yet)
+        vk::BufferCreateInfo buffer_info(
+            {},                 // flags
+            size,               // size
+            usage_flags,        // usage
+            buffer_sharing_mode // sharingMode
+        );
+        new_buffer = device.createBuffer( buffer_info );
+        check_error_condition( return create_buffer_result(), vulkan_log_errors, not new_buffer, "Failed to create Vulkan buffer object (size=\1)", size );
+
+        // Get memory information based on buffer requirements
+        let buffer_memory_requirements = device.getBufferMemoryRequirements( new_buffer );
+        let buffer_memory_type_index   = find_best_memory_type( parent.device.physical_device, buffer_memory_requirements.memoryTypeBits, memory_property_flags );
+
+        // Allocate memory for the buffer
+        vk::MemoryAllocateInfo buffer_allocation_info(
+            buffer_memory_requirements.size, // allocationSize
+            buffer_memory_type_index         // memoryTypeIndex
+        );
+        new_buffer_memory = device.allocateMemory( buffer_allocation_info );
+        check_error_condition( return create_buffer_result(), vulkan_log_errors, not new_buffer_memory, "Failed to allocate device memory for Vulkan buffer object (size=\1)", size );
+
+        device.bindBufferMemory( new_buffer, new_buffer_memory, 0 );
+
+        // Copy data from mesh into device memory
+        // void* buffer_data;
+        // device.bindBufferMemory( new_buffer, new_buffer_memory, 0 );
+        // device.mapMemory( new_buffer_memory, 0, buffer_info.size, vk::MemoryMapFlags(), &buffer_data );
+        // memcpy( buffer_data, mesh_vertices.data(), buffer_info.size );
+        // device.unmapMemory( new_vertex_buffer_memory );
+
+        return create_buffer_result( new_buffer, new_buffer_memory );
+    }
+
+    // Copy the contents of one buffer into another
+    // note: happens using a transfer command submitted into a command buffer
+    void resource_database::copy_buffer( vk::Buffer source, vk::Buffer destination, usize size )
+    {
+        let& device = parent.device.vulkan_device;
+
+        vk::CommandBufferAllocateInfo command_buffer_allocation_info(
+            parent.device.transfer_command_pool, // commandPool
+            vk::CommandBufferLevel::ePrimary,    // level
+            1                                    // commandBufferCount
+        );
+
+        vk::CommandBuffer transfer_command_buffer = device.allocateCommandBuffers( command_buffer_allocation_info )[0];
+        check_error_condition( return, vulkan_log_errors, not transfer_command_buffer, "Failed to create transfer command buffer" );
+
+        // Record the transfer command buffer and immediately submit
+        vk::CommandBufferBeginInfo transfer_begin_info(    //
+            vk::CommandBufferUsageFlagBits::eOneTimeSubmit // flags
+        );
+        vk::BufferCopy buffer_copy_info(
+            0,   // srcOffset
+            0,   // dstOffset
+            size // size
+        );
+        vk::SubmitInfo transfer_submit_info(
+            0,                        // waitSemaphoreCount
+            nullptr,                  // pWaitSemaphores
+            {},                       // pWaitDstStageMask
+            1,                        // commandBufferCount
+            &transfer_command_buffer, // pCommandBuffers
+            0,                        // signalSemaphoreCount
+            nullptr                   // pSignalSemaphores
+        );
+        let no_fence = vk::Fence();
+
+        transfer_command_buffer.begin( transfer_begin_info );
+        transfer_command_buffer.copyBuffer( source, destination, 1, &buffer_copy_info );
+        transfer_command_buffer.end();
+        parent.device.queue.graphics.submit( 1, &transfer_submit_info, no_fence );
+
+        // Wait for the transfer to complete before continuing
+        parent.device.queue.graphics.waitIdle();
+        device.freeCommandBuffers( parent.device.transfer_command_pool, 1, &transfer_command_buffer );
+    }
+
     // Get the Vulkan resource data for a mesh resource with the given ID
     const mesh_entry& resource_database::get_mesh_data( const resource::id resource_id ) const
     {
-        check_error_condition( return invalid_mesh_data, vulkan_log_errors, mesh_data.count( resource_id ) == 0, "Failed to find Vulkan mesh resource with id=\1", resource_id );
+        check_error_condition( return invalid_mesh_data, vulkan_log_errors, mesh_data.count( resource_id ) == 0, "Failed to find Vulkan mesh resource (\1)", resource_id );
         return mesh_data.at( resource_id );
     }
 
@@ -141,10 +232,6 @@ namespace rnjin::graphics::vulkan
         check_error_condition( return mesh_data.at( mesh_id ), vulkan_log_errors, has_data_for_mesh == true, "Vulkan data for mesh #\1 already exists", mesh_id );
 
         let& device = parent.device.vulkan_device;
-
-        // Constant flags for creating buffers and allocating memory
-        let buffer_sharing_mode = vk::SharingMode::eExclusive;
-        let buffer_memory_flags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 
         vk::Buffer new_vertex_buffer;
         vk::DeviceMemory new_vertex_buffer_memory;
@@ -160,34 +247,33 @@ namespace rnjin::graphics::vulkan
             // Get data from mesh
             let buffer_size = sizeof( mesh::vertex ) * mesh_vertices.size();
 
-            // Create the buffer (no memory allocated yet)
-            vk::BufferCreateInfo buffer_info(
-                {},                                     // flags
-                buffer_size,                            // size
-                vk::BufferUsageFlagBits::eVertexBuffer, // usage
-                buffer_sharing_mode                     // sharingMode
-            );
-            new_vertex_buffer = device.createBuffer( buffer_info );
-            check_error_condition( return invalid_mesh_data, vulkan_log_errors, not new_vertex_buffer, "Failed to create vertex buffer for mesh resource #\1", mesh_id );
+            // Create the staging buffer
+            let staging_buffer_usage_flags           = vk::BufferUsageFlagBits::eTransferSrc;
+            let staging_buffer_memory_property_flags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+            let staging_buffer_result                = create_buffer( buffer_size, staging_buffer_usage_flags, staging_buffer_memory_property_flags );
+            check_error_condition( return invalid_mesh_data, vulkan_log_errors, not staging_buffer_result.valid, "Failed to create vertex staging buffer for mesh resource (\1)", mesh_resource.get_id() );
 
-            // Get memory information based on buffer requirements
-            let buffer_memory_requirements = device.getBufferMemoryRequirements( new_vertex_buffer );
-            let buffer_memory_type_index   = find_best_memory_type( parent.device.physical_device, buffer_memory_requirements.memoryTypeBits, buffer_memory_flags );
+            // Create the vertex buffer
+            let buffer_usage_flags    = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+            let memory_property_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+            let create_result         = create_buffer( buffer_size, buffer_usage_flags, memory_property_flags );
+            check_error_condition( return invalid_mesh_data, vulkan_log_errors, not create_result.valid, "Failed to create vertex buffer for mesh resource (\1)", mesh_resource.get_id() );
 
-            // Allocate memory for the buffer
-            vk::MemoryAllocateInfo buffer_allocation_info(
-                buffer_memory_requirements.size, // allocationSize
-                buffer_memory_type_index         // memoryTypeIndex
-            );
-            new_vertex_buffer_memory = device.allocateMemory( buffer_allocation_info );
-            check_error_condition( return invalid_mesh_data, vulkan_log_errors, not new_vertex_buffer_memory, "Failed to allocate vertex buffer memory for mesh resource #\1", mesh_resource.get_id() );
+            new_vertex_buffer        = create_result.buffer;
+            new_vertex_buffer_memory = create_result.buffer_memory;
 
-            // Copy data from mesh into device memory
+            // Copy data from mesh into staging buffer
             void* buffer_data;
-            device.bindBufferMemory( new_vertex_buffer, new_vertex_buffer_memory, 0 );
-            device.mapMemory( new_vertex_buffer_memory, 0, buffer_info.size, vk::MemoryMapFlags(), &buffer_data );
-            memcpy( buffer_data, mesh_vertices.data(), buffer_info.size );
-            device.unmapMemory( new_vertex_buffer_memory );
+            device.mapMemory( staging_buffer_result.buffer_memory, 0, buffer_size, vk::MemoryMapFlags(), &buffer_data );
+            memcpy( buffer_data, mesh_vertices.data(), buffer_size );
+            device.unmapMemory( staging_buffer_result.buffer_memory );
+
+            // Perform a device-level transfer from the staging buffer into the final vertex buffer
+            copy_buffer( staging_buffer_result.buffer, new_vertex_buffer, buffer_size );
+
+            // Release staging buffer resources
+            device.destroyBuffer( staging_buffer_result.buffer );
+            device.freeMemory( staging_buffer_result.buffer_memory );
         }
 
         tracked_subregion( vulkan_log_verbose, "Vulkan index buffer creation" )
@@ -195,34 +281,33 @@ namespace rnjin::graphics::vulkan
             // Get data from mesh
             let buffer_size = sizeof( mesh::index ) * mesh_indices.size();
 
-            // Create the buffer (no memory allocated yet)
-            vk::BufferCreateInfo buffer_info(
-                {},                                    // flags
-                buffer_size,                           // size
-                vk::BufferUsageFlagBits::eIndexBuffer, // usage
-                buffer_sharing_mode                    // sharingMode
-            );
-            new_index_buffer = device.createBuffer( buffer_info );
-            check_error_condition( return invalid_mesh_data, vulkan_log_errors, not new_index_buffer, "Failed to create index buffer for mesh resource #\1", mesh_id );
+            // Create the staging buffer
+            let staging_buffer_usage_flags           = vk::BufferUsageFlagBits::eTransferSrc;
+            let staging_buffer_memory_property_flags = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+            let staging_buffer_result                = create_buffer( buffer_size, staging_buffer_usage_flags, staging_buffer_memory_property_flags );
+            check_error_condition( return invalid_mesh_data, vulkan_log_errors, not staging_buffer_result.valid, "Failed to create vertex staging buffer for mesh resource (\1)", mesh_resource.get_id() );
 
-            // Get memory information based on buffer requirements
-            let buffer_memory_requirements = device.getBufferMemoryRequirements( new_index_buffer );
-            let buffer_memory_type_index   = find_best_memory_type( parent.device.physical_device, buffer_memory_requirements.memoryTypeBits, buffer_memory_flags );
+            let buffer_usage_flags    = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+            let memory_property_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+            let create_result         = create_buffer( buffer_size, buffer_usage_flags, memory_property_flags );
 
-            // Allocate memory for the buffer
-            vk::MemoryAllocateInfo buffer_allocation_info(
-                buffer_memory_requirements.size, // allocationSize
-                buffer_memory_type_index         // memoryTypeIndex
-            );
-            new_index_buffer_memory = device.allocateMemory( buffer_allocation_info );
-            check_error_condition( return invalid_mesh_data, vulkan_log_errors, not new_index_buffer_memory, "Failed to allocate index buffer memory for mesh resource #\1", mesh_id );
+            check_error_condition( return invalid_mesh_data, vulkan_log_errors, not create_result.valid, "Failed to create index buffer for mesh resource (\1)", mesh_resource.get_id() );
 
-            // Copy data from mesh into device memory
+            new_index_buffer        = create_result.buffer;
+            new_index_buffer_memory = create_result.buffer_memory;
+
+            // Copy data from mesh into staging buffer
             void* buffer_data;
-            device.bindBufferMemory( new_index_buffer, new_index_buffer_memory, 0 );
-            device.mapMemory( new_index_buffer_memory, 0, buffer_info.size, vk::MemoryMapFlags(), &buffer_data );
-            memcpy( buffer_data, mesh_indices.data(), buffer_info.size );
-            device.unmapMemory( new_index_buffer_memory );
+            device.mapMemory( staging_buffer_result.buffer_memory, 0, buffer_size, vk::MemoryMapFlags(), &buffer_data );
+            memcpy( buffer_data, mesh_indices.data(), buffer_size );
+            device.unmapMemory( staging_buffer_result.buffer_memory );
+
+            // Perform a device-level transfer from the staging buffer into the final index buffer
+            copy_buffer( staging_buffer_result.buffer, new_index_buffer, buffer_size );
+
+            // Release staging buffer resources
+            device.destroyBuffer( staging_buffer_result.buffer );
+            device.freeMemory( staging_buffer_result.buffer_memory );
         }
 
         // Create and insert the new entry into the database
@@ -241,7 +326,7 @@ namespace rnjin::graphics::vulkan
     // Free Vulkan resources used by a mesh resource (buffers / device memory)
     void resource_database::release_mesh_data( const resource::id resource_id )
     {
-        check_error_condition( return, vulkan_log_errors, mesh_data.count( resource_id ) == 0, "Failed to find Vulkan mesh resource with id=\1", resource_id );
+        check_error_condition( return, vulkan_log_errors, mesh_data.count( resource_id ) == 0, "Failed to find Vulkan mesh resource (\1)", resource_id );
 
         // Wait for all pending operations to complete before cleaning up resources
         // (so no structures are destroyed while in use by command buffers)
@@ -334,7 +419,7 @@ namespace rnjin::graphics::vulkan
     // Get the Vulkan resource data for a material resource with the given ID
     const material_entry& resource_database::get_material_data( const resource::id resource_id ) const
     {
-        check_error_condition( return invalid_material_data, vulkan_log_errors, material_data.count( resource_id ) == 0, "Failed to find Vulkan material resource with id=\1", resource_id );
+        check_error_condition( return invalid_material_data, vulkan_log_errors, material_data.count( resource_id ) == 0, "Failed to find Vulkan material resource (\1)", resource_id );
         return material_data.at( resource_id );
     }
 
@@ -534,7 +619,7 @@ namespace rnjin::graphics::vulkan
     // Free Vulkan resources used by a material resource (pipeline layout, pipeline)
     void resource_database::release_material_data( const resource::id resource_id )
     {
-        check_error_condition( return, vulkan_log_errors, material_data.count( resource_id ) == 0, "Failed to find Vulkan material resource with id=\1", resource_id );
+        check_error_condition( return, vulkan_log_errors, material_data.count( resource_id ) == 0, "Failed to find Vulkan material resource (\1)", resource_id );
 
         // Wait for all pending operations to complete before cleaning up resources
         // (so no structures are destroyed while in use by command buffers)

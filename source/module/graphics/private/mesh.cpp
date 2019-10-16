@@ -18,20 +18,20 @@ namespace rnjin::graphics
     // Create a non-empty mesh
     mesh::mesh( list<mesh::vertex> vertices, list<mesh::index> indices ) : vertices( vertices ), indices( indices )
     {
-        if ( has_data() )
-        {
-            mesh::events.mesh_loaded().send( *this );
-        }
+        // if ( has_data() )
+        // {
+        //     mesh::events.mesh_loaded().send( *this );
+        // }
     }
 
     // Destroy a mesh
     // note: fire the mesh destroyed event if any data exists
     mesh::~mesh()
     {
-        if ( has_data() )
-        {
-            mesh::events.mesh_destroyed().send( *this );
-        }
+        // if ( has_data() )
+        // {
+        //     mesh::events.mesh_destroyed().send( *this );
+        // }
     }
 
     // Save mesh data to a file
@@ -45,23 +45,23 @@ namespace rnjin::graphics
     // note: sends mesh destroyed and loaded events if data exists
     void mesh::read_data( io::file& file )
     {
-        // Treat reading in data as effectively destroying the old mesh (if it exists)
-        if ( has_data() )
-        {
-            mesh::events.mesh_destroyed().send( *this );
-        }
+        // // Treat reading in data as effectively destroying the old mesh (if it exists)
+        // if ( has_data() )
+        // {
+        //     mesh::events.mesh_destroyed().send( *this );
+        // }
 
         // Read data from file
         vertices = file.read_buffer<vertex>();
         indices  = file.read_buffer<index>();
 
-        if ( has_data() )
-        {
-            mesh::events.mesh_loaded().send( *this );
-        }
+        // if ( has_data() )
+        // {
+        //     mesh::events.mesh_loaded().send( *this );
+        // }
     }
 
-    // Define static events structure
-    define_static_group( mesh::events );
+    // // Define static events structure
+    // define_static_group( mesh::events );
 
 } // namespace rnjin::graphics

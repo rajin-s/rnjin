@@ -47,6 +47,7 @@ namespace rnjin::graphics::vulkan
             vk::PhysicalDevice physical_device;
             vk::Device vulkan_device;
             vk::CommandPool command_pool;
+            vk::CommandPool transfer_command_pool;
 
             void find_queue_family_indices( const vk::SurfaceKHR* reference_surface );
 

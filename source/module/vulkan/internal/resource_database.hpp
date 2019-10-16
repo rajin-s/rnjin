@@ -10,14 +10,14 @@
 
 #include "mesh.hpp"
 #include "material.hpp"
-#include "object.hpp"
+#include "event.hpp"
 
 namespace rnjin::graphics::vulkan
 {
     // forward declarations
     class renderer_internal;
 
-    class resource_database : child_class<const renderer_internal>, object
+    class resource_database : child_class<const renderer_internal>, event_receiver
     {
         public: // methods
         resource_database( const renderer_internal& parent );
@@ -31,6 +31,19 @@ namespace rnjin::graphics::vulkan
         void on_mesh_destroyed( const mesh& mesh_resource );
         void on_material_loaded( const material& material_resource );
         void on_material_destroyed( const material& material_resource );
+
+        struct create_buffer_result
+        {
+            create_buffer_result() : valid( false ) {}
+            create_buffer_result( vk::Buffer buffer, vk::DeviceMemory buffer_memory ) : pass_member( buffer ), pass_member( buffer_memory ), valid( true ) {}
+
+            vk::Buffer buffer;
+            vk::DeviceMemory buffer_memory;
+            const bool valid;
+        };
+
+        create_buffer_result create_buffer( usize size, vk::BufferUsageFlags usage_flags, vk::MemoryPropertyFlags memory_property_flags );
+        void copy_buffer( vk::Buffer source, vk::Buffer destination, usize size );
 
         public: // structures
         struct mesh_entry
