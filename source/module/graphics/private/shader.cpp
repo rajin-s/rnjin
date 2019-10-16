@@ -79,8 +79,9 @@ namespace rnjin
         void shader::write_data( io::file& file )
         {
             file.write_var( shader_type );
+            file.write_string( glsl.content );
 
-            glsl.save_to( file );
+            // glsl.save_to( file );
 
             const bool has_spirv = not spirv.empty();
             file.write_var( has_spirv );
@@ -92,9 +93,10 @@ namespace rnjin
 
         void shader::read_data( io::file& file )
         {
-            shader_type = file.read_var<type>();
+            shader_type  = file.read_var<type>();
+            glsl.content = file.read_string();
 
-            glsl.load_from( file );
+            // glsl.load_from( file );
 
             const bool has_spirv = file.read_var<bool>();
             if ( has_spirv )
