@@ -21,8 +21,8 @@ namespace rnjin::test
 #define _pass( message ) std::cout << "  [ ] (" << current_test_name << ": " << __LINE__ << ") " << message << std::endl
 
 #define record( expression ) \
-    expression;              \
-    note( #expression );
+    note( #expression );     \
+    expression;
 
 #define assert_equal( A, B )                                         \
     if ( ( A ) == ( B ) )                                            \
@@ -34,19 +34,19 @@ namespace rnjin::test
         _fail( #A " = " << ( A ) << " (expected " << ( B ) << ")" ); \
     }
 
-#define test( name )                                                                  \
-    namespace                                                                         \
-    {                                                                                 \
-        struct test_##name##_container                                                \
-        {                                                                             \
-            static constexpr char* current_test_name = "" #name;                      \
-            static void run();                                                        \
-            test_##name##_container()                                                 \
-            {                                                                         \
+#define test( name )                                                                         \
+    namespace                                                                                \
+    {                                                                                        \
+        struct test_##name##_container                                                       \
+        {                                                                                    \
+            static constexpr char* current_test_name = "" #name;                             \
+            static void run();                                                               \
+            test_##name##_container()                                                        \
+            {                                                                                \
                 std::cout << "Registered test '" #name "' from '" __FILE__ "'" << std::endl; \
-                rnjin::test::add_test_action( #name, run );                           \
-            }                                                                         \
-        };                                                                            \
-        static test_##name##_container _test_##name;                                  \
-    }                                                                                 \
+                rnjin::test::add_test_action( #name, run );                                  \
+            }                                                                                \
+        };                                                                                   \
+        static test_##name##_container _test_##name;                                         \
+    }                                                                                        \
     void ::test_##name##_container::run()
