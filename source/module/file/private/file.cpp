@@ -110,11 +110,11 @@ namespace rnjin
         // Check that the file was opened properly
         const bool file::is_valid() const
         {
-            check_error_condition( pass, file_log_verbose_errors, not valid, "" );
-            check_error_condition( pass, file_log_verbose_errors, stream == nullptr, "" );
-            check_error_condition( pass, file_log_verbose_errors, stream->bad(), "" );
-            check_error_condition( pass, file_log_verbose_errors, stream->eof(), "" );
-            check_error_condition( pass, file_log_verbose_errors, stream->fail(), "" );
+            check_error_condition( pass, file_log_verbose_errors, not valid, "File validity flag not set (\1)", path );
+            check_error_condition( pass, file_log_verbose_errors, stream == nullptr, "File stream is null (\1)", path );
+            check_error_condition( pass, file_log_verbose_errors, stream->bad(), "File stream is bad (\1)", path );
+            check_error_condition( pass, file_log_verbose_errors, stream->eof(), "File stream has ended (\1)", path );
+            check_error_condition( pass, file_log_verbose_errors, stream->fail(), "File stream failed (\1)", path );
 
             return valid and stream != nullptr and stream->good();
         }
@@ -229,8 +229,8 @@ namespace rnjin
             return first == 0x01;
         }
 
-// Enable a debug flag to force byte reversal to test that it works
-// #define RNJIN_FORCE_REVERSE_BYTES
+        // Enable a debug flag to force byte reversal to test that it works
+        // #define RNJIN_FORCE_REVERSE_BYTES
 
 #ifdef RNJIN_FORCE_REVERSE_BYTES
         const bool _need_to_reverse_bytes = true;
