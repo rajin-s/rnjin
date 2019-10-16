@@ -4,27 +4,23 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "object.hpp"
+#include "event.hpp"
 
 namespace rnjin::core
 {
-    object::object() {}
-    object::~object()
+    event_receiver::event_receiver() {}
+    event_receiver::~event_receiver()
     {
-        // Notify others that this object is being destroyed
-        lifetime.on_destroyed().send();
-
-        // Free memory associated with this object's
-        // event handlers, calling their destructor to
-        // disassociate them from their target events
+        // Free memory associated with this event_receiver's event handlers
+        // note: event_handler destructor is called to remove association with target event
         for ( event_handler_base*& handler_pointer : owned_event_handlers )
         {
             delete handler_pointer;
             // handler_pointer = nullptr;
         }
     }
-
-    void object::delete_invalid_event_handlers()
+    // Free memory associated with this event_receiver's invalidated event handlers
+    void event_receiver::delete_invalid_event_handlers()
     {
         for ( int i = 0; i < owned_event_handlers.size(); i++ )
         {
@@ -47,5 +43,11 @@ namespace rnjin::core
                 i--;
             }
         }
+    }
+
+    lifetime_events::lifetime_events() {}
+    lifetime_events::~lifetime_events()
+    {
+        lifetime.destroyed().send();
     }
 } // namespace rnjin::core

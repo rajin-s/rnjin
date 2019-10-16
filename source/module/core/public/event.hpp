@@ -43,7 +43,7 @@ namespace rnjin::core
     // note: event handlers are invalidated with their target event is destroyed,
     //       but are not themselves destroyed (ie still take up memory)
     // note: invalidated event handlers owned by objects are destroyed periodically
-    //       in object::delete_invalid_event_handlers()
+    //       in event_receiver::delete_invalid_event_handlers()
     template <typename O, typename... As>
     class event_handler : public event_handler_base, public event_handler_args<As...>
     {
@@ -142,5 +142,53 @@ namespace rnjin::core
         private: // members
         string name;
         set<handler_type*> handler_pointers;
+    };
+
+    // A base helper class for types that will do lots of event handling
+    class event_receiver
+    {
+        public: // methods
+        event_receiver();
+        ~event_receiver();
+
+        // Create a new event handler for the target event
+        // and store it as an owned event handlers of this event_receiver
+        template <typename O, typename... As>
+        void handle_event( event<As...>& target_event, void ( O::*method )( As... ) )
+        {
+            event_handler<O, As...>* new_event_handler = new event_handler<O, As...>( target_event, (O*) this, method );
+            owned_event_handlers.push_back( new_event_handler );
+
+            // Clean up any invalid handler pointers whenever a new one is added
+            // note: this could happen any time, but this seems to make sense
+            delete_invalid_event_handlers();
+        }
+
+        // Go through all event handlers and free ones that don't have a
+        // valid target event (ie handlers for destroyed events)
+        void delete_invalid_event_handlers();
+
+        private: // members
+        list<event_handler_base*> owned_event_handlers;
+    };
+
+    // A base helper class for types that need others to know about their lifetime
+    class lifetime_events
+    {
+        public: // methods
+        lifetime_events();
+        ~lifetime_events();
+
+        // events are accessible through the lifetime group
+        // ie my_obj.lifetime.destroyed()
+        group
+        {
+            public: // accessors
+            let_mutable& destroyed get_mutable_value( destroyed_event );
+
+            private: // members
+            event<> destroyed_event{ "destroyed" };
+        }
+        lifetime;
     };
 } // namespace rnjin::core
