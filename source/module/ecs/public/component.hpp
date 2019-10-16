@@ -193,7 +193,12 @@ namespace rnjin::ecs
         static const T* owned_by( const entity& owner )
         {
             let owner_id = owner.get_id();
-            check_error_condition( return nullptr, ecs_log_errors, owners.count( owner_id ) == 0, "No components are attached to entity (\1)", owner_id );
+            
+            // check_error_condition( return nullptr, ecs_log_errors, owners.count( owner_id ) == 0, "No components are attached to entity (\1)", owner_id );
+            if ( owners.count( owner_id ) == 0 )
+            {
+                return nullptr;
+            }
 
             // Associated component is at end of list
             // note: would be handled by binary search below, but this is a common case that can be easily optimized
