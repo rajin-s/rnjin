@@ -101,11 +101,11 @@ namespace rnjin
             if ( condition )                                                                                                                                   \
             {                                                                                                                                                  \
                 target_log.print_error( message_format, __VA_ARGS__ );                                                                                         \
-                target_log.print_additional( "'" #condition "' @ \1", debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) ); \
+                target_log.print_additional( "'" #condition "' @ \1", rnjin::debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) ); \
                 action;                                                                                                                                        \
             }
 
-        #define debug_checkpoint( target_log ) target_log.print( "Reach \1", debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) )
+        #define debug_checkpoint( target_log ) target_log.print( "Reach \1", rnjin::debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) )
         /* clang-format on */
 
         // A single log source, capable of writing to any C++ ostream
