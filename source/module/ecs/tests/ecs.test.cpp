@@ -45,9 +45,6 @@ component_class( float_component )
 // A system that reads from an int component and increases a float component's value by that amount
 class test_system_1 : public rnjin::ecs::system<read_from<int_component>, write_to<float_component>>
 {
-    public:
-    void initialize() override {}
-
     protected: // inherited
     void define() override {}
     void update( entity_components& components ) override
@@ -113,7 +110,7 @@ component_class( dependent_component )
 class test_system_2 : public rnjin::ecs::system<read_from<int_component>, write_to<dependent_component>>, event_receiver
 {
     public:
-    void initialize() override
+    void initialize()
     {
         // Set up event handlers for whenever an int_component is added or removed from an entity
         handle_event( int_component::events.added(), &test_system_2::on_int_component_added );

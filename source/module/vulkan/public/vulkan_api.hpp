@@ -72,5 +72,6 @@ namespace rnjin::graphics::vulkan
         friend class renderer_internal;
         friend class api_internal;
         friend class renderer;
+        friend class device;
     };
 } // namespace rnjin::graphics::vulkan

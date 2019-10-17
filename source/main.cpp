@@ -10,17 +10,17 @@
 #include "log.hpp"
 
 #include "glfw.hpp"
-#include "render_view.hpp"
-#include "visual.hpp"
-#include "visual_ecs.hpp"
+// #include "render_view.hpp"
+// #include "visual.hpp"
+// #include "visual_ecs.hpp"
 
-#include "vulkan_api.hpp"
-#include "vulkan_renderer.hpp"
-#include "vulkan_ecs.hpp"
+// #include "vulkan_api.hpp"
+// #include "vulkan_renderer.hpp"
+// #include "vulkan_ecs.hpp"
 
 #include "console.hpp"
 
-#include "primitives.hpp"
+// #include "primitives.hpp"
 
 #include "ecs.hpp"
 
@@ -49,57 +49,54 @@ void main( int argc, char* argv[] )
 
             window<GLFW> main_window( "RNJIN", int2( 128, 128 ), true );
 
-            vulkan::api vk_api( "rnjin.vulkan" );
-            {
-                vk_api.validation.enable( vulkan::api::messages::all );
-                vk_api.extension.enable();
-                vk_api.initialize();
-            }
+            // vulkan::api vk_api( "rnjin.vulkan" );
+            // {
+            //     vk_api.validation.enable( vulkan::api::messages::all );
+            //     vk_api.extension.enable();
+            //     vk_api.initialize();
+            // }
 
-            vulkan::renderer vk_renderer( vk_api );
-            {
-                debug_checkpoint( log::main );
-                vk_renderer.add_target( main_window );
-                vk_renderer.initialize();
-                debug_checkpoint( log::main );
-            }
+            // vulkan::renderer vk_renderer( vk_api );
+            // {
+            //     debug_checkpoint( log::main );
+            //     vk_renderer.add_target( main_window );
+            //     vk_renderer.initialize();
+            //     debug_checkpoint( log::main );
+            // }
 
-            tracked_subregion( log::main, "Resource creation" )
-            {
-                graphics::mesh new_cube = graphics::primitives::cube( 0.25 );
-                new_cube.set_path( "test/cube.mesh" );
-                new_cube.save();
+            // tracked_subregion( log::main, "Resource creation" )
+            // {
+            //     graphics::mesh new_cube = graphics::primitives::cube( 0.25 );
+            //     new_cube.set_path( "test/cube.mesh" );
+            //     new_cube.save();
 
-                graphics::shader test_vertex   = graphics::shader( "Test Vertex Shader", shader::type::vertex );
-                graphics::shader test_fragment = graphics::shader( "Test Fragment Shader", shader::type::fragment );
-                test_vertex.set_glsl( io::file( "shaders/test_vsh.glsl", io::file::mode::read ).read_all_text() );
-                test_vertex.compile();
-                test_vertex.set_path( "test/vertex.shader" );
-                test_vertex.save();
+            //     graphics::shader test_vertex   = graphics::shader( "Test Vertex Shader", shader::type::vertex );
+            //     graphics::shader test_fragment = graphics::shader( "Test Fragment Shader", shader::type::fragment );
+            //     test_vertex.set_glsl( io::file( "shaders/test_vsh.glsl", io::file::mode::read ).read_all_text() );
+            //     test_vertex.compile();
+            //     test_vertex.set_path( "test/vertex.shader" );
+            //     test_vertex.save();
 
-                test_fragment.set_glsl( io::file( "shaders/test_fsh.glsl", io::file::mode::read ).read_all_text() );
-                test_fragment.compile();
-                test_fragment.set_path( "test/fragment.shader" );
-                test_fragment.save();
+            //     test_fragment.set_glsl( io::file( "shaders/test_fsh.glsl", io::file::mode::read ).read_all_text() );
+            //     test_fragment.compile();
+            //     test_fragment.set_path( "test/fragment.shader" );
+            //     test_fragment.save();
 
-                graphics::material new_material = graphics::material( "Test Material", test_vertex, test_fragment );
-                new_material.set_path( "test/new.material" );
-                new_material.save();
-            }
-            debug_checkpoint( log::main );
+            //     graphics::material new_material = graphics::material( "Test Material", test_vertex, test_fragment );
+            //     new_material.set_path( "test/new.material" );
+            //     new_material.save();
+            // }
+            // debug_checkpoint( log::main );
 
-            // ECS definitions
-            render_view test_view;
-            // test_view.add_item( new_cube, new_material );
-
+            // // ECS definitions
+            // vulkan::resource_collector collect_vulkan_model_resources;
+            // {
+            //     collect_vulkan_model_resources.initialize();
+            // }
             // entity test_entity;
-            // test_entity.add<model>( "test/cube.mesh", "test/new.material" );
-
-            // vulkan::model_prep prep_vulkan_models{};
-            // vulkan::resource_collector collect_vulkan_model_resources{};
-            // graphics::render_view_collector collect_render_view( test_view );
-
-            // collect_render_view.update_all();
+            // {
+            //     test_entity.add<model>( "test/cube.mesh", "test/new.material" );
+            // }
 
             bool do_render = false;
             while ( not glfwWindowShouldClose( main_window.get_api_window() ) )
@@ -111,9 +108,8 @@ void main( int argc, char* argv[] )
                 {
                     if ( do_render or run )
                     {
-                        // prep_vulkan_models.update_all();
                         // collect_vulkan_model_resources.update_all();
-                        vk_renderer.render( test_view );
+                        // vk_renderer.render( test_view );
                         do_render = false;
                     }
                 }
