@@ -24,8 +24,16 @@ namespace rnjin
             const uint size      = 4;
         } // namespace icon
 
-        const string log_directory = "./logs/";
-        const string log_extension = ".log";
+        const string& get_log_directory()
+        {
+            static string value = "./logs/";
+            return value;
+        }
+        const string& get_log_extension()
+        {
+            static string value = ".log";
+            return value;
+        }
 
         // Static log management
         static dictionary<string, source*>& get_sources()
@@ -64,7 +72,7 @@ namespace rnjin
             name_blank.resize( name.size(), ' ' );
 
             // If a file is created by the log, this will be the name
-            default_file_name = log_directory + log_name + log_extension;
+            default_file_name = get_log_directory() + log_name + get_log_extension();
 
             if ( console_output_mode != output_mode::never )
             {
@@ -91,10 +99,10 @@ namespace rnjin
             sources[log_name] = this;
 
             // Record that the log has started
-            print( "Log Started" );
+            print( "Log Started (write to '\1')", default_file_name );
         }
         source::source( const string& log_name, const output_mode console_output_mode, const output_mode file_output_mode, const list<flag_info> flags )
-        : source( log_name, console_output_mode, file_output_mode )
+          : source( log_name, console_output_mode, file_output_mode )
         {
             foreach ( info : flags )
             {

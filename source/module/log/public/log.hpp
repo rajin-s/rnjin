@@ -64,7 +64,7 @@ namespace rnjin
             bool single_iter_finished;
         };
 
-/* clang-format off */
+        /* clang-format off */
         #define tracked_subregion( target_log, name ) for ( rnjin::log::scope_tracker __( target_log, name ); __.do_single_iter(); )
         /* clang-format on */
 
@@ -88,24 +88,25 @@ namespace rnjin
             raw_line,
         };
 
+        const string& get_log_directory();
+        const string& get_log_extension();
 
-        extern const string log_directory;
-        extern const string log_extension;
+        /* clang-format off */
 
-// Debug logging utilities
-// Check an error condition and output to the given log if it is met, recording the location
-// Action can be pass, return, continue, break, etc. to handle execution flow
+        // Debug logging utilities
+        // Check an error condition and output to the given log if it is met, recording the location
+        // Action can be pass, return, continue, break, etc. to handle execution flow
 
-/* clang-format off */
-        #define check_error_condition( action, target_log, condition, message_format, ... )                                                                    \
-            if ( condition )                                                                                                                                   \
-            {                                                                                                                                                  \
-                target_log.print_error( message_format, __VA_ARGS__ );                                                                                         \
+        #define check_error_condition( action, target_log, condition, message_format, ... )                                                                           \
+            if ( condition )                                                                                                                                          \
+            {                                                                                                                                                         \
+                target_log.print_error( message_format, __VA_ARGS__ );                                                                                                \
                 target_log.print_additional( "'" #condition "' @ \1", rnjin::debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) ); \
-                action;                                                                                                                                        \
+                action;                                                                                                                                               \
             }
 
         #define debug_checkpoint( target_log ) target_log.print( "Reach \1", rnjin::debug::get_call_string( __raw_file_string, __raw_function_string, __raw_line_string ) )
+
         /* clang-format on */
 
         // A single log source, capable of writing to any C++ ostream
