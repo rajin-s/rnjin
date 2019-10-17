@@ -12,5 +12,6 @@ void main()
 {
     // just pass the color along
     gl_Position = vec4( vertex_position.xy, 0.0, 1.0 );
-    out_color   = vec4( vertex_position.xy * 4.0 - 1.0, 1.0, 1.0 );
+    // out_color   = vec4( vertex_position.xy * 4.0 - 1.0, 1.0, 1.0 );
+    out_color = vertex_color;
 }

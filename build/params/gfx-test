@@ -1,3 +1,4 @@
 -lf rnjin.graphics + verbose
 -lf rnjin.graphics + vulkan
+-lf rnjin.file + verbose
 -w
