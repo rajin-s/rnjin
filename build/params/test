@@ -1,0 +1,8 @@
+-lf rnjin.console + verbose
+
+-lf rnjin.file + verbose
+
+-lf rnjin.graphics + verbose
+-lf rnjin.graphics + vulkan
+
+-lf rnjin.ecs + verbose
