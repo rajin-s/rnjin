@@ -5,14 +5,14 @@
             "name": "Engine (Windows)",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceRoot}\\rnjin.exe",
-            "symbolSearchPath": "${workspaceRoot};C:\\Program Files (x86)\\Microsoft Visual Studio 14.0",
+            "program": "${workspaceRoot}\\build\\rnjin.exe",
+            "symbolSearchPath": "${workspaceRoot}\\build;C:\\Program Files (x86)\\Microsoft Visual Studio 14.0",
             "externalConsole": false,
             "logging": {
                 "moduleLoad": false,
                 "trace": true
             },
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceRoot}\\build",
             // "args": ["-af", "params\\gfx-test"]
             "args": []
             // "visualizerFile": "${workspaceRoot}/my.natvis",
@@ -22,14 +22,14 @@
             "name": "Tests (Windows)",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceRoot}\\tests.exe",
-            "symbolSearchPath": "${workspaceRoot};C:\\Program Files (x86)\\Microsoft Visual Studio 14.0",
+            "program": "${workspaceRoot}\\build\\tests.exe",
+            "symbolSearchPath": "${workspaceRoot}\\build;C:\\Program Files (x86)\\Microsoft Visual Studio 14.0",
             "externalConsole": false,
             "logging": {
                 "moduleLoad": false,
                 "trace": true
             },
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceRoot}\\build",
             "args": [
                 "vulkan_resource_management",
             ]

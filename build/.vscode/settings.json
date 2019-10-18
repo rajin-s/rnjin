@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "*.shader": "hlsl",
-        "*.pad": "python",
-        "SConstruct": "python",
-        "*.putt": "json",
-        "xtr1common": "cpp"
-    }
-}
