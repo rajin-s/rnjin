@@ -4,143 +4,23 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "vulkan_renderer_internal.hpp"
 #include "vulkan_window_surface.hpp"
 
 namespace rnjin::graphics::vulkan
 {
-    // Create an uninitialized window surface that has a reference to its parent renderer
-    window_surface::window_surface( const renderer_internal& parent ) : render_target( parent )
+    window_surface::window_surface( const device& device_instance ) : pass_member( device_instance )
     {
-        vulkan_log_verbose.print_additional( "Created Vulkan window surface" );
+        vulkan_log_verbose.print( "Created Vulkan window surface" );
     }
-    // Destroy an uninitialized window surface
-    // note: clean_up should have already been called
     window_surface::~window_surface()
     {
-        vulkan_log_verbose.print_additional( "Destroyed Vulkan window surface" );
-    }
-
-    /// Rendering
-
-    // Perform draw calls based on a provided render_view
-    // note: all pre-draw-call optimization should happen during
-    //       render_view generation, as this just blindly iterates
-    //       over all elements.
-    void window_surface::render( const render_view& view )
-    {
-        let static no_fence = vk::Fence();
-        let static timeout  = std::numeric_limits<uint64_t>::max();
-        let& device         = parent.device.vulkan_device;
-
-        // Acquire next swapchain element, respecting synchronization
-        let frame_synchronization = swapchain.synchronization.get_current_frame_info();
-
-        // Wait for the current frame to be finished (no longer in flight from a previous render call)
-        device.waitForFences( 1, &frame_synchronization.in_flight, true, timeout );
-
-        // Get the next image from the swapchain
-        let acquired_image = device.acquireNextImageKHR( swapchain.vulkan_swapchain, timeout, frame_synchronization.image_available, no_fence );
-
-        // Detect and handle resizing (skip this render call)
-        if ( acquired_image.result == vk::Result::eErrorOutOfDateKHR )
-        {
-            handle_out_of_date_swapchain();
-            return;
-        }
-
-        // Mark the current frame as in flight and get swapchain element data
-        device.resetFences( 1, &frame_synchronization.in_flight );
-        let next_image_index    = acquired_image.value;
-        auto& swapchain_element = swapchain.elements[next_image_index];
-
-        // Begin the current frame's command buffer
-        tracked_subregion( vulkan_log_verbose, "Begin command buffer" )
-        {
-            let begin_info = begin_frame_info{
-                render_pass,                    // render_pass
-                swapchain_element.frame_buffer, // frame_buffer
-                swapchain.image_size,           // image_size
-                true,                           // clear
-                vk::ClearValue()                // clear_value
-            };
-            begin_frame( begin_info, swapchain_element.command_buffer );
-        }
-
-        // Do draw calls
-        tracked_subregion( vulkan_log_verbose, "Record command buffer" )
-        {
-            // TODO: Support instance batching
-            foreach ( item : view.get_items() )
-            {
-                let& mesh_data     = parent.resources.get_mesh_data( item.mesh_resource.get_id() );
-                let& material_data = parent.resources.get_material_data( item.material_resource.get_id() );
-
-                check_error_condition( continue, vulkan_log_errors, mesh_data.is_valid == false, "Can't draw without resource_database mesh data (id=\1)", item.mesh_resource.get_id() );
-                check_error_condition( continue, vulkan_log_errors, material_data.is_valid == false, "Can't draw without resource_database material data (id=\1)", item.mesh_resource.get_id() );
-
-                let draw_info = draw_call_info{
-                    mesh_data.vertex_buffer, // vertex_buffer
-                    mesh_data.index_buffer,  // index_buffer
-                    material_data.pipeline,  // pipeline
-                    mesh_data.vertex_count,  // vertex_count
-                    mesh_data.index_count,   // index_count
-                };
-                draw( draw_info, swapchain_element.command_buffer );
-            }
-        }
-
-        // End the current frame's command buffer
-        tracked_subregion( vulkan_log_verbose, "End command buffer" )
-        {
-            end_frame( swapchain_element.command_buffer );
-        }
-
-        // Submit the current frame's command buffer
-        tracked_subregion( vulkan_log_verbose, "Submit Vulkan command buffer" )
-        {
-            const vk::Semaphore submit_wait_semaphores[]   = { frame_synchronization.image_available };
-            const vk::Semaphore submit_signal_semaphores[] = { frame_synchronization.render_finished };
-            const vk::PipelineStageFlags wait_stages[]     = { { vk::PipelineStageFlagBits::eColorAttachmentOutput } };
-
-            vk::SubmitInfo submit_info(
-                1,                                 // waitSemaphoreCount
-                submit_wait_semaphores,            // pWaitSemaphores
-                wait_stages,                       // pWaitDstStageMask
-                1,                                 // commandBufferCount
-                &swapchain_element.command_buffer, // pCommandBuffers
-                1,                                 // signalSemaphoreCount
-                submit_signal_semaphores           // pSignalSemaphores
-            );
-            parent.device.queue.graphics.submit( 1, &submit_info, frame_synchronization.in_flight );
-
-            vk::SwapchainKHR swapchains[] = { swapchain.vulkan_swapchain };
-            vk::PresentInfoKHR present_info(
-                1,                        // waitSemaphoreCount
-                submit_signal_semaphores, // pWaitSemaphores
-                1,                        // swapchainCount
-                swapchains,               // pSwapchains
-                &next_image_index,        // pImageIndices
-                nullptr                   // pResults
-            );
-
-            try
-            {
-                parent.device.queue.present.presentKHR( present_info );
-            }
-            catch ( vk::OutOfDateKHRError out_of_date )
-            {
-                handle_out_of_date_swapchain();
-            }
-
-            // Advance to next frame in flight
-            swapchain.synchronization.advance_frame();
-        }
+        vulkan_log_verbose.print( "Destroying Vulkan window surface" );
+        clean_up();
     }
 
     // Create a Vulkan surface object from the provided window
     // note: this is called before initialization, as having a surface
-    //       is useful for the renderer to pick the best physical device
+    //       is needed by device_instance to check for presentation support
     void window_surface::create_surface( window<GLFW>& target )
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan window surface initialization" );
@@ -148,13 +28,12 @@ namespace rnjin::graphics::vulkan
         window_pointer = &target;
         window_size    = uint2( target.get_size().x, target.get_size().y ); // todo: update window to use uint2
 
-        let& instance             = parent.get_vulkan_instance();
+        let& instance             = device_instance.get_vulkan_instance();
         let create_surface_result = glfwCreateWindowSurface( instance, target.get_api_window(), nullptr, (VkSurfaceKHR*) &vulkan_surface );
 
         check_error_condition( return, vulkan_log_errors, create_surface_result != VK_SUCCESS, "Failed to create Vulkan surface from GLFW window" );
     }
 
-    // note: called from renderer_internal::initialize()
     void window_surface::initialize()
     {
         create_swapchain();
@@ -164,10 +43,8 @@ namespace rnjin::graphics::vulkan
         initialize_synchronization();
     }
 
-    // note: called from renderer_internal::clean_up()
     void window_surface::clean_up()
     {
-        // destroy_pipelines();
         destroy_synchronization();
         destroy_frame_buffers();
         destroy_render_pass();
@@ -175,16 +52,26 @@ namespace rnjin::graphics::vulkan
         destroy_surface();
     }
 
+/* -------------------------------------------------------------------------- */
+/*                               Initialization                               */
+/* -------------------------------------------------------------------------- */
+#pragma region initialization
+
+    // Helpers for swapchain creation
+    const vk::SurfaceFormatKHR get_best_surface_format( const list<vk::SurfaceFormatKHR>& available_formats );
+    const vk::PresentModeKHR get_best_present_mode( const list<vk::PresentModeKHR>& available_present_modes );
+    const uint2 get_best_swap_extent( const vk::SurfaceCapabilitiesKHR capabilities, const uint2 window_size );
+
     void window_surface::create_swapchain()
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan swapchain creation" );
 
-        check_error_condition( return, vulkan_log_errors, parent.device.queue.family_index.graphics < 0, "Invalid graphics queue index" );
-        check_error_condition( return, vulkan_log_errors, parent.device.queue.family_index.present < 0, "Invalid present queue index" );
+        check_error_condition( return, vulkan_log_errors, device_instance.queue.family_index.graphics() < 0, "Invalid graphics queue index" );
+        check_error_condition( return, vulkan_log_errors, device_instance.queue.family_index.present() < 0, "Invalid present queue index" );
         check_error_condition( return, vulkan_log_errors, not vulkan_surface, "Vulkan surface is invalid" );
 
-        let& device          = parent.device.vulkan_device;
-        let& physical_device = parent.device.physical_device;
+        let& vulkan_device   = device_instance.get_vulkan_device();
+        let& physical_device = device_instance.get_physical_device();
 
         let capabilities            = physical_device.getSurfaceCapabilitiesKHR( vulkan_surface );
         let supported_formats       = physical_device.getSurfaceFormatsKHR( vulkan_surface );
@@ -200,10 +87,15 @@ namespace rnjin::graphics::vulkan
 
         // Don't exceed the maximum image count
         swapchain.image_count = capabilities.minImageCount + 1;
-        if ( capabilities.maxImageCount > 0 and swapchain.image_count > capabilities.maxImageCount ) { swapchain.image_count = capabilities.maxImageCount; }
+        if ( capabilities.maxImageCount > 0 and swapchain.image_count > capabilities.maxImageCount )
+        {
+            swapchain.image_count = capabilities.maxImageCount;
+        }
 
         // note: queue indices have already been checked to ensure they're non-negative
-        uint queue_indices[] = { (uint) parent.device.queue.family_index.graphics, (uint) parent.device.queue.family_index.present };
+        let graphics_index   = (uint) device_instance.queue.family_index.graphics();
+        let present_index    = (uint) device_instance.queue.family_index.present();
+        uint queue_indices[] = { graphics_index, present_index };
 
         // Try to be concurrent by default
         vk::SharingMode sharing_mode  = vk::SharingMode::eConcurrent;
@@ -211,7 +103,7 @@ namespace rnjin::graphics::vulkan
         uint* queue_family_indices    = queue_indices;
 
         // Can't be concurrent if the graphics and present queues are the same
-        if ( parent.device.queue.family_index.graphics == parent.device.queue.family_index.present )
+        if ( graphics_index == present_index )
         {
             sharing_mode             = vk::SharingMode::eExclusive;
             queue_family_index_count = 0;
@@ -237,10 +129,10 @@ namespace rnjin::graphics::vulkan
             nullptr                                                         // oldSwapchain
         );
 
-        swapchain.vulkan_swapchain = device.createSwapchainKHR( create_info );
+        swapchain.vulkan_swapchain = vulkan_device.createSwapchainKHR( create_info );
         check_error_condition( return, vulkan_log_errors, not swapchain.vulkan_swapchain, "Failed to create Vulkan swapchain" );
 
-        let swapchain_images  = device.getSwapchainImagesKHR( swapchain.vulkan_swapchain );
+        let swapchain_images  = vulkan_device.getSwapchainImagesKHR( swapchain.vulkan_swapchain );
         swapchain.image_count = swapchain_images.size();
         swapchain.elements.resize( swapchain.image_count );
 
@@ -260,7 +152,7 @@ namespace rnjin::graphics::vulkan
             );
 
             element.image      = image;
-            element.image_view = device.createImageView( image_view_info );
+            element.image_view = vulkan_device.createImageView( image_view_info );
         }
 
         vulkan_log_verbose.print_additional( "Created \1 swapchain elements", swapchain.elements.size() );
@@ -323,7 +215,7 @@ namespace rnjin::graphics::vulkan
             &subpass_dependency // pDependencies
         );
 
-        render_pass = parent.device.vulkan_device.createRenderPass( render_pass_info );
+        render_pass = device_instance.get_vulkan_device().createRenderPass( render_pass_info );
         check_error_condition( return, vulkan_log_errors, not render_pass, "Failed to create Vulkan render pass" );
     }
 
@@ -346,7 +238,7 @@ namespace rnjin::graphics::vulkan
                 1                         // layers
             );
 
-            element.frame_buffer = parent.device.vulkan_device.createFramebuffer( framebuffer_info );
+            element.frame_buffer = device_instance.get_vulkan_device().createFramebuffer( framebuffer_info );
             check_error_condition( return, vulkan_log_errors, not element.frame_buffer, "Failed to create Vulkan frame buffer" );
         }
     }
@@ -356,20 +248,23 @@ namespace rnjin::graphics::vulkan
         let task = vulkan_log_verbose.track_scope( "Vulkan command buffer creation" );
 
         vk::CommandBufferAllocateInfo allocate_info(
-            parent.device.command_pool,       // commandPool
-            vk::CommandBufferLevel::ePrimary, // level
-            swapchain.image_count             // commandBufferCount
+            device_instance.command_pool.main(), // commandPool
+            vk::CommandBufferLevel::ePrimary,    // level
+            swapchain.image_count                // commandBufferCount
         );
 
-        let command_buffers = parent.device.vulkan_device.allocateCommandBuffers( allocate_info );
+        let command_buffers = device_instance.get_vulkan_device().allocateCommandBuffers( allocate_info );
         check_error_condition( return, vulkan_log_errors, command_buffers.empty(), "Failed to create Vulkan command buffers" );
 
-        for ( uint i : range( swapchain.image_count ) ) { swapchain.elements[i].command_buffer = command_buffers[i]; }
+        for ( uint i : range( swapchain.image_count ) )
+        {
+            swapchain.elements[i].command_buffer = command_buffers[i];
+        }
     }
 
     void window_surface::initialize_synchronization()
     {
-        let& device = parent.device.vulkan_device;
+        let& vulkan_device = device_instance.get_vulkan_device();
 
         vk::SemaphoreCreateInfo semaphore_info;
         vk::FenceCreateInfo fence_info( vk::FenceCreateFlagBits::eSignaled );
@@ -377,9 +272,9 @@ namespace rnjin::graphics::vulkan
         swapchain.synchronization.frames.resize( swapchain.synchronization.max_frames_in_flight );
         for ( uint i : range( swapchain.synchronization.max_frames_in_flight ) )
         {
-            swapchain.synchronization.frames[i].image_available = device.createSemaphore( semaphore_info );
-            swapchain.synchronization.frames[i].render_finished = device.createSemaphore( semaphore_info );
-            swapchain.synchronization.frames[i].in_flight       = device.createFence( fence_info );
+            swapchain.synchronization.frames[i].image_available = vulkan_device.createSemaphore( semaphore_info );
+            swapchain.synchronization.frames[i].render_finished = vulkan_device.createSemaphore( semaphore_info );
+            swapchain.synchronization.frames[i].in_flight       = vulkan_device.createFence( fence_info );
 
             check_error_condition( pass, vulkan_log_errors, not swapchain.synchronization.frames[i].image_available, "Failed to create Vulkan semaphore (i=\1)", i );
             check_error_condition( pass, vulkan_log_errors, not swapchain.synchronization.frames[i].render_finished, "Failed to create Vulkan semaphore (i=\1)", i );
@@ -388,15 +283,130 @@ namespace rnjin::graphics::vulkan
 
         swapchain.synchronization.current_frame = 0;
     }
+#pragma endregion initialization
 
-    /***************************
-     * Vulkan structure cleanup *
-     ****************************/
+/* -------------------------------------------------------------------------- */
+/*                          Drawing / Synchronization                         */
+/* -------------------------------------------------------------------------- */
+#pragma region drawing
+
+    void window_surface::begin_frame()
+    {
+        let static no_fence = vk::Fence();
+        let static timeout  = std::numeric_limits<uint64>::max();
+
+        let& vulkan_device = device_instance.get_vulkan_device();
+
+        let& frame_synchronization = swapchain.synchronization.get_current_frame_info();
+        {
+            // Acquire next swapchain element, respecting synchronization
+            // Wait for the current frame to be finished (no longer in flight from a previous render call)
+            vulkan_device.waitForFences( 1, &frame_synchronization.in_flight, true, timeout );
+
+            let acquired_image = vulkan_device.acquireNextImageKHR( swapchain.vulkan_swapchain, timeout, frame_synchronization.image_available, no_fence );
+            if ( acquired_image.result == vk::Result::eErrorOutOfDateKHR )
+            {
+                handle_out_of_date_swapchain();
+                begin_frame();
+            }
+
+            vulkan_device.resetFences( 1, &frame_synchronization.in_flight );
+
+            swapchain.current_element_index = acquired_image.value;
+        }
+
+        let_mutable& current_swapchain_element = swapchain.elements[swapchain.current_element_index];
+        {
+            // Start the command buffer and render pass
+            let viewport            = vk::Viewport( 0.0, 0.0, swapchain.image_size.x, swapchain.image_size.y );
+            let_mutable clear_value = vk::ClearValue();
+            let subpass_contents    = vk::SubpassContents::eInline;
+
+            let begin_info = vk::CommandBufferBeginInfo(
+                {},     // flags
+                nullptr // pInheritanceInfo
+            );
+            let full_screen_area = vk::Rect2D(
+                vk::Offset2D( 0, 0 ),                                          // origin
+                vk::Extent2D( swapchain.image_size.x, swapchain.image_size.y ) // size
+            );
+            let render_pass_info = vk::RenderPassBeginInfo(
+                render_pass,                            // renderPass
+                current_swapchain_element.frame_buffer, // framebuffer
+                full_screen_area,                       // renderArea
+                1,                                      // clearValueCount
+                &clear_value                            // pClearValues
+            );
+
+            current_swapchain_element.command_buffer.begin( begin_info );
+            current_swapchain_element.command_buffer.beginRenderPass( render_pass_info, subpass_contents );
+            current_swapchain_element.command_buffer.setViewport( 0, 1, &viewport );
+            current_swapchain_element.command_buffer.setScissor( 0, 1, &full_screen_area );
+        }
+    }
+
+    void window_surface::end_frame()
+    {
+        let_mutable& current_swapchain_element = swapchain.elements[swapchain.current_element_index];
+        {
+            // End the render pass and command buffer
+            current_swapchain_element.command_buffer.endRenderPass();
+            current_swapchain_element.command_buffer.end();
+        }
+
+        let& frame_synchronization = swapchain.synchronization.get_current_frame_info();
+        {
+            // Submit command buffer to graphics queue
+            const vk::Semaphore submit_wait_semaphores[]   = { frame_synchronization.image_available };
+            const vk::Semaphore submit_signal_semaphores[] = { frame_synchronization.render_finished };
+            const vk::PipelineStageFlags wait_stages[]     = { { vk::PipelineStageFlagBits::eColorAttachmentOutput } };
+            vk::SubmitInfo submit_info(
+                1,                                         // waitSemaphoreCount
+                submit_wait_semaphores,                    // pWaitSemaphores
+                wait_stages,                               // pWaitDstStageMask
+                1,                                         // commandBufferCount
+                &current_swapchain_element.command_buffer, // pCommandBuffers
+                1,                                         // signalSemaphoreCount
+                submit_signal_semaphores                   // pSignalSemaphores
+            );
+            device_instance.queue.graphics().submit( 1, &submit_info, frame_synchronization.in_flight );
+
+            // Do presentation
+            vk::SwapchainKHR swapchains[] = { swapchain.vulkan_swapchain };
+            vk::PresentInfoKHR present_info(
+                1,                                // waitSemaphoreCount
+                submit_signal_semaphores,         // pWaitSemaphores
+                1,                                // swapchainCount
+                swapchains,                       // pSwapchains
+                &swapchain.current_element_index, // pImageIndices
+                nullptr                           // pResults
+            );
+
+            try
+            {
+                device_instance.queue.present().presentKHR( present_info );
+            }
+            catch ( vk::OutOfDateKHRError out_of_date )
+            {
+                handle_out_of_date_swapchain();
+            }
+
+            // Advance to next frame in flight
+            swapchain.synchronization.advance_frame();
+        }
+    }
+
+#pragma endregion drawing
+
+/* -------------------------------------------------------------------------- */
+/*                                  Clean Up                                  */
+/* -------------------------------------------------------------------------- */
+#pragma region clean_up
     void window_surface::destroy_surface()
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan window surface cleanup" );
 
-        let& instance = parent.get_vulkan_instance();
+        let& instance = device_instance.get_vulkan_instance();
         instance.destroySurfaceKHR( vulkan_surface );
     }
 
@@ -404,27 +414,27 @@ namespace rnjin::graphics::vulkan
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan swapchain cleanup" );
 
-        let& device = parent.device.vulkan_device;
-        device.destroySwapchainKHR( swapchain.vulkan_swapchain );
+        let& vulkan_device = device_instance.get_vulkan_device();
+        vulkan_device.destroySwapchainKHR( swapchain.vulkan_swapchain );
     }
 
     void window_surface::destroy_render_pass()
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan render pass cleanup" );
 
-        let& device = parent.device.vulkan_device;
-        device.destroyRenderPass( render_pass );
+        let& vulkan_device = device_instance.get_vulkan_device();
+        vulkan_device.destroyRenderPass( render_pass );
     }
 
     void window_surface::destroy_frame_buffers()
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan swapchain element cleanup" );
 
-        let& device = parent.device.vulkan_device;
+        let& vulkan_device = device_instance.get_vulkan_device();
         foreach ( element : swapchain.elements )
         {
-            device.destroyFramebuffer( element.frame_buffer );
-            device.destroyImageView( element.image_view );
+            vulkan_device.destroyFramebuffer( element.frame_buffer );
+            vulkan_device.destroyImageView( element.image_view );
         }
     }
 
@@ -432,34 +442,15 @@ namespace rnjin::graphics::vulkan
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan synchronization cleanup" );
 
-        let& device = parent.device.vulkan_device;
+        let& vulkan_device = device_instance.get_vulkan_device();
         foreach ( frame : swapchain.synchronization.frames )
         {
-            device.destroySemaphore( frame.image_available );
-            device.destroySemaphore( frame.render_finished );
-            device.destroyFence( frame.in_flight );
+            vulkan_device.destroySemaphore( frame.image_available );
+            vulkan_device.destroySemaphore( frame.render_finished );
+            vulkan_device.destroyFence( frame.in_flight );
         }
     }
 
-    // void window_surface::destroy_pipelines()
-    // {
-    //     let task = vulkan_log_verbose.track_scope( "Vulkan pipeline cleanup" );
-
-    //     let& device = parent.device.vulkan_device;
-    //     foreach ( pipeline : pipelines )
-    //     {
-    //         device.destroyPipeline( pipeline.vulkan_pipeline );
-    //         device.destroyPipelineLayout( pipeline.layout );
-    //     }
-
-    //     device.destroyBuffer( test_vertex_buffer );
-    //     device.freeMemory( test_vertex_buffer_memory );
-    // }
-
-    /********************************
-     * Vulkan structure re-creation *
-     * (for window resize, etc.)    *
-     ********************************/
     void window_surface::handle_out_of_date_swapchain()
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan swapchain out of date handling" );
@@ -478,7 +469,7 @@ namespace rnjin::graphics::vulkan
         window_size = new_size;
 
         // Wait for current rendering operations to finish before destroying resources
-        parent.device.vulkan_device.waitIdle();
+        device_instance.wait_for_idle();
 
         destroy_frame_buffers();
         destroy_render_pass();
@@ -488,16 +479,22 @@ namespace rnjin::graphics::vulkan
         create_render_pass();
         create_frame_buffers();
     }
+#pragma endregion clean_up
 
-    /****************************
-     * Surface Creation Helpers *
-     ****************************/
+/* -------------------------------------------------------------------------- */
+/*                         Swapchain Creation Helpers                         */
+/* -------------------------------------------------------------------------- */
+#pragma region helpers
+
     const vk::SurfaceFormatKHR get_best_surface_format( const list<vk::SurfaceFormatKHR>& available_formats )
     {
         // Find a common easy-to-use format
         foreach ( format : available_formats )
         {
-            if ( format.format == vk::Format::eB8G8R8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear ) { return format; }
+            if ( format.format == vk::Format::eB8G8R8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear )
+            {
+                return format;
+            }
         }
 
         // Default to first format
@@ -513,7 +510,10 @@ namespace rnjin::graphics::vulkan
         // See if any of the available present modes are triple buffered, or if immediate is needed
         foreach ( present_mode : available_present_modes )
         {
-            if ( present_mode == vk::PresentModeKHR::eMailbox ) { return present_mode; }
+            if ( present_mode == vk::PresentModeKHR::eMailbox )
+            {
+                return present_mode;
+            }
             else if ( present_mode == vk::PresentModeKHR::eImmediate )
             {
                 fallback = present_mode;
@@ -540,4 +540,6 @@ namespace rnjin::graphics::vulkan
 
         return extent;
     }
+
+#pragma endregion helpers
 } // namespace rnjin::graphics::vulkan

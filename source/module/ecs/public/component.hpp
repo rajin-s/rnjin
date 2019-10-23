@@ -190,7 +190,7 @@ namespace rnjin::ecs
             }
         }
 
-        static const T* owned_by( const entity& owner )
+        static T* owned_by( const entity& owner )
         {
             let owner_id = owner.get_id();
             

@@ -164,7 +164,7 @@ namespace rnjin::graphics::vulkan
             // "VK_LAYER_LUNARG_assistant_layer",
             "VK_LAYER_LUNARG_core_validation",
             // "VK_LAYER_LUNARG_device_simulation",
-            // "VK_LAYER_KHRONOS_validation",
+            "VK_LAYER_KHRONOS_validation",
             // "VK_LAYER_LUNARG_monitor",
             "VK_LAYER_LUNARG_object_tracker",
             // "VK_LAYER_LUNARG_screenshot",

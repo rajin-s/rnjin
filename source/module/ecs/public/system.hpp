@@ -92,7 +92,6 @@ namespace rnjin::ecs
 
         protected: // virtual methods
         virtual void define() is_abstract;
-        virtual void initialize() is_abstract;
 
         virtual void update( entity_components& components ) is_abstract;
         

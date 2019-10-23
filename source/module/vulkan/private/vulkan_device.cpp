@@ -4,65 +4,53 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
+#include "vulkan_api_internal.hpp"
 #include "vulkan_window_surface.hpp"
-#include "vulkan_renderer_internal.hpp"
+#include "vulkan_device.hpp"
 
 namespace rnjin::graphics::vulkan
 {
-    renderer_internal::renderer_internal( api& api_instance ) : api_instance( api_instance )
+    // Helper functions and constant data
+    extern const list<const char*> required_device_extensions;
+    extern const list<const char*> device_present_extensions;
+
+    const vk::SurfaceFormatKHR get_best_surface_format( const list<vk::SurfaceFormatKHR>& available_formats );
+    const vk::PresentModeKHR get_best_present_mode( const list<vk::PresentModeKHR>& available_present_modes );
+    const uint2 get_best_swap_extent( const vk::SurfaceCapabilitiesKHR capabilities, const uint2 window_size );
+    const int get_device_suitability( const vk::PhysicalDevice device, const vk::SurfaceKHR* reference_surface, const bool require_validation );
+
+    // Vulkan device wrapper
+    device::device( api& api_instance ) : pass_member( api_instance ), is_initialized( false ), reference_surface( nullptr )
     {
-        vulkan_log_verbose.print( "Created Vulkan renderer internals" );
+        vulkan_log_verbose.print( "Created Vulkan device wrapper" );
     }
-    renderer_internal::~renderer_internal()
+    device::~device()
     {
-        vulkan_log_verbose.print( "Destroyed Vulkan renderer internals" );
-    }
-
-    void renderer_internal::initialize()
-    {
-        let task = vulkan_log_verbose.track_scope( "Vulkan renderer initialization" );
-
-        let& reference_surface = window_target.get_vulkan_surface();
-        create_device( &reference_surface );
-
-        check_error_condition( return, vulkan_log_errors, device.initialized == false, "Vulkan device wasn't successfully initialized" );
-
-        window_target.initialize();
-        resources.initialize();
-    }
-
-    void renderer_internal::clean_up()
-    {
-        let task = vulkan_log_verbose.track_scope( "Vulkan renderer cleanup" );
-
-        // Wait for all pending operations to complete before cleaning up resources
-        // (so no structures are destroyed while in use by command buffers)
-        wait_for_device_idle();
-
-        resources.clean_up();
-        window_target.clean_up();
-        destroy_device();
+        clean_up();
+        vulkan_log_verbose.print( "Destroying Vulkan device wrapper" );
+        check_error_condition( pass, vulkan_log_errors, is_initialized == true, "Destroying Vulkan device wrapper without cleaning up resources" );
     }
 
-    void renderer_internal::wait_for_device_idle() const
+    // Fetch the Vulkan instance from the API instance
+    const vk::Instance& device::get_vulkan_instance() const
     {
-        device.vulkan_device.waitIdle();
+        return api_instance.internal->instance.vulkan_instance;
     }
 
-    /***********************************
-     * Vulkan structure initialization *
-     ***********************************/
-
-    void renderer_internal::create_device( const vk::SurfaceKHR* reference_surface )
+    void device::set_reference_surface( const window_surface& surface )
     {
-        let task = vulkan_log_verbose.track_scope( "Vulkan device initialization" );
+        reference_surface = &surface.get_vulkan_surface();
+    }
 
-        device.initialized = false;
+    void device::initialize()
+    {
+        let task = vulkan_log_verbose.track_scope( "Vulkan device wrapper initialization" );
 
         let& instance          = get_vulkan_instance();
         let require_validation = api_instance.internal->validation.any_enabled();
-        let require_present    = reference_surface != nullptr;
+        let require_present    = reference_surface != nullptr && reference_surface;
 
+        // Select the best physical device, if multiple are present
         tracked_subregion( vulkan_log_verbose, "Vulkan physical device selection" )
         {
             // Get all valid physical devices on the system
@@ -85,14 +73,14 @@ namespace rnjin::graphics::vulkan
             }
             check_error_condition( return, vulkan_log_errors, not best_device, "Failed to find a suitable GPU" );
 
-            device.physical_device = best_device;
+            physical_device = best_device;
 
-            // Note: graphics queue is guarenteed to be present since it is checked during device selection
-            device.find_queue_family_indices( reference_surface );
+            // Note: graphics queue is guaranteed to be present since it is checked during device selection
+            find_queue_family_indices();
 
-            check_error_condition( pass, vulkan_log_errors, device.queue.family_index.graphics < 0, "Failed to find graphics queue for device" );
-            check_error_condition( pass, vulkan_log_errors, device.queue.family_index.compute < 0, "Failed to find compute queue for device" );
-            check_error_condition( pass, vulkan_log_errors, require_present and device.queue.family_index.present < 0, "Failed to find present queue for device" );
+            check_error_condition( pass, vulkan_log_errors, queue.family_index.graphics() < 0, "Failed to find graphics queue for device" );
+            check_error_condition( pass, vulkan_log_errors, queue.family_index.compute() < 0, "Failed to find compute queue for device" );
+            check_error_condition( pass, vulkan_log_errors, require_present and queue.family_index.present() < 0, "Failed to find present queue for device" );
         }
 
         // Create logical device
@@ -102,7 +90,7 @@ namespace rnjin::graphics::vulkan
             list<vk::DeviceQueueCreateInfo> queue_create_infos;
 
             // Get queue info for all unique, valid queues
-            set<int> unique_queue_families = { device.queue.family_index.graphics, device.queue.family_index.present, device.queue.family_index.compute };
+            set<int> unique_queue_families = { queue.family_index.graphics(), queue.family_index.present(), queue.family_index.compute() };
             foreach ( family : unique_queue_families )
             {
                 if ( family >= 0 )
@@ -122,7 +110,10 @@ namespace rnjin::graphics::vulkan
 
             // Get list of needed extensions
             list<const char*> enabled_extensions( required_device_extensions.begin(), required_device_extensions.end() );
-            if ( require_present ) { enabled_extensions.insert( enabled_extensions.end(), device_present_extensions.begin(), device_present_extensions.end() ); }
+            if ( require_present )
+            {
+                enabled_extensions.insert( enabled_extensions.end(), device_present_extensions.begin(), device_present_extensions.end() );
+            }
 
             // Create logical device
             vk::DeviceCreateInfo create_info(
@@ -135,44 +126,43 @@ namespace rnjin::graphics::vulkan
                 enabled_extensions.data(), // ppEnabledExtensionNames
                 &features                  // pEnabledFeatures
             );
-            device.vulkan_device = device.physical_device.createDevice( create_info );
+            vulkan_device = physical_device.createDevice( create_info );
+            check_error_condition( return, vulkan_log_errors, not vulkan_device, "Failed to create Vulkan logical device" );
 
             // Get queue handles
             const uint queue_index = 0;
-            device.queue.graphics  = device.vulkan_device.getQueue( device.queue.family_index.graphics, queue_index );
 
-            if ( device.queue.family_index.present >= 0 ) { device.queue.present = device.vulkan_device.getQueue( device.queue.family_index.present, queue_index ); }
+            queue.graphics_queue = vulkan_device.getQueue( queue.family_index.graphics(), queue_index );
+            if ( queue.family_index.present() >= 0 )
+            {
+                queue.present_queue = vulkan_device.getQueue( queue.family_index.present(), queue_index );
+            }
         }
 
-        // Create command pool
+        // Create command pools
         tracked_subregion( vulkan_log_verbose, "Vulkan command pool initialization" );
         {
             vk::CommandPoolCreateInfo command_pool_info(
                 vk::CommandPoolCreateFlagBits::eResetCommandBuffer, // flags
-                device.queue.family_index.graphics                  // queueFamilyIndex
+                queue.family_index.graphics()                       // queueFamilyIndex
             );
-            device.command_pool = device.vulkan_device.createCommandPool( command_pool_info );
+            command_pool.main_pool = vulkan_device.createCommandPool( command_pool_info );
+
+            vk::CommandPoolCreateInfo transfer_command_pool_info(
+                vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient, // flags
+                queue.family_index.graphics()                                                                   // queueFamilyIndex
+            );
+            command_pool.transfer_pool = vulkan_device.createCommandPool( transfer_command_pool_info );
         }
 
-        device.initialized = true;
+        is_initialized = true;
     }
 
-    void renderer_internal::destroy_device()
+    void device::find_queue_family_indices()
     {
-        let task = vulkan_log_verbose.track_scope( "Vulkan device cleanup" );
-
-        check_error_condition( return, vulkan_log_errors, device.initialized == false, "Destroying uninitialized Vulkan device" );
-
-        device.vulkan_device.destroyCommandPool( device.command_pool );
-        device.vulkan_device.destroy();
-        device.initialized = false;
-    }
-
-    void renderer_internal::device_info::find_queue_family_indices( const vk::SurfaceKHR* surface )
-    {
-        queue.family_index.graphics = -1;
-        queue.family_index.present  = -1;
-        queue.family_index.compute  = -1;
+        queue.family_index.graphics_index = -1;
+        queue.family_index.present_index  = -1;
+        queue.family_index.compute_index  = -1;
 
         let queue_families = physical_device.getQueueFamilyProperties();
         for ( uint i : range( queue_families.size() ) )
@@ -183,24 +173,61 @@ namespace rnjin::graphics::vulkan
             {
                 let supports_graphics = family.queueFlags & vk::QueueFlagBits::eGraphics;
                 let supports_compute  = family.queueFlags & vk::QueueFlagBits::eCompute;
-                let supports_present  = surface != nullptr and physical_device.getSurfaceSupportKHR( i, *surface );
+                let supports_present  = reference_surface != nullptr and physical_device.getSurfaceSupportKHR( i, *reference_surface );
 
-                if ( supports_graphics and queue.family_index.graphics < 0 ) { queue.family_index.graphics = i; }
-                if ( supports_present and queue.family_index.present < 0 ) { queue.family_index.present = i; }
-                if ( supports_compute and queue.family_index.compute < 0 ) { queue.family_index.compute = i; }
+                if ( supports_graphics and queue.family_index.graphics_index < 0 )
+                {
+                    queue.family_index.graphics_index = i;
+                }
+                if ( supports_present and queue.family_index.present_index < 0 )
+                {
+                    queue.family_index.present_index = i;
+                }
+                if ( supports_compute and queue.family_index.compute_index < 0 )
+                {
+                    queue.family_index.compute_index = i;
+                }
             }
 
-            let found_graphics = queue.family_index.graphics >= 0;
-            let found_present  = queue.family_index.present >= 0;
-            let found_compute  = queue.family_index.compute >= 0;
+            let found_graphics = queue.family_index.graphics_index >= 0;
+            let found_present  = queue.family_index.present_index >= 0;
+            let found_compute  = queue.family_index.compute_index >= 0;
 
-            if ( found_graphics and found_compute and ( surface == nullptr or found_present ) ) { break; }
+            if ( found_graphics and found_compute and ( reference_surface == nullptr or found_present ) )
+            {
+                break;
+            }
         }
     }
 
-    /* *** ** *** ** *** *** *** ** *** **
-     * Physical Device Selection Helpers *
-     * *** ** *** ** *** *** *** ** *** **/
+    // Release Vulkan resources used by this device wrapper
+    void device::clean_up()
+    {
+        check_error_condition( return, vulkan_log_errors, is_initialized == false, "Destroying uninitialized Vulkan device wrapper" );
+
+        tracked_subregion( vulkan_log_verbose, "Vulkan command pool destruction" )
+        {
+            vulkan_device.destroyCommandPool( command_pool.main() );
+            vulkan_device.destroyCommandPool( command_pool.transfer() );
+        }
+
+        tracked_subregion( vulkan_log_verbose, "Vulkan device destruction" )
+        {
+            vulkan_device.destroy();
+        }
+
+        is_initialized = false;
+    }
+
+    void device::wait_for_idle() const
+    {
+        vulkan_device.waitIdle();
+    }
+
+/* -------------------------------------------------------------------------- */
+/*                      Physical Device Selection Helpers                     */
+/* -------------------------------------------------------------------------- */
+#pragma region helpers
 
     const list<const char*> required_device_extensions = {};
     const list<const char*> device_present_extensions  = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
@@ -228,9 +255,18 @@ namespace rnjin::graphics::vulkan
                 let supports_compute  = family.queueFlags & vk::QueueFlagBits::eCompute;
                 let supports_present  = surface != nullptr and device.getSurfaceSupportKHR( i, *surface );
 
-                if ( supports_graphics ) { support.graphics = true; }
-                if ( supports_compute ) { support.compute = true; }
-                if ( supports_present ) { support.present = true; }
+                if ( supports_graphics )
+                {
+                    support.graphics = true;
+                }
+                if ( supports_compute )
+                {
+                    support.compute = true;
+                }
+                if ( supports_present )
+                {
+                    support.present = true;
+                }
             }
         }
 
@@ -243,7 +279,10 @@ namespace rnjin::graphics::vulkan
         set<string> unsupported_extensions;
 
         vulkan_log_verbose.print( "\1 required extension(s)", required_device_extensions.size() );
-        for ( uint i : range( required_device_extensions.size() ) ) { unsupported_extensions.insert( string( required_device_extensions[i] ) ); }
+        for ( uint i : range( required_device_extensions.size() ) )
+        {
+            unsupported_extensions.insert( string( required_device_extensions[i] ) );
+        }
 
         // Required presentation-specific extensions if needed
         if ( require_present )
@@ -263,7 +302,10 @@ namespace rnjin::graphics::vulkan
 
         // Report extension support information
         let unsupported_extension_count = unsupported_extensions.size();
-        if ( unsupported_extension_count == 0 ) { vulkan_log_verbose.print_additional( "All extensions supported" ); }
+        if ( unsupported_extension_count == 0 )
+        {
+            vulkan_log_verbose.print_additional( "All extensions supported" );
+        }
         else
         {
             vulkan_log_errors.print_additional( "\1 unsupported extensions", unsupported_extension_count );
@@ -293,11 +335,11 @@ namespace rnjin::graphics::vulkan
         if ( features.geometryShader ) score += 200;
         if ( features.tessellationShader ) score += 200;
 
-        let requires_present = surface != nullptr;
+        let requires_present = surface != nullptr && *surface;
         let queue_support    = get_device_queue_support( device, surface );
 
         check_error_condition( return bad_device, vulkan_log_errors, queue_support.graphics == false, "Device (\1) doesn't support rendering", properties.deviceName );
-        check_error_condition( return bad_device, vulkan_log_errors, requires_present and not queue_support.present, "Device (\1) doens't support surface display", properties.deviceName );
+        check_error_condition( return bad_device, vulkan_log_errors, requires_present and not queue_support.present, "Device (\1) doesn't support surface display", properties.deviceName );
 
         const bool supports_extensions = device_supports_extensions( device, requires_present, require_validation );
         check_error_condition( return bad_device, vulkan_log_errors, supports_extensions == false, "Device (\1) doesn't support required extensions", properties.deviceName );
@@ -314,4 +356,7 @@ namespace rnjin::graphics::vulkan
         vulkan_log_verbose.print_additional( "\1 (vendor: \2) score: \3", properties.deviceName, properties.vendorID, score );
         return score;
     }
+
+#pragma endregion helpers
+
 } // namespace rnjin::graphics::vulkan

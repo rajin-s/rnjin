@@ -6,32 +6,41 @@
 
 #pragma once
 
-#include "glfw.hpp"
-#include "renderer.hpp"
+#include <vulkan/vulkan.hpp>
+
+#include "ecs.hpp"
+#include "vulkan_window_surface.hpp"
 #include "vulkan_api.hpp"
+#include "vulkan_resources.hpp"
 
 namespace rnjin::graphics::vulkan
 {
-    class api_internal;
-    class renderer_internal;
-
-    class renderer : public renderer_base
+    class renderer : public ecs::system<read_from<internal_resources>>
     {
-        public:
-        renderer( api& api_instance );
+        public: // methods
+        renderer( const device& device_instance, window_surface& target );
         ~renderer();
 
         void initialize();
 
-        // note: this _should_ be a double-specialized template function, but this accomplishes the same thing
-        void add_target( window<GLFW>& target );
-        void render( const render_view& view );
+        public: // accessors
+        let& get_device get_value( device_instance );
+        let& get_render_pass get_value( target.get_render_pass() );
 
-        private:
-        renderer_internal* internal;
+        protected: // internal
+        void define() override;
+        void before_update() override;
+        void update( entity_components& components ) override;
+        void after_update() override;
 
-        friend class renderer_internal;
-        friend class api_internal;
-        friend class api;
+        private: // members
+        const device& device_instance;
+        window_surface& target;
+
+        group
+        {
+            vk::CommandBuffer command_buffer;
+        }
+        current_frame;
     };
 } // namespace rnjin::graphics::vulkan

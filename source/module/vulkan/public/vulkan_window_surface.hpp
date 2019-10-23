@@ -6,24 +6,40 @@
 
 #pragma once
 
+#include <vulkan/vulkan.hpp>
+
 #include "glfw.hpp"
-#include "vulkan_render_target.hpp"
+#include "vulkan_device.hpp"
 
 namespace rnjin::graphics::vulkan
 {
-    class window_surface : public render_target
+    class window_surface
     {
         public: // methods
-        window_surface( const renderer_internal& parent );
+        window_surface( const device& device_instance );
         ~window_surface();
 
+        // note: order of events is
+        //       1. device created
+        //       2. window surface created
+        //       3. vk::Surface created
+        //       4. device initialized
+        //       5. window surface initialized
         void create_surface( window<GLFW>& target );
 
         void initialize();
-        void render( const render_view& view );
         void clean_up();
 
-        protected: // methods
+        void begin_frame();
+        void end_frame();
+
+        public: // accessors
+        let& get_vulkan_surface get_value( vulkan_surface );
+        let& get_render_pass get_value( render_pass );
+
+        let& get_current_command_buffer get_value( swapchain.elements[swapchain.current_element_index].command_buffer );
+
+        private: // methods
         void destroy_surface();
 
         void create_swapchain();
@@ -40,30 +56,16 @@ namespace rnjin::graphics::vulkan
         void initialize_synchronization();
         void destroy_synchronization();
 
-        // uint create_pipeline( const shader& vertex_shader, const shader& fragment_shader );
-        // void destroy_pipelines();
-
         void handle_out_of_date_swapchain();
         void handle_resize( const uint2 new_size );
 
-        public: // accessors
-        let& get_vulkan_surface get_value( vulkan_surface );
-        let& get_render_pass get_value( render_pass );
-
         private: // members
+        const device& device_instance;
         uint2 window_size;
 
         const window<GLFW>* window_pointer;
         vk::SurfaceKHR vulkan_surface;
-
         vk::RenderPass render_pass;
-
-        // struct pipeline_info
-        // {
-        //     vk::PipelineLayout layout;
-        //     vk::Pipeline vulkan_pipeline;
-        // };
-        // list<pipeline_info> pipelines;
 
         group swapchain_info
         {
@@ -109,6 +111,7 @@ namespace rnjin::graphics::vulkan
             };
 
             list<element> elements;
+            uint current_element_index;
         }
         swapchain;
     };

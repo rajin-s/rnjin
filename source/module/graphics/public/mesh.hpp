@@ -49,29 +49,42 @@ namespace rnjin::graphics
         ~mesh();
 
         public: // accessors
-        let& get_vertices get_value( vertices );
-        let& get_indices get_value( indices );
-        let has_data get_value( not vertices.empty() );
+        group mesh_vertices
+        {
+            public: // accessors
+            let& get_data get_value( data );
+            let get_version get_value( version );
+
+            private: // members
+            list<vertex> data;
+            version_id version;
+
+            friend class mesh;
+            mesh_vertices() : data(), version() {}
+            mesh_vertices( list<vertex> data ) : data( data ), version() {}
+        }
+        vertices;
+
+        group mesh_indices
+        {
+            public: // accessors
+            let& get_data get_value( data );
+            let get_version get_value( version );
+
+            private: // members
+            list<index> data;
+            version_id version;
+
+            friend class mesh;
+            mesh_indices() : data(), version() {}
+            mesh_indices( list<index> data ) : data( data ), version() {}
+        }
+        indices;
+
+        let has_data get_value( not vertices.data.empty() );
 
         protected: // inherited
         virtual void write_data( io::file& file );
         virtual void read_data( io::file& file );
-
-        private: // members
-        list<vertex> vertices;
-        list<index> indices;
-
-        // public: // static data
-        // static group
-        // {
-        //     public: // accessors
-        //     let_mutable& mesh_loaded get_mutable_value( mesh_loaded_event );
-        //     let_mutable& mesh_destroyed get_mutable_value( mesh_destroyed_event );
-
-        //     private: // members
-        //     event<const mesh&> mesh_loaded_event{ "Mesh Loaded" };
-        //     event<const mesh&> mesh_destroyed_event{ "Mesh Destroyed" };
-        // }
-        // events;
     };
 } // namespace rnjin::graphics

@@ -42,7 +42,7 @@ namespace rnjin::ecs
         template <typename component_type, typename... arg_types>
         void add( arg_types... args ) const
         {
-            component_type::add_to( *this, args... );
+            component<component_type>::add_to( *this, args... );
         }
 
         // Add a component to this entity if it doesn't already exist
@@ -51,7 +51,7 @@ namespace rnjin::ecs
         template <typename component_type, typename... arg_types>
         void require( arg_types... args ) const
         {
-            component_type::add_unique( *this, args... );
+            component<component_type>::add_unique( *this, args... );
         }
 
         // Remove a component from this entity
@@ -60,7 +60,7 @@ namespace rnjin::ecs
         template <typename component_type>
         void remove() const
         {
-            component_type::remove_from( *this );
+            component<component_type>::remove_from( *this );
         }
 
         // Get a component attached to this entity
@@ -69,7 +69,16 @@ namespace rnjin::ecs
         template <typename component_type>
         const component_type* get() const
         {
-            return component_type::owned_by( *this );
+            return component<component_type>::owned_by( *this );
+        }
+        
+        // Get a component attached to this entity as a mutable pointer
+        // note: actually forwards call to component::owned_by, since
+        //       entities don't internally store their associated components
+        template <typename component_type>
+        component_type* get_mutable() const
+        {
+            return component<component_type>::owned_by( *this );
         }
 
         public: // accessors

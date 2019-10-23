@@ -6,12 +6,15 @@
 
 #include <iostream>
 #include <core.hpp>
+#include <console.hpp>
 #include <test.hpp>
 
 using namespace rnjin;
 
 int main( int argc, char* argv[] )
 {
+    console::parse_arguments( { "-af", "params/test" } );
+
     try
     {
         for ( uint i : range( argc ) )
@@ -21,7 +24,7 @@ int main( int argc, char* argv[] )
 
             string test_name = string( argv[i] );
 
-            if (test_name == "all")
+            if ( test_name == "all" )
             {
                 test::execute_all_test_actions();
                 break;
@@ -33,7 +36,7 @@ int main( int argc, char* argv[] )
         }
         std::cout << std::endl << "Finished tests" << std::endl;
     }
-    catch (std::exception e)
+    catch ( std::exception e )
     {
         std::cout << "Error: " << e.what() << std::endl;
     }
