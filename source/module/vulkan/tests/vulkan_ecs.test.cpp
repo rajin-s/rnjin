@@ -8,6 +8,7 @@
 
 #include "log.hpp"
 #include "visual_ecs.hpp"
+#include "primitives.hpp"
 
 #include "vulkan_api.hpp"
 #include "vulkan_device.hpp"
@@ -68,6 +69,10 @@ test( vulkan_ecs )
 
     subregion
     {
+        graphics::mesh new_cube = graphics::primitives::cube( 0.25 );
+        new_cube.set_path( "test/cube.mesh" );
+        new_cube.save();
+
         shader test_vertex   = shader( "Test Vertex Shader", shader::type::vertex );
         shader test_fragment = shader( "Test Fragment Shader", shader::type::fragment );
         test_vertex.set_glsl( io::file( "shaders/test_vsh.glsl", io::file::mode::read ).read_all_text() );
@@ -100,7 +105,7 @@ test( vulkan_ecs )
             {
                 vk_resource_collector.update_all();
                 vk_renderer.update_all();
-    
+
                 do_render = false;
             }
         }

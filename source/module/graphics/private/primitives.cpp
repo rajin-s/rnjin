@@ -43,40 +43,40 @@ namespace rnjin::graphics::primitives
 
         let vertices = list<mesh::vertex>{
             // Left face
-            vertex( points[0], directions[1], white, uvs[1] ),
-            vertex( points[1], directions[1], white, uvs[0] ),
-            vertex( points[4], directions[1], white, uvs[3] ),
-            vertex( points[5], directions[1], white, uvs[2] ),
+            vertex( points[0], directions[1], float4(1, 1, 0, 1), uvs[1] ),
+            vertex( points[1], directions[1], float4(0, 1, 1, 1), uvs[0] ),
+            vertex( points[4], directions[1], float4(1, 0, 1, 1), uvs[3] ),
+            vertex( points[5], directions[1], float4(1, 1, 0, 1), uvs[2] ),
 
             // Back face
-            vertex( points[0], directions[5], white, uvs[1] ),
-            vertex( points[3], directions[5], white, uvs[0] ),
-            vertex( points[4], directions[5], white, uvs[3] ),
-            vertex( points[7], directions[5], white, uvs[2] ),
+            vertex( points[0], directions[5], float4(1, 1, 0, 1), uvs[1] ),
+            vertex( points[3], directions[5], float4(0, 1, 1, 1), uvs[0] ),
+            vertex( points[4], directions[5], float4(1, 0, 1, 1), uvs[3] ),
+            vertex( points[7], directions[5], float4(1, 1, 0, 1), uvs[2] ),
 
             // Top face
-            vertex( points[4], directions[2], white, uvs[1] ),
-            vertex( points[7], directions[2], white, uvs[0] ),
-            vertex( points[5], directions[2], white, uvs[3] ),
-            vertex( points[6], directions[2], white, uvs[2] ),
+            vertex( points[4], directions[2], float4(1, 1, 0, 1), uvs[1] ),
+            vertex( points[7], directions[2], float4(0, 1, 1, 1), uvs[0] ),
+            vertex( points[5], directions[2], float4(1, 0, 1, 1), uvs[3] ),
+            vertex( points[6], directions[2], float4(1, 1, 0, 1), uvs[2] ),
 
             // Front face
-            vertex( points[1], directions[4], white, uvs[1] ),
-            vertex( points[2], directions[4], white, uvs[0] ),
-            vertex( points[5], directions[4], white, uvs[3] ),
-            vertex( points[6], directions[4], white, uvs[2] ),
+            vertex( points[1], directions[4], float4(1, 1, 0, 1), uvs[1] ),
+            vertex( points[2], directions[4], float4(0, 1, 1, 1), uvs[0] ),
+            vertex( points[5], directions[4], float4(1, 0, 1, 1), uvs[3] ),
+            vertex( points[6], directions[4], float4(1, 1, 0, 1), uvs[2] ),
 
             // Right face
-            vertex( points[3], directions[0], white, uvs[1] ),
-            vertex( points[2], directions[0], white, uvs[0] ),
-            vertex( points[7], directions[0], white, uvs[3] ),
-            vertex( points[6], directions[0], white, uvs[2] ),
+            vertex( points[3], directions[0], float4(1, 1, 0, 1), uvs[1] ),
+            vertex( points[2], directions[0], float4(0, 1, 1, 1), uvs[0] ),
+            vertex( points[7], directions[0], float4(1, 0, 1, 1), uvs[3] ),
+            vertex( points[6], directions[0], float4(1, 1, 0, 1), uvs[2] ),
 
             // Bottom face
-            vertex( points[3], directions[3], white, uvs[1] ),
-            vertex( points[1], directions[3], white, uvs[0] ),
-            vertex( points[2], directions[3], white, uvs[3] ),
-            vertex( points[0], directions[3], white, uvs[2] ),
+            vertex( points[3], directions[3], float4(1, 1, 0, 1), uvs[1] ),
+            vertex( points[1], directions[3], float4(0, 1, 1, 1), uvs[0] ),
+            vertex( points[2], directions[3], float4(1, 0, 1, 1), uvs[3] ),
+            vertex( points[0], directions[3], float4(1, 1, 0, 1), uvs[2] ),
         };
 
         // clang-format off
