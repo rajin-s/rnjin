@@ -16,12 +16,58 @@
 namespace rnjin
 {
     // numeric types
-    using byte  = uint8_t;
-    using uint  = uint32_t;
-    using usize = std::size_t;
+    using byte = uint8_t;
+    using uint = uint32_t;
 
     using uint64 = uint64_t;
     using uint16 = uint16_t;
+
+    // named numeric types
+    using usize = std::size_t;
+
+    // numeric wrappers
+    class version_id
+    {
+        public:
+        inline version_id() : number( version_id::first_number ) {}
+        inline ~version_id() {}
+
+        inline bool update_to( const version_id other )
+        {
+            bool result = number != other.number;
+            number      = other.number;
+            return result;
+        }
+
+        inline version_id& operator++(int _)
+        {
+            number++;
+            return *this;
+        }
+
+        inline bool is_first()
+        {
+            return number == version_id::first_number;
+        }
+        inline bool is_invalid()
+        {
+            return number == version_id::invalid_number;
+        }
+
+        inline static version_id invalid()
+        {
+            return version_id( version_id::invalid_number );
+        }
+
+        private:
+        using numeric_type = uint64;
+        numeric_type number;
+
+        inline version_id( numeric_type number ) : number( number ) {}
+
+        static constexpr numeric_type first_number   = 0;
+        static constexpr numeric_type invalid_number = ~0;
+    };
 
     // strings
     using string = std::string;

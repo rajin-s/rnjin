@@ -5,6 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #include "vulkan_api_internal.hpp"
+#include "vulkan_window_surface.hpp"
 #include "vulkan_device.hpp"
 
 namespace rnjin::graphics::vulkan
@@ -26,7 +27,6 @@ namespace rnjin::graphics::vulkan
     device::~device()
     {
         clean_up();
-        
         vulkan_log_verbose.print( "Destroying Vulkan device wrapper" );
         check_error_condition( pass, vulkan_log_errors, is_initialized == true, "Destroying Vulkan device wrapper without cleaning up resources" );
     }
@@ -41,6 +41,7 @@ namespace rnjin::graphics::vulkan
     {
         reference_surface = &surface.get_vulkan_surface();
     }
+
     void device::initialize()
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan device wrapper initialization" );
@@ -218,7 +219,16 @@ namespace rnjin::graphics::vulkan
         is_initialized = false;
     }
 
-    // Physical device selection helpers
+    void device::wait_for_idle() const
+    {
+        vulkan_device.waitIdle();
+    }
+
+/* -------------------------------------------------------------------------- */
+/*                      Physical Device Selection Helpers                     */
+/* -------------------------------------------------------------------------- */
+#pragma region helpers
+
     const list<const char*> required_device_extensions = {};
     const list<const char*> device_present_extensions  = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
@@ -346,5 +356,7 @@ namespace rnjin::graphics::vulkan
         vulkan_log_verbose.print_additional( "\1 (vendor: \2) score: \3", properties.deviceName, properties.vendorID, score );
         return score;
     }
+
+#pragma endregion helpers
 
 } // namespace rnjin::graphics::vulkan

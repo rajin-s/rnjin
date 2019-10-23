@@ -24,7 +24,7 @@ namespace rnjin::graphics::vulkan
         void initialize();
         void clean_up();
 
-        void wait_for_idle();
+        void wait_for_idle() const;
 
         public: // accessors
         const vk::Instance& get_vulkan_instance() const;
@@ -91,14 +91,5 @@ namespace rnjin::graphics::vulkan
             friend class device;
         }
         queue;
-    };
-
-    class window_surface
-    {
-        public: // accessors
-        let& get_vulkan_surface get_value( vulkan_surface );
-
-        private: // members
-        vk::SurfaceKHR vulkan_surface;
     };
 } // namespace rnjin::graphics::vulkan

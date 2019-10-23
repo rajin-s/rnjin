@@ -8,9 +8,10 @@
 
 namespace rnjin::graphics::vulkan
 {
-    /* -------------------------------------------------------------------------- */
-    /*                              Buffer Allocation                             */
-    /* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/*                              Buffer Allocation                             */
+/* -------------------------------------------------------------------------- */
+#pragma region buffer_allocation
 
     buffer_allocation::buffer_allocation() : offset( 0 ), size( 0 ), buffer( nullptr ) {}
     buffer_allocation::buffer_allocation( vk::DeviceSize offset, vk::DeviceSize size, vk::Buffer* buffer )
@@ -19,10 +20,13 @@ namespace rnjin::graphics::vulkan
         pass_member( buffer )  //
     {}
 
+#pragma endregion buffer_allocation
 
-    /* -------------------------------------------------------------------------- */
-    /*                              Buffer Allocator                              */
-    /* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+/*                              Buffer Allocator                              */
+/* -------------------------------------------------------------------------- */
+#pragma region buffer_allocator
 
     uint find_best_memory_type( vk::PhysicalDevice device, bitmask type_filter, vk::MemoryPropertyFlags target_properties );
 
@@ -30,18 +34,19 @@ namespace rnjin::graphics::vulkan
       : pass_member( device_instance ),       //
         pass_member( usage_flags ),           //
         pass_member( memory_property_flags ), //
-        size( 0 ),                      //
+        size( 0 ),                            //
         entry_block( 0, 0, nullptr, nullptr ) //
     {}
 
     buffer_allocator::~buffer_allocator()
     {
-        let task = vulkan_log_verbose.track_scope( "Vulkan buffer allocator destruction" );
-
-        let& vulkan_device = device_instance.get_vulkan_device();
+        vulkan_log_verbose.print( "Destroying Vulkan buffer allocator" );
+        vulkan_log_verbose.print_additional( "\1 bytes total, \2 bytes free", size, available_space );
 
         // Make sure no operations are in-progress before freeing buffers and memory
-        vulkan_device.waitIdle();
+        device_instance.wait_for_idle();
+
+        let& vulkan_device = device_instance.get_vulkan_device();
 
         // Make sure the buffer was actually created
         if ( buffer )
@@ -68,7 +73,8 @@ namespace rnjin::graphics::vulkan
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan buffer allocator initialization" );
 
-        size = total_size;
+        size            = total_size;
+        available_space = total_size;
 
         let& vulkan_device = device_instance.get_vulkan_device();
 
@@ -86,6 +92,8 @@ namespace rnjin::graphics::vulkan
         // Get memory information based on buffer requirements
         let buffer_memory_requirements = vulkan_device.getBufferMemoryRequirements( buffer );
         let buffer_memory_type_index   = find_best_memory_type( device_instance.get_physical_device(), buffer_memory_requirements.memoryTypeBits, memory_property_flags );
+
+        vulkan_log_verbose.print_additional( "Allocating \1 bytes for buffer space", total_size );
 
         // Allocate memory for the buffer
         vk::MemoryAllocateInfo buffer_allocation_info(
@@ -118,7 +126,7 @@ namespace rnjin::graphics::vulkan
     // note: uses a first-fit allocation strategy
     buffer_allocation buffer_allocator::allocate( vk::DeviceSize size )
     {
-        let task = vulkan_log_verbose.track_scope( "Vulkan buffer_allocator allocation" );
+        vulkan_log_verbose.print( "Allocating \1 byte Vulkan buffer (\2 bytes free)", size, available_space );
 
         check_error_condition( return buffer_allocation(), vulkan_log_errors, size == 0, "Tried to allocate 0 bytes of GPU memory" );
 
@@ -135,14 +143,17 @@ namespace rnjin::graphics::vulkan
 
         check_error_condition( return buffer_allocation(), vulkan_log_errors, destination_block == nullptr, "Failed to allocate GPU memory for a request of size \1", size );
 
+        available_space -= size;
+
         // The destination block size matches the request exactly, so just get rid of it
         if ( destination_block->size == size )
         {
             // note: previous is guaranteed to exist, as the entry block (the only block without a previous entry)
             //       has 0 size and will thus never be selected for allocation
             destination_block->previous->next = destination_block->next;
-            return buffer_allocation( destination_block->offset, size, &buffer );
+            let result                        = buffer_allocation( destination_block->offset, size, &buffer );
             delete destination_block;
+            return result;
         }
         else
         {
@@ -159,7 +170,7 @@ namespace rnjin::graphics::vulkan
     //       (maybe we should store an 'owner' pointer in the allocation and check that here?)
     void buffer_allocator::free( buffer_allocation& allocation )
     {
-        let task = vulkan_log_verbose.track_scope( "Vulkan buffer_allocator de-allocation" );
+        vulkan_log_verbose.print( "Freeing \1 byte Vulkan buffer", allocation.size );
 
         block* previous_block = &entry_block;
         block* next_block     = nullptr;
@@ -179,6 +190,8 @@ namespace rnjin::graphics::vulkan
                 break;
             }
         }
+
+        available_space += allocation.size;
 
         // Insert new free block and coalesce as needed
 
@@ -293,42 +306,85 @@ namespace rnjin::graphics::vulkan
         check_error_condition( return 0, vulkan_log_errors, failed_to_find_memory_type == true, "Failed to find a suitable memory type" );
     }
 
+#pragma endregion buffer_allocator
 
-    /* -------------------------------------------------------------------------- */
-    /*                              Resource Database                             */
-    /* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/*                               Render Pipeline                              */
+/* -------------------------------------------------------------------------- */
+#pragma region render_pipeline
 
-    resource_database* resource_database::singleton = nullptr;
+    render_pipeline::render_pipeline() {}
+    render_pipeline::render_pipeline( vk::Pipeline vulkan_pipeline, vk::PipelineLayout layout )
+      : pass_member( vulkan_pipeline ), //
+        pass_member( layout )           //
+    {}
+    render_pipeline::~render_pipeline() {}
+
+    void render_pipeline::invalidate()
+    {
+        vulkan_pipeline = vk::Pipeline();
+        layout          = vk::PipelineLayout();
+    }
+
+#pragma endregion render_pipeline
+
+/* -------------------------------------------------------------------------- */
+/*                              Resource Database                             */
+/* -------------------------------------------------------------------------- */
+#pragma region resource_database
 
     resource_database::resource_database( const device& device_instance )
       : pass_member( device_instance ), //
         vertex_buffer_allocator(
             device_instance,                                                                //
             vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, //
-            vk::MemoryPropertyFlagBits::eDeviceLocal ),
+            vk::MemoryPropertyFlagBits::eDeviceLocal ),                                     //
         index_buffer_allocator(
             device_instance,                                                               //
             vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, //
-            vk::MemoryPropertyFlagBits::eDeviceLocal ),
+            vk::MemoryPropertyFlagBits::eDeviceLocal ),                                    //
         staging_buffer_allocator(
-            device_instance,                                                                //
-            vk::BufferUsageFlagBits::eTransferSrc, //
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent )
+            device_instance,                                                                       //
+            vk::BufferUsageFlagBits::eTransferSrc,                                                 //
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent ) //
     {}
-    resource_database::~resource_database() {}
-
-    void resource_database::initialize()
+    resource_database::~resource_database()
     {
-        let task = vulkan_log_verbose.track_scope( "Vulkan resource database initialization" );
+        clean_up();
+    }
 
-        // Fixed number of elements each buffer has to work with
-        let max_buffer_count = 500;
+    void resource_database::initialize( usize vertex_buffer_space, usize index_buffer_space, usize staging_buffer_space )
+    {
+        vulkan_log_verbose.print( "Initializing Vulkan resource database" );
+        vulkan_log_verbose.print_additional( "\1 bytes for vertex buffers", vertex_buffer_space );
+        vulkan_log_verbose.print_additional( "\1 bytes for index buffers", index_buffer_space );
+        vulkan_log_verbose.print_additional( "\1 bytes for staging buffers", staging_buffer_space );
 
-        vertex_buffer_allocator.initialize( sizeof( mesh::vertex ) * max_buffer_count );
-        index_buffer_allocator.initialize( sizeof( mesh::index ) * max_buffer_count );
-        staging_buffer_allocator.initialize( sizeof( mesh::vertex ) * max_buffer_count );
+        vertex_buffer_allocator.initialize( vertex_buffer_space );
+        index_buffer_allocator.initialize( index_buffer_space );
+        staging_buffer_allocator.initialize( staging_buffer_space );
 
-        resource_database::singleton = this;
+        let pipeline_cache_info = vk::PipelineCacheCreateInfo(
+            // TODO: load pipeline cache from disk and such
+        );
+        pipeline_cache = device_instance.get_vulkan_device().createPipelineCache( pipeline_cache_info );
+    }
+
+    void resource_database::clean_up()
+    {
+        let task = vulkan_log_verbose.track_scope( "Vulkan resource database cleanup" );
+
+        // Make sure no rendering operations are in progress when we release resources
+        device_instance.wait_for_idle();
+
+        let& vulkan_device = device_instance.get_vulkan_device();
+
+        vulkan_device.destroyPipelineCache( pipeline_cache );
+        foreach ( pipeline : pipelines )
+        {
+            vulkan_device.destroyPipeline( pipeline.get_vulkan_pipeline() );
+            vulkan_device.destroyPipelineLayout( pipeline.get_layout() );
+        }
     }
 
     // Copy host memory to CPU-accessible device memory owned by a staging buffer
@@ -449,29 +505,347 @@ namespace rnjin::graphics::vulkan
         index_buffer_allocator.free( allocation );
     }
 
+    // Helper structures/functions for pipeline creation
+    struct vertex_description
+    {
+        vk::VertexInputBindingDescription input;
+        vk::VertexInputAttributeDescription* input_attributes;
+        uint input_attribute_count;
+    };
+    template <typename T>
+    static vertex_description get_vertex_binding_description();
+    template <>
+    static vertex_description get_vertex_binding_description<mesh::vertex>();
 
-    /* -------------------------------------------------------------------------- */
-    /*                        Internal Resources Component                        */
-    /* -------------------------------------------------------------------------- */
+    render_pipeline resource_database::create_pipeline( const shader& vertex_shader, const shader& fragment_shader, const vk::RenderPass& render_pass )
+    {
+        let& vulkan_device = device_instance.get_vulkan_device();
 
-    internal_resources::internal_resources() {}
+        vk::Pipeline new_pipeline;
+        vk::PipelineLayout new_pipeline_layout;
+
+        tracked_subregion( vulkan_log_verbose, "Vulkan pipeline creation" )
+        {
+            // Pipeline layout info
+            // TODO: handle descriptor sets and push constants
+            vk::PipelineLayoutCreateInfo pipeline_layout_info(
+                {},      // flags
+                0,       // setLayoutCount
+                nullptr, // pSetLayouts
+                0,       // pushConstantRangeCount
+                nullptr  // pPushConstantRanges
+            );
+
+            new_pipeline_layout = vulkan_device.createPipelineLayout( pipeline_layout_info );
+            check_error_condition( return render_pipeline(), vulkan_log_errors, not new_pipeline_layout, "Failed to create Vulkan pipeline layout" );
+
+            // Get shader bytecode for each stage
+            let& vertex_shader_binary   = vertex_shader.get_spirv();
+            let& fragment_shader_binary = fragment_shader.get_spirv();
+
+            // Build shader modules
+            vk::ShaderModuleCreateInfo vertex_shader_info(
+                {},                                                         // flags
+                vertex_shader_binary.size() * sizeof( shader::spirv_char ), // codeSize
+                vertex_shader_binary.data()                                 // pCode
+            );
+            vk::ShaderModuleCreateInfo fragment_shader_info(
+                {},                                                           // flags
+                fragment_shader_binary.size() * sizeof( shader::spirv_char ), // codeSize
+                fragment_shader_binary.data()                                 // pCode
+            );
+
+            // note: these will be cleaned up automatically since they're made with a createUnique call
+            let vertex_shader_module   = vulkan_device.createShaderModuleUnique( vertex_shader_info );
+            let fragment_shader_module = vulkan_device.createShaderModuleUnique( fragment_shader_info );
+
+            check_error_condition( return render_pipeline(), vulkan_log_errors, not vertex_shader_module, "Failed to create vertex shader module from shader" );
+            check_error_condition( return render_pipeline(), vulkan_log_errors, not fragment_shader_module, "Failed to create vertex shader module from shader" );
+
+            // Shader stage info
+            vk::PipelineShaderStageCreateInfo vertex_shader_stage_info(
+                {},                               // flags
+                vk::ShaderStageFlagBits::eVertex, // stage
+                *vertex_shader_module,            // module
+                "main",                           // pName
+                nullptr                           // pSpecializationInfo
+            );
+            vk::PipelineShaderStageCreateInfo fragment_shader_stage_info(
+                {},                                 // flags
+                vk::ShaderStageFlagBits::eFragment, // stage
+                *fragment_shader_module,            // module
+                "main",                             // pName
+                nullptr                             // pSpecializationInfo
+            );
+            vk::PipelineShaderStageCreateInfo shader_stages[] = { vertex_shader_stage_info, fragment_shader_stage_info };
+
+            // Vertex input info (currently standardized for only one vertex type mesh::vertex)
+            let vertex_description = get_vertex_binding_description<mesh::vertex>();
+
+            vk::PipelineVertexInputStateCreateInfo vertex_input_info(
+                {},                                       // flags
+                1,                                        // vertexBindingDescriptionCount
+                &vertex_description.input,                // pVertexBindingDescriptions
+                vertex_description.input_attribute_count, // vertexAttributeDescriptionCount
+                vertex_description.input_attributes       // pVertexAttributeDescriptions
+            );
+            vk::PipelineInputAssemblyStateCreateInfo input_assembly(
+                {},                                   // flags
+                vk::PrimitiveTopology::eTriangleList, // topology
+                false                                 // primitiveRestartEnable
+            );
+
+            // Viewport state (with dummy info since this will be overwritten by dynamic state)
+            let viewport_size = uint2();
+            vk::Viewport viewport(
+                0.0,             // x
+                0.0,             // y
+                viewport_size.x, // width
+                viewport_size.y, // height
+                0.0,             // minDepth
+                1.0              // maxDepth
+            );
+            vk::Rect2D scissor(
+                vk::Offset2D( 0, 0 ),                            // offset
+                vk::Extent2D( viewport_size.x, viewport_size.y ) // extent
+            );
+            vk::PipelineViewportStateCreateInfo viewport_state(
+                {},        // flags
+                1,         // viewportCount
+                &viewport, // pViewports
+                1,         // scissorCount
+                &scissor   // pScissors
+            );
+
+            // Rasterization state
+            vk::PipelineRasterizationStateCreateInfo rasterizer(
+                {},                          // flags
+                false,                       // depthClampEnable
+                false,                       // rasterizerDiscardEnable
+                vk::PolygonMode::eFill,      // polygonMode
+                vk::CullModeFlagBits::eBack, // cullMode
+                vk::FrontFace::eClockwise,   // frontFace
+                false,                       // depthBiasEnable
+                0.0,                         // depthBiasConstantFactor
+                0.0,                         // depthBiasClamp
+                0.0,                         // depthBiasSlopeFactor
+                1.0                          // lineWidth
+            );
+
+            vk::PipelineMultisampleStateCreateInfo multisampling(
+                {},                          // flags
+                vk::SampleCountFlagBits::e1, // rasterizationSamples
+                false,                       // sampleShadingEnable
+                1.0,                         // minSampleShading
+                nullptr,                     // pSampleMask
+                false,                       // alphaToCoverageEnable
+                false                        // alphaToOneEnable
+            );
+
+            // Color output state
+            // TODO: pull this from material info
+            let color_write_all = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+            vk::PipelineColorBlendAttachmentState color_blend_attachment(
+                false,                  // blendEnable
+                vk::BlendFactor::eOne,  // srcColorBlendFactor
+                vk::BlendFactor::eZero, // dstColorBlendFactor
+                vk::BlendOp::eAdd,      // colorBlendOp
+                vk::BlendFactor::eOne,  // srcAlphaBlendFactor
+                vk::BlendFactor::eZero, // dstAlphaBlendFactor
+                vk::BlendOp::eAdd,      // alphaBlendOp
+                color_write_all         // colorWriteMask
+            );
+
+            vk::PipelineColorBlendStateCreateInfo color_blending(
+                {},                      // flags
+                false,                   // logicOpEnable
+                vk::LogicOp::eCopy,      // logicOp
+                1,                       // attachmentCount
+                &color_blend_attachment, // pAttachments
+                { 0.0, 0.0, 0.0, 0.0 }   // blendConstants
+            );
+
+            static let pipeline_dynamic_state = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+            vk::PipelineDynamicStateCreateInfo dynamic_state(
+                {},                            // flags
+                pipeline_dynamic_state.size(), // dynamicStateCount
+                pipeline_dynamic_state.begin() // pDynamicStates
+            );
+
+            // Create pipeline
+            vk::GraphicsPipelineCreateInfo graphics_pipeline_info(
+                {},                  // flags
+                2,                   // stageCount
+                shader_stages,       // pStages
+                &vertex_input_info,  // pVertexInputState
+                &input_assembly,     // pInputAssemblyState
+                nullptr,             // pTessellationState
+                &viewport_state,     // pViewportState
+                &rasterizer,         // pRasterizationState
+                &multisampling,      // pMultisampleState
+                nullptr,             // pDepthStencilState
+                &color_blending,     // pColorBlendState
+                &dynamic_state,      // pDynamicState
+                new_pipeline_layout, // layout
+                render_pass          // renderPass
+                                     // subpass            = 0
+                                     // basePipelineHandle = null
+                                     // basePipelineIndex  = 0
+            );
+
+            new_pipeline = vulkan_device.createGraphicsPipelines( pipeline_cache, { graphics_pipeline_info } )[0];
+            check_error_condition( return render_pipeline(), vulkan_log_errors, not new_pipeline, "Failed to create Vulkan pipeline" );
+        }
+
+        pipelines.emplace_back( new_pipeline, new_pipeline_layout );
+        return pipelines.back();
+    }
+
+    void resource_database::free_pipeline( render_pipeline& pipeline )
+    {
+        let& vulkan_device = device_instance.get_vulkan_device();
+
+        vulkan_device.destroyPipeline( pipeline.get_vulkan_pipeline() );
+        vulkan_device.destroyPipelineLayout( pipeline.get_layout() );
+
+        pipeline.invalidate();
+    }
+
+    // Definitions of helper functions for pipeline creation
+    template <typename T>
+    static vertex_description get_vertex_binding_description()
+    {
+        static let invalid_description = vertex_description{ vk::VertexInputBindingDescription(), 0, nullptr };
+
+        let invalid_vertex_type = true;
+        check_error_condition( return invalid_description, vulkan_log_errors, invalid_vertex_type == true, "Failed to get binding description for invalid vertex type" );
+    }
+    template <>
+    static vertex_description get_vertex_binding_description<mesh::vertex>()
+    {
+        static const vk::VertexInputBindingDescription input(
+            0,                             // binding
+            mesh::vertex_info.vertex_size, // stride
+            vk::VertexInputRate::eVertex   // inputRate
+        );
+
+        // clang-format off
+        static list<vk::VertexInputAttributeDescription> attributes{
+            vk::VertexInputAttributeDescription(  // position
+                0,                                // location
+                0,                                // binding
+                vk::Format::eR32G32B32Sfloat,     // format
+                mesh::vertex_info.position_offset // offset
+            ),
+            vk::VertexInputAttributeDescription(  // normal
+                1,                                // location
+                0,                                // binding
+                vk::Format::eR32G32B32Sfloat,     // format
+                mesh::vertex_info.normal_offset   // offset
+            ), 
+            vk::VertexInputAttributeDescription(  // color
+                2,                                // location
+                0,                                // binding
+                vk::Format::eR32G32B32A32Sfloat,  // format
+                mesh::vertex_info.color_offset    // offset
+            ), 
+            vk::VertexInputAttributeDescription(  // uv
+                3,                                // location
+                0,                                // binding
+                vk::Format::eR32G32Sfloat,        // format
+                mesh::vertex_info.uv_offset       // offset
+            )
+        };
+        // clang-format on
+
+        return vertex_description{
+            input,                   // input
+            attributes.data(),       // input_attributes
+            (uint) attributes.size() // input_attribute_count
+        };
+    }
+
+#pragma endregion resource_database
+
+/* -------------------------------------------------------------------------- */
+/*                        Internal Resources Component                        */
+/* -------------------------------------------------------------------------- */
+#pragma region internal_resources
+
+    internal_resources::internal_resources()
+      : saved_indices_version( version_id::invalid() ),  //
+        saved_vertices_version( version_id::invalid() ), //
+        saved_material_version( version_id::invalid() )  //
+    {}
     internal_resources::~internal_resources() {}
 
-    // Allocate Vulkan resources based on those of a single model component
-    void internal_resources::update( const model& source )
+    void internal_resources::update_mesh_data( const mesh& source, resource_database& resources )
     {
-        let_mutable* db = resource_database::get_instance();
+        // Re-allocate a vertex buffer if the source vertices have changed since the last update
+        // note: will always be called for the first update, since the saved version starts invalid
+        if ( saved_vertices_version.update_to( source.vertices.get_version() ) )
+        {
+            vulkan_log_verbose.print( "Updating vulkan data for mesh vertices (\1)", source.get_id() );
 
+            // Release an existing vertex buffer if it has been allocated
+            // TODO: re-use the same buffer and copy new data if the number of elements stays the same
+            if ( vertices.is_valid() )
+            {
+                resources.free_vertex_buffer( vertices );
+            }
+            vertices     = resources.create_vertex_buffer( source.vertices.get_data() );
+            vertex_count = source.vertices.get_data().size();
+        }
+
+        // Re-allocate an index buffer if the source indices have changed since the last update
+        // note: will always be called for the first update, since the saved version starts invalid
+        if ( saved_indices_version.update_to( source.indices.get_version() ) )
+        {
+            vulkan_log_verbose.print( "Updating vulkan data for mesh indices (\1)", source.get_id() );
+
+            // Release an existing index buffer if it has been allocated
+            // TODO: re-use the same buffer and copy new data if the number of elements stays the same
+            if ( indices.is_valid() )
+            {
+                resources.free_index_buffer( indices );
+            }
+            indices     = resources.create_index_buffer( source.indices.get_data() );
+            index_count = source.indices.get_data().size();
+        }
+    }
+
+    void internal_resources::update_material_data( const material& source, resource_database& resources, const vk::RenderPass& render_pass )
+    {
+        // Re-create a pipeline if the source material has changed since the last update
+        // note: will always be called for the first update, since the saved version starts invalid
+        if ( saved_material_version.update_to( source.get_version() ) )
+        {
+            vulkan_log_verbose.print( "Updating vulkan data for material (\1)", source.get_id() );
+
+            // Release an existing pipeline if it has been created
+            if ( pipeline.is_valid() )
+            {
+                resources.free_pipeline( pipeline );
+            }
+            pipeline = resources.create_pipeline( source.get_vertex_shader(), source.get_fragment_shader(), render_pass );
+        }
+    }
+
+    void internal_resources::release( resource_database& resources )
+    {
         if ( vertices.is_valid() )
         {
-            db->free_vertex_buffer( vertices );
+            resources.free_vertex_buffer( vertices );
         }
         if ( indices.is_valid() )
         {
-            db->free_index_buffer( indices );
+            resources.free_index_buffer( indices );
         }
-
-        vertices = db->create_vertex_buffer( source.get_mesh().get_vertices() );
-        indices  = db->create_index_buffer( source.get_mesh().get_indices() );
+        if ( pipeline.is_valid() )
+        {
+            resources.free_pipeline( pipeline );
+        }
     }
+
+#pragma endregion internal_resources
 } // namespace rnjin::graphics::vulkan

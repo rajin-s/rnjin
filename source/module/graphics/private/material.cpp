@@ -9,16 +9,19 @@
 namespace rnjin::graphics
 {
     material::material() {}
-    material::material( const string& name ) : pass_member( name ), vertex_shader(), fragment_shader() {}
-    material::material( const string&, const shader& vertex_shader, const shader& fragment_shader ) : pass_member( name ), pass_member( vertex_shader ), pass_member( fragment_shader )
-    {
-        // material::events.material_loaded().send( *this );
-    }
-
-    material::~material()
-    {
-        // material::events.material_destroyed().send( *this );
-    }
+    material::material( const string& name )
+      : pass_member( name ), //
+        vertex_shader(),     //
+        fragment_shader(),   //
+        version()            //
+    {}
+    material::material( const string&, const shader& vertex_shader, const shader& fragment_shader )
+      : pass_member( name ),            //
+        pass_member( vertex_shader ),   //
+        pass_member( fragment_shader ), //
+        version()                       //
+    {}
+    material::~material() {}
 
     void material::write_data( io::file& file )
     {
@@ -34,7 +37,8 @@ namespace rnjin::graphics
 
         vertex_shader.load_from( file );
         fragment_shader.load_from( file );
-    }
 
+        version++;
+    }
     // define_static_group( material::events );
 } // namespace rnjin::graphics

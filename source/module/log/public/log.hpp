@@ -41,7 +41,7 @@ namespace rnjin
             }
             ~scope_tracker()
             {
-                target.print( "Finish \1", scope_name );
+                target.print_additional( "Finish \1", scope_name );
             }
 
             bool do_single_iter()

@@ -71,6 +71,15 @@ namespace rnjin::ecs
         {
             return component<component_type>::owned_by( *this );
         }
+        
+        // Get a component attached to this entity as a mutable pointer
+        // note: actually forwards call to component::owned_by, since
+        //       entities don't internally store their associated components
+        template <typename component_type>
+        component_type* get_mutable() const
+        {
+            return component<component_type>::owned_by( *this );
+        }
 
         public: // accessors
         let get_id get_value( entity_id );

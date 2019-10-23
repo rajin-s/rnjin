@@ -88,8 +88,32 @@ namespace rnjin::graphics::vulkan
         };
 
         block entry_block;
+        vk::DeviceSize available_space;
     };
 
+    /* -------------------------------------------------------------------------- */
+    /*                                  Pipeline                                  */
+    /* -------------------------------------------------------------------------- */
+
+    class render_pipeline
+    {
+        public: // methods
+        render_pipeline();
+        render_pipeline( vk::Pipeline vulkan_pipeline, vk::PipelineLayout layout );
+        ~render_pipeline();
+
+        void invalidate();
+
+        public: // accessors
+        let& get_vulkan_pipeline get_value( vulkan_pipeline );
+        let& get_layout get_value( layout );
+
+        let is_valid get_value( vulkan_pipeline and layout );
+
+        private: // members
+        vk::Pipeline vulkan_pipeline;
+        vk::PipelineLayout layout;
+    };
 
     /* -------------------------------------------------------------------------- */
     /*                              Resource Database                             */
@@ -101,13 +125,16 @@ namespace rnjin::graphics::vulkan
         resource_database( const device& device_instance );
         ~resource_database();
 
-        void initialize();
+        void initialize( usize vertex_buffer_space, usize index_buffer_space, usize staging_buffer_space );
+        void clean_up();
 
         buffer_allocation create_vertex_buffer( const list<mesh::vertex>& vertices );
         buffer_allocation create_index_buffer( const list<mesh::index>& indices );
-
         void free_vertex_buffer( buffer_allocation& allocation );
         void free_index_buffer( buffer_allocation& allocation );
+
+        render_pipeline create_pipeline( const shader& vertex_shader, const shader& fragment_shader, const vk::RenderPass& render_pass );
+        void free_pipeline( render_pipeline& pipeline );
 
         private: // methods
         void write_staging_buffer( const buffer_allocation& staging_buffer_allocation, vk::DeviceSize size, void* source );
@@ -116,21 +143,13 @@ namespace rnjin::graphics::vulkan
 
         private: // members
         const device& device_instance;
+        vk::PipelineCache pipeline_cache;
+        list<render_pipeline> pipelines;
 
         // note: this should probably have several 'chunks' of allocators for each use case, instead of just one massive one
         buffer_allocator vertex_buffer_allocator;
         buffer_allocator index_buffer_allocator;
         buffer_allocator staging_buffer_allocator;
-
-        // TODO: remove singleton structure?
-        public: // static methods
-        static resource_database* get_instance()
-        {
-            return singleton;
-        }
-
-        private: // static members
-        static resource_database* singleton;
     };
 
 
@@ -140,14 +159,31 @@ namespace rnjin::graphics::vulkan
 
     component_class( internal_resources )
     {
-        public:
+        public: // methods
         internal_resources();
         ~internal_resources();
 
-        void update( const model& source );
+        void update_mesh_data( const mesh& source, resource_database& resources );
+        void update_material_data( const material& source, resource_database& resources, const vk::RenderPass& render_pass );
+        void release( resource_database & resource );
 
-        private:
+        let& get_vertices get_value( vertices );
+        let& get_indices get_value( indices );
+        let& get_pipeline get_value( pipeline );
+
+        let get_vertex_count get_value( vertex_count );
+        let get_index_count get_value( index_count );
+
+        private: // members
+        version_id saved_vertices_version;
+        version_id saved_indices_version;
+        version_id saved_material_version;
+
+        usize vertex_count;
+        usize index_count;
+
         buffer_allocation vertices;
         buffer_allocation indices;
+        render_pipeline pipeline;
     };
 } // namespace rnjin::graphics::vulkan
