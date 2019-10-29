@@ -31,7 +31,7 @@
             },
             "cwd": "${workspaceRoot}\\build",
             "args": [
-                "vulkan_resource_management",
+                "vulkan_ecs",
             ]
             // "visualizerFile": "${workspaceRoot}/my.natvis",
             // "showDisplayString": true
