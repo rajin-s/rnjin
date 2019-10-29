@@ -13,11 +13,18 @@ namespace rnjin::graphics::vulkan
 /* -------------------------------------------------------------------------- */
 #pragma region buffer_allocation
 
-    buffer_allocation::buffer_allocation() : offset( 0 ), size( 0 ), buffer( nullptr ) {}
+    buffer_allocation::buffer_allocation() : offset( 0 ), size( 0 ), padding( 0 ), buffer( nullptr ) {}
     buffer_allocation::buffer_allocation( vk::DeviceSize offset, vk::DeviceSize size, vk::Buffer* buffer )
       : pass_member( offset ), //
         pass_member( size ),   //
+        padding( 0 ),          //
         pass_member( buffer )  //
+    {}
+    buffer_allocation::buffer_allocation( vk::DeviceSize offset, vk::DeviceSize size, vk::DeviceSize padding, vk::Buffer* buffer )
+      : pass_member( offset ),  //
+        pass_member( size ),    //
+        pass_member( padding ), //
+        pass_member( buffer )   //
     {}
 
 #pragma endregion buffer_allocation
@@ -165,12 +172,33 @@ namespace rnjin::graphics::vulkan
         }
     }
 
+    // Allocate a portion of the whole buffer with some added padding to preserve alignment
+    buffer_allocation buffer_allocator::allocate( vk::DeviceSize size, vk::DeviceSize padding )
+    {
+        // for the purposes of allocation, just treat this a block that is size+padding bytes
+        let_mutable allocation = allocate( size + padding );
+        allocation.size -= padding;
+        allocation.padding = padding;
+        return allocation;
+    }
+
     // Release a portion of the whole buffer that was previously allocated, coalescing the list of free blocks as needed
     // note: should only be called for buffer_allocation objects that this instance allocated; this isn't enforced
     //       (maybe we should store an 'owner' pointer in the allocation and check that here?)
     void buffer_allocator::free( buffer_allocation& allocation )
     {
-        vulkan_log_verbose.print( "Freeing \1 byte Vulkan buffer", allocation.size );
+        if ( allocation.padding > 0 )
+        {
+            vulkan_log_verbose.print( "Freeing \1 (+ \2 padding) byte Vulkan buffer", allocation.size, allocation.padding );
+        }
+        else
+        {
+            vulkan_log_verbose.print( "Freeing \1 byte Vulkan buffer", allocation.size, allocation.padding );
+        }
+
+        // for the purposes of deallocation, just treat blocks with padding as having larger size
+        allocation.size += allocation.padding;
+        allocation.padding = 0;
 
         block* previous_block = &entry_block;
         block* next_block     = nullptr;
@@ -314,16 +342,20 @@ namespace rnjin::graphics::vulkan
 #pragma region render_pipeline
 
     render_pipeline::render_pipeline() {}
-    render_pipeline::render_pipeline( vk::Pipeline vulkan_pipeline, vk::PipelineLayout layout )
-      : pass_member( vulkan_pipeline ), //
-        pass_member( layout )           //
+    render_pipeline::render_pipeline( vk::Pipeline vulkan_pipeline, vk::PipelineLayout layout, vk::DescriptorSet descriptor_set, vk::DescriptorSetLayout descriptor_layout )
+      : pass_member( vulkan_pipeline ),  //
+        pass_member( layout ),           //
+        pass_member( descriptor_set ),   //
+        pass_member( descriptor_layout ) //
     {}
     render_pipeline::~render_pipeline() {}
 
     void render_pipeline::invalidate()
     {
-        vulkan_pipeline = vk::Pipeline();
-        layout          = vk::PipelineLayout();
+        vulkan_pipeline   = vk::Pipeline();
+        layout            = vk::PipelineLayout();
+        descriptor_set    = vk::DescriptorSet();
+        descriptor_layout = vk::DescriptorSetLayout();
     }
 
 #pragma endregion render_pipeline
@@ -344,8 +376,12 @@ namespace rnjin::graphics::vulkan
             vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, //
             vk::MemoryPropertyFlagBits::eDeviceLocal ),                                    //
         staging_buffer_allocator(
+            device_instance,                                                                        //
+            vk::BufferUsageFlagBits::eTransferSrc,                                                  //
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent ), //
+        uniform_buffer_allocator(
             device_instance,                                                                       //
-            vk::BufferUsageFlagBits::eTransferSrc,                                                 //
+            vk::BufferUsageFlagBits::eUniformBuffer,                                               //
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent ) //
     {}
     resource_database::~resource_database()
@@ -353,21 +389,41 @@ namespace rnjin::graphics::vulkan
         clean_up();
     }
 
-    void resource_database::initialize( usize vertex_buffer_space, usize index_buffer_space, usize staging_buffer_space )
+    void resource_database::initialize( initialization_info info )
     {
         vulkan_log_verbose.print( "Initializing Vulkan resource database" );
-        vulkan_log_verbose.print_additional( "\1 bytes for vertex buffers", vertex_buffer_space );
-        vulkan_log_verbose.print_additional( "\1 bytes for index buffers", index_buffer_space );
-        vulkan_log_verbose.print_additional( "\1 bytes for staging buffers", staging_buffer_space );
+        vulkan_log_verbose.print_additional( "\1 bytes for vertex buffers", info.vertex_buffer_space );
+        vulkan_log_verbose.print_additional( "\1 bytes for index buffers", info.index_buffer_space );
+        vulkan_log_verbose.print_additional( "\1 bytes for staging buffers", info.staging_buffer_space );
+        vulkan_log_verbose.print_additional( "\1 bytes for uniform buffers", info.uniform_buffer_space );
+        vulkan_log_verbose.print_additional( "max \1 descriptor sets", info.max_descriptor_sets );
 
-        vertex_buffer_allocator.initialize( vertex_buffer_space );
-        index_buffer_allocator.initialize( index_buffer_space );
-        staging_buffer_allocator.initialize( staging_buffer_space );
+        vertex_buffer_allocator.initialize( info.vertex_buffer_space );
+        index_buffer_allocator.initialize( info.index_buffer_space );
+        staging_buffer_allocator.initialize( info.staging_buffer_space );
+        uniform_buffer_allocator.initialize( info.uniform_buffer_space );
+
+        let& vulkan_device = device_instance.get_vulkan_device();
 
         let pipeline_cache_info = vk::PipelineCacheCreateInfo(
             // TODO: load pipeline cache from disk and such
         );
-        pipeline_cache = device_instance.get_vulkan_device().createPipelineCache( pipeline_cache_info );
+        pipeline_cache = vulkan_device.createPipelineCache( pipeline_cache_info );
+
+        // Create a descriptor pool to allocate descriptor sets from
+        // note: need to figure out what all these max numbers mean
+        let descriptor_pool_size = vk::DescriptorPoolSize(
+            vk::DescriptorType::eUniformBuffer, // type
+            info.max_descriptor_sets            // descriptorCount
+        );
+        let descriptor_pool_info = vk::DescriptorPoolCreateInfo(
+            vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, // flags
+            info.max_descriptor_sets,                             // maxSets
+            1,                                                    // poolSizeCount
+            &descriptor_pool_size                                 // pPoolSizes
+        );
+        descriptor_pool = vulkan_device.createDescriptorPool( descriptor_pool_info );
+        check_error_condition( pass, vulkan_log_errors, not descriptor_pool, "Failed to create Vulkan descriptor pool" );
     }
 
     void resource_database::clean_up()
@@ -380,15 +436,16 @@ namespace rnjin::graphics::vulkan
         let& vulkan_device = device_instance.get_vulkan_device();
 
         vulkan_device.destroyPipelineCache( pipeline_cache );
-        foreach ( pipeline : pipelines )
+        vulkan_device.destroyDescriptorPool( descriptor_pool );
+
+        for ( let_mutable& pipeline : pipelines )
         {
-            vulkan_device.destroyPipeline( pipeline.get_vulkan_pipeline() );
-            vulkan_device.destroyPipelineLayout( pipeline.get_layout() );
+            free_pipeline( pipeline );
         }
     }
 
     // Copy host memory to CPU-accessible device memory owned by a staging buffer
-    void resource_database::write_staging_buffer( const buffer_allocation& staging_buffer_allocation, vk::DeviceSize size, void* source )
+    void resource_database::write_buffer( const buffer_allocation& allocation, const buffer_allocator& allocator, vk::DeviceSize size, const void* source )
     {
         let& vulkan_device = device_instance.get_vulkan_device();
 
@@ -396,14 +453,14 @@ namespace rnjin::graphics::vulkan
         let memory_map_flags = vk::MemoryMapFlags();
 
         vulkan_device.mapMemory(
-            staging_buffer_allocator.get_memory(),  // memory
-            staging_buffer_allocation.get_offset(), // offset
-            staging_buffer_allocation.get_size(),   // size
-            memory_map_flags,                       // flags
-            &device_memory                          // ppData
+            allocator.get_memory(),  // memory
+            allocation.get_offset(), // offset
+            allocation.get_size(),   // size
+            memory_map_flags,        // flags
+            &device_memory           // ppData
         );
         memcpy( device_memory, source, size );
-        vulkan_device.unmapMemory( staging_buffer_allocator.get_memory() );
+        vulkan_device.unmapMemory( allocator.get_memory() );
     }
 
     // Copy CPU-accessible device memory to higher performance internal device memory
@@ -470,7 +527,7 @@ namespace rnjin::graphics::vulkan
 
         // TODO: aggregate transfer requests and execute all at once, rather than creating, writing, and destroying staging buffers individually
         buffer_allocation new_staging_buffer = staging_buffer_allocator.allocate( buffer_size );
-        write_staging_buffer( new_staging_buffer, buffer_size, (void*) vertices.data() );
+        write_buffer( new_staging_buffer, staging_buffer_allocator, buffer_size, (const void*) vertices.data() );
         transfer_staging_buffer( new_staging_buffer, new_vertex_buffer );
         free_staging_buffer( new_staging_buffer );
 
@@ -486,11 +543,29 @@ namespace rnjin::graphics::vulkan
 
         // TODO: aggregate transfer requests and execute all at once, rather than creating, writing, and destroying staging buffers individually
         buffer_allocation new_staging_buffer = staging_buffer_allocator.allocate( buffer_size );
-        write_staging_buffer( new_staging_buffer, buffer_size, (void*) indices.data() );
+        write_buffer( new_staging_buffer, staging_buffer_allocator, buffer_size, (const void*) indices.data() );
         transfer_staging_buffer( new_staging_buffer, new_index_buffer );
         free_staging_buffer( new_staging_buffer );
 
         return new_index_buffer;
+    }
+
+    // Allocate a uniform buffer and transfer data directly from CPU memory
+    buffer_allocation resource_database::create_uniform_buffer( usize size, const void* data )
+    {
+        // Ensure allocation size respects the minimum device alignment for uniform buffer offsets
+        usize allocation_padding = 0;
+
+        let alignment_requirement = device_instance.device_info.limits.get_min_uniform_buffer_alignment();
+        if ( alignment_requirement > 0 && ( size % alignment_requirement ) != 0 )
+        {
+            allocation_padding = alignment_requirement - ( size % alignment_requirement );
+        }
+
+        buffer_allocation new_uniform_buffer = uniform_buffer_allocator.allocate( size, allocation_padding );
+        write_buffer( new_uniform_buffer, uniform_buffer_allocator, size, data );
+
+        return new_uniform_buffer;
     }
 
     // Free resources used by a mesh vertex buffer
@@ -503,6 +578,42 @@ namespace rnjin::graphics::vulkan
     void resource_database::free_index_buffer( buffer_allocation& allocation )
     {
         index_buffer_allocator.free( allocation );
+    }
+
+    void resource_database::free_uniform_buffer( buffer_allocation& allocation )
+    {
+        uniform_buffer_allocator.free( allocation );
+    }
+
+    void resource_database::transfer_uniform_buffer( usize size, const void* data, buffer_allocation& allocation )
+    {
+        write_buffer( allocation, uniform_buffer_allocator, size, data );
+    }
+
+    // note: called after being constructed (from internal_resources) to bind a particular uniform buffer
+    void resource_database::bind_uniform_buffer( render_pipeline& pipeline, const buffer_allocation& uniform_buffer_allocation )
+    {
+        vk::DescriptorBufferInfo uniform_buffer_info(
+            uniform_buffer_allocation.get_buffer(), // buffer
+            uniform_buffer_allocation.get_offset(), // offset
+            uniform_buffer_allocation.get_size()    // range
+        );
+        vk::WriteDescriptorSet descriptor_write_info(
+            pipeline.get_descriptor_set(),      // dstSet
+            0,                                  // dstBinding
+            0,                                  // dstArrayElement
+            1,                                  // descriptorCount
+            vk::DescriptorType::eUniformBuffer, // descriptorType
+            nullptr,                            // pImageInfo
+            &uniform_buffer_info,               // pBufferInfo
+            nullptr                             // pTexelBufferView
+        );
+        device_instance.get_vulkan_device().updateDescriptorSets(
+            1,                      // descriptorWriteCount
+            &descriptor_write_info, // pDescriptorWrites
+            0,                      // descriptorCopyCount
+            nullptr                 // pDescriptorCopies)
+        );
     }
 
     // Helper structures/functions for pipeline creation
@@ -523,17 +634,43 @@ namespace rnjin::graphics::vulkan
 
         vk::Pipeline new_pipeline;
         vk::PipelineLayout new_pipeline_layout;
+        vk::DescriptorSet new_descriptor_set;
+        vk::DescriptorSetLayout new_descriptor_layout;
 
         tracked_subregion( vulkan_log_verbose, "Vulkan pipeline creation" )
         {
+            // Descriptor set layout creation
+            vk::DescriptorSetLayoutBinding descriptor_set_layout_binding(
+                0,                                  // binding
+                vk::DescriptorType::eUniformBuffer, // descriptorType
+                1,                                  // descriptorCount
+                vk::ShaderStageFlagBits::eVertex,   // stageFlags
+                nullptr                             // pImmutableSamplers
+            );
+
+            vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info(
+                vk::DescriptorSetLayoutCreateFlags(), // flags
+                1,                                    // bindingCount
+                &descriptor_set_layout_binding        // pBindings
+            );
+
+            new_descriptor_layout = vulkan_device.createDescriptorSetLayout( descriptor_set_layout_info );
+
+            // Descriptor set allocation
+            vk::DescriptorSetAllocateInfo desciptor_set_info(
+                descriptor_pool,       // descriptorPool
+                1,                     // descriptorSetCount
+                &new_descriptor_layout // pSetLayouts
+            );
+            new_descriptor_set = vulkan_device.allocateDescriptorSets( desciptor_set_info )[0];
+
             // Pipeline layout info
-            // TODO: handle descriptor sets and push constants
             vk::PipelineLayoutCreateInfo pipeline_layout_info(
-                {},      // flags
-                0,       // setLayoutCount
-                nullptr, // pSetLayouts
-                0,       // pushConstantRangeCount
-                nullptr  // pPushConstantRanges
+                {},                     // flags
+                1,                      // setLayoutCount
+                &new_descriptor_layout, // pSetLayouts
+                0,                      // pushConstantRangeCount
+                nullptr                 // pPushConstantRanges
             );
 
             new_pipeline_layout = vulkan_device.createPipelineLayout( pipeline_layout_info );
@@ -619,17 +756,17 @@ namespace rnjin::graphics::vulkan
 
             // Rasterization state
             vk::PipelineRasterizationStateCreateInfo rasterizer(
-                {},                          // flags
-                false,                       // depthClampEnable
-                false,                       // rasterizerDiscardEnable
-                vk::PolygonMode::eFill,      // polygonMode
-                vk::CullModeFlagBits::eBack, // cullMode
-                vk::FrontFace::eClockwise,   // frontFace
-                false,                       // depthBiasEnable
-                0.0,                         // depthBiasConstantFactor
-                0.0,                         // depthBiasClamp
-                0.0,                         // depthBiasSlopeFactor
-                1.0                          // lineWidth
+                {},                               // flags
+                false,                            // depthClampEnable
+                false,                            // rasterizerDiscardEnable
+                vk::PolygonMode::eFill,           // polygonMode
+                vk::CullModeFlagBits::eBack,      // cullMode
+                vk::FrontFace::eCounterClockwise, // frontFace
+                false,                            // depthBiasEnable
+                0.0,                              // depthBiasConstantFactor
+                0.0,                              // depthBiasClamp
+                0.0,                              // depthBiasSlopeFactor
+                1.0                               // lineWidth
             );
 
             vk::PipelineMultisampleStateCreateInfo multisampling(
@@ -697,9 +834,10 @@ namespace rnjin::graphics::vulkan
             check_error_condition( return render_pipeline(), vulkan_log_errors, not new_pipeline, "Failed to create Vulkan pipeline" );
         }
 
-        pipelines.emplace_back( new_pipeline, new_pipeline_layout );
+        pipelines.emplace_back( new_pipeline, new_pipeline_layout, new_descriptor_set, new_descriptor_layout );
         return pipelines.back();
     }
+
 
     void resource_database::free_pipeline( render_pipeline& pipeline )
     {
@@ -707,6 +845,8 @@ namespace rnjin::graphics::vulkan
 
         vulkan_device.destroyPipeline( pipeline.get_vulkan_pipeline() );
         vulkan_device.destroyPipelineLayout( pipeline.get_layout() );
+
+        vulkan_device.destroyDescriptorSetLayout( pipeline.get_descriptor_layout() );
 
         pipeline.invalidate();
     }
@@ -775,7 +915,8 @@ namespace rnjin::graphics::vulkan
     internal_resources::internal_resources()
       : saved_indices_version( version_id::invalid() ),  //
         saved_vertices_version( version_id::invalid() ), //
-        saved_material_version( version_id::invalid() )  //
+        saved_material_version( version_id::invalid() ), //
+        saved_uniforms_version( version_id::invalid() )  //
     {}
     internal_resources::~internal_resources() {}
 
@@ -785,7 +926,7 @@ namespace rnjin::graphics::vulkan
         // note: will always be called for the first update, since the saved version starts invalid
         if ( saved_vertices_version.update_to( source.vertices.get_version() ) )
         {
-            vulkan_log_verbose.print( "Updating vulkan data for mesh vertices (\1)", source.get_id() );
+            vulkan_log_verbose.print( "Updating Vulkan data for mesh vertices (\1)", source.get_id() );
 
             // Release an existing vertex buffer if it has been allocated
             // TODO: re-use the same buffer and copy new data if the number of elements stays the same
@@ -801,7 +942,7 @@ namespace rnjin::graphics::vulkan
         // note: will always be called for the first update, since the saved version starts invalid
         if ( saved_indices_version.update_to( source.indices.get_version() ) )
         {
-            vulkan_log_verbose.print( "Updating vulkan data for mesh indices (\1)", source.get_id() );
+            vulkan_log_verbose.print( "Updating Vulkan data for mesh indices (\1)", source.get_id() );
 
             // Release an existing index buffer if it has been allocated
             // TODO: re-use the same buffer and copy new data if the number of elements stays the same
@@ -820,7 +961,7 @@ namespace rnjin::graphics::vulkan
         // note: will always be called for the first update, since the saved version starts invalid
         if ( saved_material_version.update_to( source.get_version() ) )
         {
-            vulkan_log_verbose.print( "Updating vulkan data for material (\1)", source.get_id() );
+            vulkan_log_verbose.print( "Updating Vulkan data for material (\1)", source.get_id() );
 
             // Release an existing pipeline if it has been created
             if ( pipeline.is_valid() )
@@ -828,6 +969,26 @@ namespace rnjin::graphics::vulkan
                 resources.free_pipeline( pipeline );
             }
             pipeline = resources.create_pipeline( source.get_vertex_shader(), source.get_fragment_shader(), render_pass );
+
+            // Release an existing uniform buffer if it has been created
+            if ( uniforms.is_valid() )
+            {
+                resources.free_uniform_buffer( uniforms );
+            }
+            uniforms               = resources.create_uniform_buffer( material::get_uniforms_size(), &source.get_uniforms() );
+            saved_uniforms_version = version_id::invalid();
+
+            // Bind the new uniform buffer allocation to the pipeline's descriptor set
+            resources.bind_uniform_buffer( pipeline, uniforms );
+        }
+
+        // Transfer uniform data if it has changed since the last update
+        // note: will always be called for the first update, as well as any update where
+        //       the material itself changed, since the saved version is set to invalid
+        if ( saved_uniforms_version.update_to( source.get_uniforms_version() ) )
+        {
+            vulkan_log_verbose.print( "Updating Vulkan data for material uniforms (\1)", source.get_id() );
+            resources.transfer_uniform_buffer( material::get_uniforms_size(), &source.get_uniforms(), uniforms );
         }
     }
 

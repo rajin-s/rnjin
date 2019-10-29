@@ -37,6 +37,8 @@ namespace rnjin::graphics::vulkan
         const device& device_instance;
         window_surface& target;
 
+        usize frame_number;
+
         group
         {
             vk::CommandBuffer command_buffer;

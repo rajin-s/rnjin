@@ -12,7 +12,8 @@ namespace rnjin::graphics
 {
     namespace primitives
     {
+        mesh quad( const float radius );
         mesh cube( const float radius );
         mesh sphere( const float radius );
-    } // namespace primitive
+    } // namespace primitives
 } // namespace rnjin::graphics

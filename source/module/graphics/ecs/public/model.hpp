@@ -25,6 +25,9 @@ namespace rnjin::graphics
         public: // accessors
         let& get_mesh get_value( mesh_resource );
         let& get_material get_value( material_resource );
+        
+        let_mutable& get_mesh_mutable get_mutable_value( mesh_resource );
+        let_mutable& get_material_mutable get_mutable_value( material_resource );
 
         private: // members
         mesh mesh_resource;

@@ -37,7 +37,7 @@ namespace rnjin::graphics::vulkan
         let& get_vulkan_surface get_value( vulkan_surface );
         let& get_render_pass get_value( render_pass );
 
-        let& get_current_command_buffer get_value( swapchain.elements[swapchain.current_element_index].command_buffer );
+        let& get_current_command_buffer get_value( swapchain.get_current().command_buffer );
 
         private: // methods
         void destroy_surface();
@@ -112,6 +112,8 @@ namespace rnjin::graphics::vulkan
 
             list<element> elements;
             uint current_element_index;
+
+            const element& get_current get_value( elements[current_element_index] );
         }
         swapchain;
     };

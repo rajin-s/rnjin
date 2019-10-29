@@ -264,6 +264,7 @@ namespace rnjin::graphics::vulkan
 
     void window_surface::initialize_synchronization()
     {
+        let task = vulkan_log_verbose.track_scope( "Vulkan surface synchronization initialization" );
         let& vulkan_device = device_instance.get_vulkan_device();
 
         vk::SemaphoreCreateInfo semaphore_info;

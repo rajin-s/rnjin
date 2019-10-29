@@ -75,6 +75,13 @@ namespace rnjin::graphics::vulkan
 
             physical_device = best_device;
 
+            // Save relevant data about physical device properties
+            let device_properties = physical_device.getProperties();
+            {
+
+                device_info.limits.min_uniform_buffer_alignment = device_properties.limits.minUniformBufferOffsetAlignment;
+            }
+
             // Note: graphics queue is guaranteed to be present since it is checked during device selection
             find_queue_family_indices();
 

@@ -9,6 +9,7 @@
 #include "log.hpp"
 #include "visual_ecs.hpp"
 #include "primitives.hpp"
+#include "transformations.hpp"
 
 #include "vulkan_api.hpp"
 #include "vulkan_device.hpp"
@@ -56,11 +57,22 @@ test( vulkan_ecs )
     // note: contains resource_database
     vulkan::resource_collector vk_resource_collector( vk_renderer );
     {
+        // note: these are arbitrary numbers
         const usize vertex_buffer_space  = sizeof( mesh::vertex ) * 1000;
         const usize index_buffer_space   = sizeof( mesh::index ) * 1000;
         const usize staging_buffer_space = sizeof( mesh::vertex ) * 500;
+        const usize uniform_buffer_space = sizeof( float4x4 ) * 400;
+        const usize max_descriptor_sets  = 300;
 
-        vk_resource_collector.initialize( vertex_buffer_space, index_buffer_space, staging_buffer_space );
+        vulkan::resource_database::initialization_info resource_database_info{
+            vertex_buffer_space,  // vertex_buffer_space;
+            index_buffer_space,   // index_buffer_space;
+            staging_buffer_space, // staging_buffer_space;
+            uniform_buffer_space, // uniform_buffer_space;
+            max_descriptor_sets   // max_descriptor_sets;
+        };
+
+        vk_resource_collector.initialize( resource_database_info );
     }
 
     debug_checkpoint( rnjin::log::main );
@@ -93,6 +105,8 @@ test( vulkan_ecs )
     ent1.add<model>( "test/cube.mesh", "test/new.material" );
     ent2.add<model>( "test/cube.mesh", "test/new.material" );
 
+    let_mutable& mat1 = ent1.get_mutable<model>()->get_material_mutable();
+
     bool do_render = false;
     while ( not glfwWindowShouldClose( main_window.get_api_window() ) )
     {
@@ -103,6 +117,15 @@ test( vulkan_ecs )
         {
             if ( do_render or run )
             {
+                {
+                    mat1.set_position( float3( 0, 0.01, 0 ) );
+                    mat1.set_rotation_and_scale( float3(), float3( 1, 1, 1 ) );
+                    mat1.set_view( float3(), float3() );
+
+                    let window_size = main_window.get_size();
+                    mat1.set_projection( math::projection::orthographic_vertical( 2, float2( window_size.x, window_size.y ), -1, 1 ) );
+                }
+
                 vk_resource_collector.update_all();
                 vk_renderer.update_all();
 

@@ -19,7 +19,7 @@ namespace rnjin::graphics::vulkan
         resource_collector( const renderer& target_renderer );
         ~resource_collector();
 
-        void initialize( usize vertex_buffer_space, usize index_buffer_space, usize staging_buffer_space );
+        void initialize( const resource_database::initialization_info resource_database_info );
 
         protected: // internal
         void define() override;

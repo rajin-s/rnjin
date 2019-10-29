@@ -88,6 +88,7 @@ namespace rnjin
                 if ( can_resize() )
                 {
                     API::resize_window( *this, size );
+                    this->size = size;
                 }
             }
             // Get this windows size (in pixels)
@@ -124,6 +125,8 @@ namespace rnjin
             bool valid;
             bool shown;
             int2 size;
+
+            friend typename API;
         };
     } // namespace graphics
 } // namespace rnjin

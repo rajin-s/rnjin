@@ -21,6 +21,13 @@ namespace rnjin
             glfwTerminate();
         }
 
+        dictionary<GLFWwindow*, window<GLFW>*> windows;
+
+        void GLFW::on_glfw_window_resized( GLFWwindow* glfw_window, int width, int height )
+        {
+            windows[glfw_window]->size = int2( width, height );
+        }
+
         void GLFW::create_window( window<GLFW>& target )
         {
             GLFW::window_count++;
@@ -32,9 +39,15 @@ namespace rnjin
             glfwWindowHint( GLFW_CLIENT_API, GLFW_NO_API );
             glfwWindowHint( GLFW_RESIZABLE, target.resizable ? GLFW_TRUE : GLFW_FALSE );
             target.api_window = glfwCreateWindow( target.size.x, target.size.y, target.title.c_str(), nullptr, nullptr );
+
+            windows[target.api_window] = &target;
+
+            glfwSetWindowSizeCallback( target.api_window, GLFW::on_glfw_window_resized );
         }
         void GLFW::destroy_window( window<GLFW>& target )
         {
+            windows.erase( target.api_window );
+
             glfwDestroyWindow( target.api_window );
             GLFW::window_count--;
 

@@ -15,9 +15,9 @@ namespace rnjin::graphics::vulkan
     resource_collector::~resource_collector() {}
 
     void resource_collector::define() {}
-    void resource_collector::initialize( usize vertex_buffer_space, usize index_buffer_space, usize staging_buffer_space )
+    void resource_collector::initialize( const resource_database::initialization_info resource_database_info )
     {
-        resources.initialize(vertex_buffer_space, index_buffer_space, staging_buffer_space);
+        resources.initialize( resource_database_info );
 
         handle_event( model::events.added(), &resource_collector::on_model_added );
         handle_event( model::events.removed(), &resource_collector::on_model_removed );

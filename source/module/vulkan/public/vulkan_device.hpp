@@ -47,6 +47,25 @@ namespace rnjin::graphics::vulkan
         public: // groups
         group
         {
+            group
+            {
+                public: // accessors
+                let get_min_uniform_buffer_alignment get_value( min_uniform_buffer_alignment );
+
+                private: // members
+                usize min_uniform_buffer_alignment;
+
+                friend class device;
+            }
+            limits;
+
+            private: // members
+            friend class device;
+        }
+        device_info;
+
+        group
+        {
             public: // accessors
             let& main get_value( main_pool );
             let& transfer get_value( transfer_pool );

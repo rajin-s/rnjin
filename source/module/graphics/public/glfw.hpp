@@ -28,6 +28,7 @@ namespace rnjin
             static void close_window( window<GLFW>& target );
             static bool can_resize( window<GLFW>& target );
             static void resize_window( window<GLFW>& target, int2 size );
+            static void on_glfw_window_resized( GLFWwindow* glfw_window, int width, int height );
             static void set_window_title( window<GLFW>& target, const string& title );
 
             private:
