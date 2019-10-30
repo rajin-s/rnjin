@@ -28,9 +28,9 @@ namespace rnjin::ecs
             // note: this check is needed, as systems can set up event handlers
             //       that leave the entity's list of owned component types in an
             //       invalid state, thus resulting in invalid removals
-            if ( T::is_owned_by( destroyed_entity ) )
+            if ( component<T>::is_owned_by( destroyed_entity ) )
             {
-                T::remove_from( destroyed_entity );
+                component<T>::remove_from( destroyed_entity );
             }
         }
     };
@@ -71,16 +71,21 @@ namespace rnjin::ecs
             entity::id owner_id;
         };
 
-        public: // static methods
+        private: // static methods (accessible to friend class entity)
+        friend class entity;
+        friend class component_type_handle<T>;
+
         static let* get_type_handle_pointer()
         {
-            static component_type_handle<component> handle;
+            static component_type_handle<T> handle;
             return &handle;
         }
 
         // Create a new component, adding it to the components global listing of all instances
         // note: constructs and copies the component into `components` since constructing in-place
         //       isn't possible with the intermediate `owned_component` struct
+        // note: called by entity.add, shouldn't be called from elsewhere, since entities also manage
+        //       their owned component types
         template <typename... arg_types>
         static void add_to( entity& owner, arg_types... args )
         {
@@ -148,16 +153,23 @@ namespace rnjin::ecs
         }
 
         // Check if this component type already has an entry associated with the given entity, if not, add one, otherwise just pass through
+        // note: called by entity.add, shouldn't be called from elsewhere, since entities also manage
+        //       their owned component types
         template <typename... arg_types>
         static void add_unique( entity& owner, arg_types... args )
         {
             let owner_id = owner.get_id();
-            if ( owners.count( owner_id ) == 0 )
+            if ( is_owned_by( owner ) )
             {
                 add_to( owner, args... );
             }
         }
 
+        // Destroy the component associated with the provided entity
+        // note: currently always modifies the global listing of all instances, in the future
+        //       this should probably invalidate unowned components and reuse them for subsequent add_to calls
+        // note: called by entity.add, shouldn't be called from elsewhere, since entities also manage
+        //       their owned component types
         static void remove_from( entity& owner )
         {
             let owner_id = owner.get_id();
@@ -287,6 +299,7 @@ namespace rnjin::ecs
             return owners.count( owner.get_id() ) > 0;
         }
 
+        public: // static methods (used by systems)
         // Get an iterator over all components associated with entities using constant references
         static const_iterator<owned_component> get_const_iterator()
         {
