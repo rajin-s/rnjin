@@ -71,7 +71,7 @@ namespace rnjin::ecs
             entity::id owner_id;
         };
 
-        private: // static methods (accessible to friend class entity)
+        protected: // static methods (accessible to friend class entity)
         friend class entity;
         friend class component_type_handle<T>;
 
@@ -89,7 +89,8 @@ namespace rnjin::ecs
         template <typename... arg_types>
         static void add_to( entity& owner, arg_types... args )
         {
-            let owner_id               = owner.get_id();
+            let owner_id = owner.get_id();
+
             let_mutable component_data = T( args... );
             component_data.set_owner( owner );
 
@@ -159,7 +160,7 @@ namespace rnjin::ecs
         static void add_unique( entity& owner, arg_types... args )
         {
             let owner_id = owner.get_id();
-            if ( is_owned_by( owner ) )
+            if ( not is_owned_by( owner ) )
             {
                 add_to( owner, args... );
             }
@@ -312,18 +313,6 @@ namespace rnjin::ecs
             return mutable_iterator<owned_component>( components );
         }
 
-
-        private: // static methods
-        // Handle an entity being destroyed, removing an associated component if it exists
-        // static void on_entity_destroyed( const entity& owner )
-        // {
-        //     ecs_log_verbose.print( "Handle destroyed entity (\1)", owner.get_id() );
-        //     if ( owners.contains( owner.get_id() ) )
-        //     {
-        //         ecs_log_verbose.print( "Removing component from destroyed entity (\1)", owner.get_id() );
-        //         remove_from( owner );
-        //     }
-        // }
 
         public: // static members
         // Events for easily performing actions on component add/remove
