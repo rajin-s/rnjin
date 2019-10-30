@@ -11,7 +11,7 @@
 
 namespace rnjin::ecs
 {
-    // Global ecs logs
+    // Global ECS logs
 
     // Graphics logs flags used in masked log source creation
     enum class log_flag : uint
@@ -24,8 +24,10 @@ namespace rnjin::ecs
     };
 
     extern log::source& get_ecs_log();
-    extern log::source::masked ecs_log_vernbose;
+    extern log::source::masked ecs_log_verbose;
     extern log::source::masked ecs_log_errors;
+
+    class component_type_handle_base;
 
     class entity
     {
@@ -40,27 +42,30 @@ namespace rnjin::ecs
         // note: actually forwards call to component::add_to, since
         //       entities don't internally store their associated components
         template <typename component_type, typename... arg_types>
-        void add( arg_types... args ) const
+        void add( arg_types... args )
         {
             component<component_type>::add_to( *this, args... );
+            add_component_type_handle( component<component_type>::get_type_handle_pointer() );
         }
 
         // Add a component to this entity if it doesn't already exist
         // note: actually forwards call to component::add_unique, since
         //       entities don't internally store their associated components
         template <typename component_type, typename... arg_types>
-        void require( arg_types... args ) const
+        void require( arg_types... args )
         {
             component<component_type>::add_unique( *this, args... );
+            add_component_type_handle( component<component_type>::get_type_handle_pointer() );
         }
 
         // Remove a component from this entity
         // note: actually forwards call to component::remove_from, since
         //       entities don't internally store their associated components
         template <typename component_type>
-        void remove() const
+        void remove()
         {
             component<component_type>::remove_from( *this );
+            remove_component_type_handle( component<component_type>::get_type_handle_pointer() );
         }
 
         // Get a component attached to this entity
@@ -71,7 +76,7 @@ namespace rnjin::ecs
         {
             return component<component_type>::owned_by( *this );
         }
-        
+
         // Get a component attached to this entity as a mutable pointer
         // note: actually forwards call to component::owned_by, since
         //       entities don't internally store their associated components
@@ -81,10 +86,36 @@ namespace rnjin::ecs
             return component<component_type>::owned_by( *this );
         }
 
+        private: // methods
+        void add_component_type_handle( const component_type_handle_base* type_handle_pointer );
+        void remove_component_type_handle( const component_type_handle_base* type_handle_pointer );
+
         public: // accessors
         let get_id get_value( entity_id );
+        let is_being_destroyed get_value( destroying );
 
         private: // members
         id entity_id;
+        bool destroying;
+        set<const component_type_handle_base*> owned_component_types;
+
+        // public: // static
+        // static group
+        // {
+        //     public: // accessors
+        //     // note: these events are used in initialization of other static data (component event handlers)
+        //     //       so they are accessed via static function variables to ensure they are initialized properly
+        //     event<const entity&>& created()
+        //     {
+        //         static event<const entity&> created_event( "entity created" );
+        //         return created_event;
+        //     };
+        //     event<const entity&>& destroyed()
+        //     {
+        //         static event<const entity&> destroyed_event( "entity destroyed" );
+        //         return destroyed_event;
+        //     };
+        // }
+        // events;
     };
 } // namespace rnjin::ecs

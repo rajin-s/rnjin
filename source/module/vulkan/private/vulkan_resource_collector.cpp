@@ -34,12 +34,12 @@ namespace rnjin::graphics::vulkan
         destination.update_material_data( source.get_material(), resources, target_renderer.get_render_pass() );
     }
 
-    void resource_collector::on_model_added( model& new_model, const entity& owner )
+    void resource_collector::on_model_added( model& new_model, entity& owner )
     {
         vulkan_log_verbose.print( "Add vulkan::internal_resources to entity with model (\1)", owner.get_id() );
         owner.require<internal_resources>();
     }
-    void resource_collector::on_model_removed( const model& old_model, const entity& owner )
+    void resource_collector::on_model_removed( const model& old_model, entity& owner )
     {
         vulkan_log_verbose.print( "Remove vulkan::internal_resources from entity with model (\1)", owner.get_id() );
         if ( let_mutable* ptr = owner.get_mutable<internal_resources>() )

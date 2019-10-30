@@ -26,8 +26,8 @@ namespace rnjin::graphics::vulkan
         void update( entity_components& components ) override;
 
         private: // methods
-        void on_model_added( model& new_model, const entity& owner );
-        void on_model_removed( const model& old_model, const entity& owner );
+        void on_model_added( model& new_model, entity& owner );
+        void on_model_removed( const model& old_model, entity& owner );
 
         private: // members
         const renderer& target_renderer;

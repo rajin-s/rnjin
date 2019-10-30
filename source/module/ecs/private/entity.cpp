@@ -4,6 +4,7 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
+#include "component.hpp"
 #include "entity.hpp"
 
 namespace rnjin::ecs
@@ -26,14 +27,28 @@ namespace rnjin::ecs
     log::source::masked ecs_log_verbose = get_ecs_log().mask( log_flag::verbose );
     log::source::masked ecs_log_errors  = get_ecs_log().mask( log_flag::errors );
 
-    entity::entity() {}
+    entity::entity()                //
+      : destroying( false ) //
+    {}
     entity::~entity()
     {
-        // TODO: when an entity is destroyed, all it's associated components
-        //       should be destroyed as well. Currently components will remain
-        //       active and systems will act on them, since they only require an ID
-
-        let not_implemented = true;
-        check_error_condition( pass, ecs_log_errors, not_implemented, "Entity destroyed without destroying its associated components (not yet implemented) (\1)", get_id() );
+        destroying = true;
+        
+        ecs_log_verbose.print( "Destroy entity (\1), (\2 owned component types)", get_id(), owned_component_types.size() );
+        foreach ( component_type_handle_pointer : owned_component_types )
+        {
+            component_type_handle_pointer->on_entity_destroyed( *this );
+        }
     }
+
+    void entity::add_component_type_handle( const component_type_handle_base* type_handle_pointer )
+    {
+        owned_component_types.insert( type_handle_pointer );
+    }
+    void entity::remove_component_type_handle( const component_type_handle_base* type_handle_pointer )
+    {
+        owned_component_types.erase( type_handle_pointer );
+    }
+
+    // define_static_group( entity::events );
 } // namespace rnjin::ecs

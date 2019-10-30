@@ -130,7 +130,7 @@ class test_system_2 : public rnjin::ecs::system<read_from<int_component>, write_
     }
 
     private: // methods
-    void on_int_component_added( int_component& c, const entity& e )
+    void on_int_component_added( int_component& c, entity& e )
     {
         std::cout << "                                ";
         if ( e.get<dependent_component>() == nullptr )
@@ -146,7 +146,7 @@ class test_system_2 : public rnjin::ecs::system<read_from<int_component>, write_
         // note: only adds the component if one is not already attached
         e.require<dependent_component>();
     }
-    void on_int_component_removed( const int_component& c, const entity& e )
+    void on_int_component_removed( const int_component& c, entity& e )
     {
         std::cout << "                                ";
         std::cout << "test_system_2: remove dependent_component from entity (" << e.get_id() << ")" << std::endl;

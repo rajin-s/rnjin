@@ -11,6 +11,30 @@
 
 namespace rnjin::ecs
 {
+    // Wrappers for storing references to a component type, instead of individual components
+    // note: used by entity to notify the component type when it is destroyed
+    class component_type_handle_base
+    {
+        public:
+        virtual void on_entity_destroyed( entity& destroyed_entity ) const is_abstract;
+    };
+
+    template <typename T>
+    class component_type_handle : public component_type_handle_base
+    {
+        public:
+        void on_entity_destroyed( entity& destroyed_entity ) const override
+        {
+            // note: this check is needed, as systems can set up event handlers
+            //       that leave the entity's list of owned component types in an
+            //       invalid state, thus resulting in invalid removals
+            if ( T::is_owned_by( destroyed_entity ) )
+            {
+                T::remove_from( destroyed_entity );
+            }
+        }
+    };
+
     template <typename T>
     class component
     {
@@ -48,11 +72,17 @@ namespace rnjin::ecs
         };
 
         public: // static methods
+        static let* get_type_handle_pointer()
+        {
+            static component_type_handle<component> handle;
+            return &handle;
+        }
+
         // Create a new component, adding it to the components global listing of all instances
         // note: constructs and copies the component into `components` since constructing in-place
         //       isn't possible with the intermediate `owned_component` struct
         template <typename... arg_types>
-        static void add_to( const entity& owner, arg_types... args )
+        static void add_to( entity& owner, arg_types... args )
         {
             let owner_id               = owner.get_id();
             let_mutable component_data = T( args... );
@@ -119,7 +149,7 @@ namespace rnjin::ecs
 
         // Check if this component type already has an entry associated with the given entity, if not, add one, otherwise just pass through
         template <typename... arg_types>
-        static void add_unique( const entity& owner, arg_types... args )
+        static void add_unique( entity& owner, arg_types... args )
         {
             let owner_id = owner.get_id();
             if ( owners.count( owner_id ) == 0 )
@@ -128,9 +158,19 @@ namespace rnjin::ecs
             }
         }
 
-        static void remove_from( const entity& owner )
+        static void remove_from( entity& owner )
         {
             let owner_id = owner.get_id();
+
+            // Since event handlers for components being removed can request other components to be removed, this
+            // could be called on an entity that doesn't own this component, as it has already been removed by the entity's destructor.
+            // ex. System removes B when A is removed:
+            //     remove B in destructor -> remove A in destructor -> system tries to remove B again
+            if ( owner.is_being_destroyed() and owners.count( owner_id ) == 0 )
+            {
+                ecs_log_verbose.print( "Component type has already been removed from destroyed entity (\1)", owner_id );
+                return;
+            }
 
             // Check if no components have been registered yet
             check_error_condition( return, ecs_log_errors, components.empty(), "Component type is not attached to any entities, can't remove (\1)", owner_id );
@@ -193,7 +233,7 @@ namespace rnjin::ecs
         static T* owned_by( const entity& owner )
         {
             let owner_id = owner.get_id();
-            
+
             // check_error_condition( return nullptr, ecs_log_errors, owners.count( owner_id ) == 0, "No components are attached to entity (\1)", owner_id );
             if ( owners.count( owner_id ) == 0 )
             {
@@ -207,7 +247,7 @@ namespace rnjin::ecs
                 return &( components.back().component_data );
             }
             // Associated component is somewhere in the list, perform a
-            // binary search to get the appropriate location to remove
+            // binary search to get the appropriate location to return
             else
             {
                 uint start = 0;
@@ -242,6 +282,11 @@ namespace rnjin::ecs
             return nullptr;
         }
 
+        static bool is_owned_by( const entity& owner )
+        {
+            return owners.count( owner.get_id() ) > 0;
+        }
+
         // Get an iterator over all components associated with entities using constant references
         static const_iterator<owned_component> get_const_iterator()
         {
@@ -254,6 +299,20 @@ namespace rnjin::ecs
             return mutable_iterator<owned_component>( components );
         }
 
+
+        private: // static methods
+        // Handle an entity being destroyed, removing an associated component if it exists
+        // static void on_entity_destroyed( const entity& owner )
+        // {
+        //     ecs_log_verbose.print( "Handle destroyed entity (\1)", owner.get_id() );
+        //     if ( owners.contains( owner.get_id() ) )
+        //     {
+        //         ecs_log_verbose.print( "Removing component from destroyed entity (\1)", owner.get_id() );
+        //         remove_from( owner );
+        //     }
+        // }
+
+        public: // static members
         // Events for easily performing actions on component add/remove
         static group component_events
         {
@@ -262,8 +321,8 @@ namespace rnjin::ecs
             let_mutable& removed get_mutable_value( component_removed_event );
 
             private: // members
-            event<T&, const entity&> component_added_event{ "component added" };
-            event<const T&, const entity&> component_removed_event{ "component removed" };
+            event<T&, entity&> component_added_event{ "component added" };
+            event<const T&, entity&> component_removed_event{ "component removed" };
         }
         events;
 
@@ -274,12 +333,13 @@ namespace rnjin::ecs
         static set<entity::id> owners;
     };
 
-    template <typename T>
-    list<typename component<T>::owned_component> component<T>::components;
-    template <typename T>
-    typename component<T>::component_events component<T>::events;
-    template <typename T>
-    set<typename entity::id> component<T>::owners;
+    // Static member definitions
+    // clang-format off
+    // template <typename T> static_event_handler<const entity&> component<T>::entity_destroyed_handler( entity::events.destroyed(), component<T>::on_entity_destroyed );
+    template <typename T> typename component<T>::component_events component<T>::events;
+    template <typename T> list<typename component<T>::owned_component> component<T>::components;
+    template <typename T> set<typename entity::id> component<T>::owners;
+    // clang-format on
 
 #define component_class( name ) class name : public rnjin::ecs::component<name>
 } // namespace rnjin::ecs
