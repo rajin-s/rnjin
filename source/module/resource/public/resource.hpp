@@ -8,7 +8,7 @@
 #include <rnjin.hpp>
 
 #include rnjin_module( core )
-#include "file/public/file.hpp"
+#include rnjin_module( file )
 
 namespace rnjin::core
 {
