@@ -8,7 +8,6 @@
 
 #include "core.hpp"
 #include "file.hpp"
-#include "reference.hpp"
 
 namespace rnjin::core
 {
@@ -24,6 +23,10 @@ namespace rnjin::core
         void save() const;   // Save a resource that has an associated file path
         void force_reload(); // Load a resource that has an associated file path
 
+        // Handle saving/loading of sub-resources
+        void save_to( io::file& file ) const; 
+        void load_from( io::file& file );
+
         void set_path( const string& new_path ); // Set the resource file path
 
         public: // accessors
@@ -33,9 +36,6 @@ namespace rnjin::core
         let has_references get_value( reference_count > 0 );
 
         protected:
-        // Handle saving/loading of sub-resources
-        void save_to( io::file& file ) const; 
-        void load_from( io::file& file );
         // Virtual methods do that nothing for a base resource type
         virtual void write_data( io::file& file ) const;
         virtual void read_data( io::file& file );

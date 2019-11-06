@@ -9,7 +9,7 @@
 #include "core.hpp"
 #include "entity.hpp"
 
-#include full_module( reflection )
+#include "reflection.hpp"
 
 namespace rnjin::ecs
 {

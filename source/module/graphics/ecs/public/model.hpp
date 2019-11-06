@@ -18,8 +18,8 @@ namespace rnjin::graphics
     {
         public: // methods
         model( const string& mesh_path, const string& material_path )
-          : mesh_resource( resource_database::load<mesh>( mesh_path ) ),            // load model resources from file paths
-            material_resource( resource_database::load<material>( material_path ) ) // load model resources from file paths
+        //   : mesh_resource( resource_database::load<mesh>( mesh_path ) ),            // load model resources from file paths
+        //     material_resource( resource_database::load<material>( material_path ) ) // load model resources from file paths
         {}
 
         public: // accessors
