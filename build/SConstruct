@@ -140,7 +140,7 @@ if not args.quiet:
 # for m in modules:
 #     all_source_files += m.source_files
 
-# Get all include directories in modules
+# Get all include directories for module objects
 all_include_directories = library.include_directories
 all_include_directories.append(project.module_directory)
 
