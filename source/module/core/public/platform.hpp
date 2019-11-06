@@ -10,7 +10,6 @@
 #include "conf.h"
 #include "macro.hpp"
 
-
 #if defined( _WIN32 )
 #    define platform_specific( if_windows, if_apple, if_linux, fallback ) if_windows
 #elif defined( __APPLE__ )

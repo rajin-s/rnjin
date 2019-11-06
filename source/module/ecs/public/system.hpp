@@ -7,9 +7,10 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include rnjin_module( core )
 #include "entity.hpp"
 #include "component.hpp"
+
+#include rnjin_module( core )
 
 namespace rnjin::ecs
 {

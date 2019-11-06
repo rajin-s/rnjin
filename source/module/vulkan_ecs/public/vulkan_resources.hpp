@@ -7,12 +7,11 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include <vulkan/vulkan.hpp>
+#include third_party_library( "vulkan/vulkan.hpp" )
 
 #include "vulkan_device.hpp"
-
 #include rnjin_module( ecs )
-#include "graphics/ecs/public/visual_ecs.hpp"
+#include rnjin_module_subset( graphics, ecs )
 
 namespace rnjin::graphics::vulkan
 {

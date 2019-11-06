@@ -6,9 +6,9 @@
 
 #include <shaderc/shaderc.hpp>
 
-#include "common.hpp"
 #include "shader.hpp"
 
+#include "common.hpp"
 #include rnjin_module( console )
 
 namespace rnjin

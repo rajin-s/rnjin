@@ -19,5 +19,6 @@
 #define rnjin_module_public( module_name, header_name ) __make_string( module_name/public/header_name.hpp )
 #define internal_header( header_name ) __make_string( header_name.hpp )
 #define standard_library( header_name ) <header_name>
+#define third_party_library( header_name ) header_name
 
 // clang-format on

@@ -9,8 +9,7 @@
 
 #include standard_library( ostream )
 
-#include "core/public/containers.hpp"
-// #include <ostream>
+#include rnjin_module_public( core, containers )
 
 namespace rnjin::core
 {

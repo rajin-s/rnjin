@@ -30,7 +30,6 @@
 
 #include "macro.hpp"
 #include "containers.hpp"
-// #include <ostream>
 
 namespace rnjin
 {

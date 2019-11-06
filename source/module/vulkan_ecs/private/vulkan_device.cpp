@@ -4,9 +4,10 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
+#include "vulkan_device.hpp"
+
 #include "vulkan_api_internal.hpp"
 #include "vulkan_window_surface.hpp"
-#include "vulkan_device.hpp"
 
 namespace rnjin::graphics::vulkan
 {

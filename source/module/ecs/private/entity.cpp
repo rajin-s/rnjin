@@ -4,8 +4,9 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "component.hpp"
 #include "entity.hpp"
+
+#include "component.hpp"
 
 namespace rnjin::ecs
 {

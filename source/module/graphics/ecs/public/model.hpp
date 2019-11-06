@@ -9,7 +9,7 @@
 
 #include rnjin_module( ecs )
 #include rnjin_module_subset( graphics, resources )
-#include rnjin_module_public( resource, resource_database )
+#include rnjin_module_public( resources, resource_database )
 
 using namespace rnjin::ecs;
 

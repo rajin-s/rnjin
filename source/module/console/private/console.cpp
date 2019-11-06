@@ -6,11 +6,9 @@
 
 #include "console.hpp"
 
+#include standard_library( iostream )
 #include rnjin_module( file )
 #include rnjin_module( log )
-
-
-#include <iostream>
 
 namespace rnjin
 {

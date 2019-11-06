@@ -8,7 +8,7 @@
 #include <rnjin.hpp>
 
 #include "shader.hpp"
-#include rnjin_module( resource )
+#include rnjin_module( resources )
 
 namespace rnjin::graphics
 {
