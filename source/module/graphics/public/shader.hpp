@@ -7,8 +7,7 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include "resource/public/resource.hpp"
-#include "resource/public/text_resource.hpp"
+#include rnjin_module( resource )
 
 namespace rnjin
 {
@@ -29,7 +28,7 @@ namespace rnjin
             public: // methods
             shader();
             shader( const string& name, const type shader_type );
-            
+
             ~shader();
 
             text_resource& get_glsl_resource();

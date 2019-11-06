@@ -4,19 +4,14 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "glfw.hpp"
+#include <rnjin.hpp>
 
-#include "log.hpp"
-#include "visual_ecs.hpp"
-#include "primitives.hpp"
-#include "transformations.hpp"
+#include rnjin_module( graphics )
+#include rnjin_module_subset( graphics, ecs )
+#include rnjin_module_subset( vulkan, ecs )
 
-#include "vulkan_api.hpp"
-#include "vulkan_device.hpp"
-#include "vulkan_window_surface.hpp"
-#include "vulkan_resource_collector.hpp"
-#include "vulkan_resources.hpp"
-#include "vulkan_renderer.hpp"
+#include rnjin_module( log )
+#include rnjin_module( math )
 
 #include "test.hpp"
 
