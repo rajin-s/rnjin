@@ -16,9 +16,10 @@ namespace rnjin::test
     void execute_all_test_actions();
 } // namespace rnjin::test
 
-#define note( message ) std::cout << "      (" << current_test_name << ": " << __LINE__ << ") " << message << std::endl
-#define _fail( message ) std::cout << "  [!] (" << current_test_name << ": " << __LINE__ << ") " << message << std::endl
-#define _pass( message ) std::cout << "  [ ] (" << current_test_name << ": " << __LINE__ << ") " << message << std::endl
+#define note( message ) std::cout << std::endl << "      (" << current_test_name << ": " << __LINE__ << ") " << message;
+#define _fail( message ) std::cout << std::endl << "  [!] (" << current_test_name << ": " << __LINE__ << ") " << message;
+#define _pass( message ) std::cout << std::endl << "  [ ] (" << current_test_name << ": " << __LINE__ << ") " << message;
+#define print_line( message ) std::cout << std::endl << "      (:" << __LINE__ << ") " << message;
 
 #define record( expression ) \
     note( #expression );     \

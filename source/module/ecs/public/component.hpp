@@ -9,6 +9,8 @@
 #include "core.hpp"
 #include "entity.hpp"
 
+#include full_module( reflection )
+
 namespace rnjin::ecs
 {
     // Wrappers for storing references to a component type, instead of individual components
@@ -48,7 +50,7 @@ namespace rnjin::ecs
         const entity& get_owner() const
         {
             const static entity invalid_owner{};
-            check_error_condition( return invalid_owner, ecs_log_errors, owner_pointer == nullptr, "Entity doesn't have a valid owner pointer" );
+            check_error_condition( return invalid_owner, ecs_log_errors, owner_pointer == nullptr, "Component (\1) doesn't have a valid owner pointer", reflect<T>::get_type_name() );
 
             return *owner_pointer;
         }
@@ -94,7 +96,8 @@ namespace rnjin::ecs
             let_mutable component_data = T( args... );
             component_data.set_owner( owner );
 
-            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) > 0, "Can't add multiple instances of the same component to an entity (\1)", owner_id );
+            ecs_log_verbose.print( "Add component '\2' to entity (\1)", owner_id, reflect<T>::get_type_name() );
+            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) > 0, "Can't add multiple instances of the same component '\2' to an entity (\1)", owner_id, reflect<T>::get_type_name() );
 
             // No components have been registered yet
             if ( components.empty() )
@@ -140,7 +143,7 @@ namespace rnjin::ecs
 
                         let owner_id_already_exists = true;
 
-                        check_error_condition( pass, ecs_log_errors, owner_id_already_exists == true, "Component already associated with an entity (\1)", owner_id );
+                        check_error_condition( pass, ecs_log_errors, owner_id_already_exists == true, "Component '\2' already associated with an entity (\1)", owner_id, reflect<T>::get_type_name() );
                         break;
                     }
                 }
@@ -175,20 +178,22 @@ namespace rnjin::ecs
         {
             let owner_id = owner.get_id();
 
+            ecs_log_verbose.print( "Remove component '\2' from entity (\1)", owner_id, reflect<T>::get_type_name() );
+
             // Since event handlers for components being removed can request other components to be removed, this
             // could be called on an entity that doesn't own this component, as it has already been removed by the entity's destructor.
             // ex. System removes B when A is removed:
             //     remove B in destructor -> remove A in destructor -> system tries to remove B again
             if ( owner.is_being_destroyed() and owners.count( owner_id ) == 0 )
             {
-                ecs_log_verbose.print( "Component type has already been removed from destroyed entity (\1)", owner_id );
+                ecs_log_verbose.print( "Component type '\2' has already been removed from destroyed entity (\1)", owner_id, reflect<T>::get_type_name() );
                 return;
             }
 
             // Check if no components have been registered yet
-            check_error_condition( return, ecs_log_errors, components.empty(), "Component type is not attached to any entities, can't remove (\1)", owner_id );
+            check_error_condition( return, ecs_log_errors, components.empty(), "Component type '\2' is not attached to any entities, can't remove (\1)", owner_id, reflect<T>::get_type_name() );
             // Check that the entity is actually an owner
-            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) == 0, "Can't remove component from an entity it's not attached to (\1)", owner_id );
+            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) == 0, "Can't remove component '\2' from an entity it's not attached to (\1)", owner_id, reflect<T>::get_type_name() );
 
             // Remove the entity from the set of owners
             owners.erase( owner_id );
@@ -238,7 +243,7 @@ namespace rnjin::ecs
                 else
                 {
                     let owner_id_not_found = true;
-                    check_error_condition( pass, ecs_log_errors, owner_id_not_found == true, "Component not associated with entity (\1)", owner_id );
+                    check_error_condition( pass, ecs_log_errors, owner_id_not_found == true, "Component '\2' not associated with entity (\1)", owner_id, reflect<T>::get_type_name() );
                 }
             }
         }
@@ -336,12 +341,12 @@ namespace rnjin::ecs
     };
 
     // Static member definitions
-    // clang-format off
-    // template <typename T> static_event_handler<const entity&> component<T>::entity_destroyed_handler( entity::events.destroyed(), component<T>::on_entity_destroyed );
-    template <typename T> typename component<T>::component_events component<T>::events;
-    template <typename T> list<typename component<T>::owned_component> component<T>::components;
-    template <typename T> set<typename entity::id> component<T>::owners;
-    // clang-format on
+    template <typename T>
+    typename component<T>::component_events component<T>::events;
+    template <typename T>
+    list<typename component<T>::owned_component> component<T>::components;
+    template <typename T>
+    set<typename entity::id> component<T>::owners;
 
 #define component_class( name ) class name : public rnjin::ecs::component<name>
 } // namespace rnjin::ecs

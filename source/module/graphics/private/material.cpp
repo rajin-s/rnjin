@@ -54,7 +54,7 @@ namespace rnjin::graphics
         uniforms.projection_matrix = matrix;
     }
 
-    void material::write_data( io::file& file )
+    void material::write_data( io::file& file ) const
     {
         file.write_string( name );
 

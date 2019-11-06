@@ -21,7 +21,7 @@ namespace rnjin::graphics
     mesh::~mesh() {}
 
     // Save mesh data to a file
-    void mesh::write_data( io::file& file )
+    void mesh::write_data( io::file& file ) const
     {
         file.write_buffer( vertices.data );
         file.write_buffer( indices.data );

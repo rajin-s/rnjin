@@ -22,8 +22,8 @@ namespace rnjin
             string content;
 
             protected: // inherited
-            virtual void write_data( io::file& file );
-            virtual void read_data( io::file& file );
+            virtual void write_data( io::file& file ) const override;
+            virtual void read_data( io::file& file ) override;
         };
     }
 }

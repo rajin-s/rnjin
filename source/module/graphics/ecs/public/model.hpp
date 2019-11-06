@@ -18,14 +18,14 @@ namespace rnjin::graphics
     {
         public: // methods
         model( const string& mesh_path, const string& material_path )
-          : mesh_resource( resource::load<mesh>( mesh_path ) ),            // load model resources from file paths
-            material_resource( resource::load<material>( material_path ) ) // load model resources from file paths
+          : mesh_resource( resource_database::load<mesh>( mesh_path ) ),            // load model resources from file paths
+            material_resource( resource_database::load<material>( material_path ) ) // load model resources from file paths
         {}
 
         public: // accessors
         let& get_mesh get_value( mesh_resource );
         let& get_material get_value( material_resource );
-        
+
         let_mutable& get_mesh_mutable get_mutable_value( mesh_resource );
         let_mutable& get_material_mutable get_mutable_value( material_resource );
 
@@ -40,3 +40,8 @@ namespace rnjin::graphics
         basis;
     };
 } // namespace rnjin::graphics
+
+reflection_info_for( rnjin::graphics, model )
+{
+    reflect_type_name( "model" );
+};

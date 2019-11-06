@@ -8,59 +8,99 @@
 
 #include "core.hpp"
 #include "file.hpp"
+#include "reference.hpp"
 
-namespace rnjin
+namespace rnjin::core
 {
-    namespace core
+    class resource
     {
-        class resource
+        public: // types
+        using id = unique_id<resource>;
+
+        public: // methods
+        resource();
+        ~resource();
+
+        void save() const;   // Save a resource that has an associated file path
+        void force_reload(); // Load a resource that has an associated file path
+
+        void set_path( const string& new_path ); // Set the resource file path
+
+        public: // accessors
+        inline let get_id get_value( resource_id );
+        let& get_path get_value( file_path );
+        let has_file get_value( not file_path.empty() );
+        let has_references get_value( reference_count > 0 );
+
+        protected:
+        // Handle saving/loading of sub-resources
+        void save_to( io::file& file ) const; 
+        void load_from( io::file& file );
+        // Virtual methods do that nothing for a base resource type
+        virtual void write_data( io::file& file ) const;
+        virtual void read_data( io::file& file );
+
+        private: // enums
+        enum class subresource_type
         {
-            public: // types
-            using id = unique_id<resource>;
+            internal = 'i',
+            external = 'e'
+        };
 
-            public: // methods
-            resource();
-            ~resource();
+        private: // members
+        string file_path;
+        id resource_id;
 
-            void save_to( io::file& file );   // Called from derived class write_data
-            void load_from( io::file& file ); // Called from derived class read_data
+        uint reference_count;
+        void add_reference();
+        void remove_reference();
 
-            void save();         // Save a resource that has an associated file path
-            void force_reload(); // Load a resource that has an associated file path
-
-            void set_path( const string& new_path ); // Set the resource file path
-
+        public: // static members
+        static group
+        {
             public: // accessors
-            inline let get_id get_value( resource_id );
-            let& get_path get_value( file_path );
-            let has_file get_value( not file_path.empty() );
-
-            protected:
-            // Virtual methods do that nothing for a base resource type
-            virtual void write_data( io::file& file );
-            virtual void read_data( io::file& file );
-
-            private: // enums
-            enum class subresource_type
-            {
-                internal = 'i',
-                external = 'e'
-            };
+            let_mutable& resource_no_longer_referenced get_mutable_value( resource_no_longer_referenced_event );
 
             private: // members
-            string file_path;
-            id resource_id;
+            event<const resource&> resource_no_longer_referenced_event{ "last reference removed" };
+        }
+        events;
 
-            public: // static methods
-            // Create a resource and immediately load it from a path
-            template <typename T>
-            static T load( const string& path )
+        // A reference that calls add/remove_reference on a given resource type when it is created/copied/destroyed
+        public: // reference type
+        template <typename T>
+        class reference
+        {
+            private: // methods
+            reference( T& target ) : pass_member( target )
             {
-                T new_resource;
-                new_resource.file_path = path;
-                new_resource.force_reload();
-                return new_resource;
+                target.add_reference();
             }
+
+            public: // methods
+            reference( reference& other ) : pass_member( other.target )
+            {
+                target.add_reference();
+            }
+            ~reference()
+            {
+                target.remove_reference();
+            }
+
+            // Get a mutable reference to the target resource
+            inline T& get_mutable()
+            {
+                return target;
+            }
+
+            // Allow implicit conversion from a reference type to a const reference to the target resource
+            inline operator const T&() const
+            {
+                return target;
+            }
+
+            private:
+            T& target;
         };
-    } // namespace core
-} // namespace rnjin
+    };
+} // namespace rnjin::core

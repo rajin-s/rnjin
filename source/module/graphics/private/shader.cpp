@@ -76,7 +76,7 @@ namespace rnjin
             }
         }
 
-        void shader::write_data( io::file& file )
+        void shader::write_data( io::file& file ) const
         {
             file.write_var( shader_type );
             file.write_string( glsl.content );

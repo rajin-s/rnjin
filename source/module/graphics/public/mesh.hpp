@@ -84,7 +84,7 @@ namespace rnjin::graphics
         let has_data get_value( not vertices.data.empty() );
 
         protected: // inherited
-        virtual void write_data( io::file& file );
-        virtual void read_data( io::file& file );
+        virtual void write_data( io::file& file ) const override;
+        virtual void read_data( io::file& file ) override;
     };
 } // namespace rnjin::graphics

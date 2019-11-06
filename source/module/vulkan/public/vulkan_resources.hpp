@@ -216,3 +216,12 @@ namespace rnjin::graphics::vulkan
         render_pipeline pipeline;
     };
 } // namespace rnjin::graphics::vulkan
+
+/* -------------------------------------------------------------------------- */
+/*                               Reflection Info                              */
+/* -------------------------------------------------------------------------- */
+
+reflection_info_for( rnjin::graphics::vulkan, internal_resources )
+{
+    reflect_type_name( "vulkan::internal_resources" );
+};

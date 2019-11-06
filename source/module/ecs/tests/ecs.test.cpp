@@ -52,8 +52,7 @@ class test_system_1 : public rnjin::ecs::system<read_from<int_component>, write_
         let& i         = components.readable<int_component>();
         let_mutable& f = components.writable<float_component>();
 
-        std::cout << "                          ";
-        std::cout << "test_system_1: Add " << i.get_int_value() << " to float component (" << f.get_float_value() << ")" << std::endl;
+        print_line( "test_system_1: Add " << i.get_int_value() << " to float component (" << f.get_float_value() << ")" );
 
         f.add_to_float_value( i.get_int_value() );
     }
@@ -124,8 +123,7 @@ class test_system_2 : public rnjin::ecs::system<read_from<int_component>, write_
         let& i         = components.readable<int_component>();
         let_mutable& d = components.writable<dependent_component>();
 
-        std::cout << "                                ";
-        std::cout << "test_system_2: dependent_component (" << d.value << " -> " << d.value + i.get_int_value() << ")" << std::endl;
+        print_line( "test_system_2: dependent_component (" << d.value << " -> " << d.value + i.get_int_value() << ")" );
         d.value += i.get_int_value();
     }
 
@@ -135,11 +133,11 @@ class test_system_2 : public rnjin::ecs::system<read_from<int_component>, write_
         std::cout << "                                ";
         if ( e.get<dependent_component>() == nullptr )
         {
-            std::cout << "test_system_2: require dependent_component on entity (" << e.get_id() << ")" << std::endl;
+            print_line( "test_system_2: require dependent_component on entity (" << e.get_id() << ")" );
         }
         else
         {
-            std::cout << "test_system_2: dependent_component already attached to entity (" << e.get_id() << ")" << std::endl;
+            print_line( "test_system_2: dependent_component already attached to entity (" << e.get_id() << ")" );
         }
 
         // Add dependent_component to the entity that an int_component was just added to
@@ -148,8 +146,7 @@ class test_system_2 : public rnjin::ecs::system<read_from<int_component>, write_
     }
     void on_int_component_removed( const int_component& c, entity& e )
     {
-        std::cout << "                                ";
-        std::cout << "test_system_2: remove dependent_component from entity (" << e.get_id() << ")" << std::endl;
+        print_line( "test_system_2: remove dependent_component from entity (" << e.get_id() << ")" );
 
         // Remove dependent_component to the entity that an int_component was just removed from
         // note: this just removes the component completely, since there is no 'unrequire' method
@@ -197,3 +194,20 @@ test( ecs_initialization )
     assert_equal( ent3.get<dependent_component>()->value, 3 );
     assert_equal( ent4.get<dependent_component>()->value, 12 );
 }
+
+/* -------------------------------------------------------------------------- */
+/*                               Reflection Info                              */
+/* -------------------------------------------------------------------------- */
+
+reflection_info_for(, int_component )
+{
+    reflect_type_name( "int_component" );
+};
+reflection_info_for(, float_component )
+{
+    reflect_type_name( "float_component" );
+};
+reflection_info_for(, dependent_component )
+{
+    reflect_type_name( "dependent_component" );
+};

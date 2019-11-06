@@ -46,3 +46,12 @@ namespace rnjin::graphics::vulkan
         current_frame;
     };
 } // namespace rnjin::graphics::vulkan
+
+/* -------------------------------------------------------------------------- */
+/*                               Reflection Info                              */
+/* -------------------------------------------------------------------------- */
+
+reflection_info_for( rnjin::graphics::vulkan, renderer )
+{
+    reflect_type_name( "vulkan::renderer" );
+};

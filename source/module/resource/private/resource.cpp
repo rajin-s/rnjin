@@ -11,11 +11,20 @@ namespace rnjin
 {
     namespace core
     {
-        resource::resource() {}
+
+/* -------------------------------------------------------------------------- */
+/*                                  Resource                                  */
+/* -------------------------------------------------------------------------- */
+#pragma region resource
+
+        resource::resource()     //
+          : reference_count( 0 ) //
+        {}
         resource::~resource() {}
 
-        // Called from derived class write_data
-        void resource::save_to( io::file& file )
+        // Save this sub-resource to the given file, either as a reference (external path) or directly (contents inline)
+        // note: called from derived class write_data
+        void resource::save_to( io::file& file ) const
         {
             let is_external = has_file();
 
@@ -27,12 +36,7 @@ namespace rnjin
                 file.write_var( subresource_type::external );
                 file.write_string( file_path );
 
-                // Don't save external subresources, they need to be saved manually
-
-                // Open the subresource file and store actual data
-                // io::file resource_file( file_path, io::file::mode::write );
-                // check_error_condition( return, io::file_log, not file.is_valid(), "Failed to open subresource file '\1' for saving", file_path );
-                // write_data( resource_file );
+                // note: external resources need to be saved externally, so we don't recursively save them here
             }
             else
             {
@@ -44,7 +48,8 @@ namespace rnjin
             }
         }
 
-        // Called from derived class read_data
+        // Load this sub-resource from the given file, either opening its own external file or reading contents directly
+        // note: called from derived class read_data
         void resource::load_from( io::file& file )
         {
             // Read an internal/external flag from the parent file
@@ -69,7 +74,7 @@ namespace rnjin
         }
 
         // Save a resource that has an associated file path
-        void resource::save()
+        void resource::save() const
         {
             // let task = io::file_log_verbose.track_scope( "Saving resource file" );
 
@@ -103,8 +108,8 @@ namespace rnjin
             file_path = new_path;
         }
 
-        // Virtual methods that do nothing for a base resource type
-        void resource::write_data( io::file& file )
+        // Virtual methods that does nothing for a base resource type
+        void resource::write_data( io::file& file ) const
         {
             pass;
         }
@@ -112,6 +117,23 @@ namespace rnjin
         {
             pass;
         }
+
+        // Reference counting
+        void resource::add_reference()
+        {
+            reference_count += 1;
+        }
+        void resource::remove_reference()
+        {
+            reference_count -= 1;
+
+            if ( reference_count == 0 )
+            {
+                resource::events.resource_no_longer_referenced().send( *this );
+            }
+        }
+
+#pragma endregion resource
 
     } // namespace core
 } // namespace rnjin

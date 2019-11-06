@@ -13,7 +13,7 @@ namespace rnjin
         text_resource::text_resource() {}
         text_resource::~text_resource() {}
 
-        void text_resource::write_data( io::file& file )
+        void text_resource::write_data( io::file& file ) const
         {
             file.write_all_text( content );
         }
