@@ -6,12 +6,12 @@ from glob import glob
 
 class library:
     include_directories = [
-        "../libs/glfw_include",
-        "../libs/vulkan_include"
+        open("../libs/glfw_include").read(),
+        open("../libs/vulkan_include").read()
     ]
     paths = [
-        "../libs/vulkan_lib",
-        "../libs/glfw_lib"
+        open("../libs/vulkan_lib").read(),
+        open("../libs/glfw_lib").read()
     ]
     names = [
         "glfw3",
