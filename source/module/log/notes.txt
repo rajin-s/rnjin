@@ -1,7 +1,0 @@
-rnjin::log
-
-    log::source::masked graphics_log_verbose( graphics_log, log_flag::verbose );
-    log::source::masked vulkan_log( graphics_log, log_flag::vulkan );
-    log::source::masked vulkan_log_verbose( graphics_log, log_flag::vulkan, log_flag::verbose );
-
-    graphics_log_verbose.print('...')

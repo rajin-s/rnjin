@@ -1,5 +1,6 @@
 import sys
 import subprocess
+import os
 
 build_target = "all"
 
@@ -29,7 +30,8 @@ if "quietly" in sys.argv:
 if not "singlecore" in sys.argv:
     args += " -j 4"
 
-command       = "scons %s > %s" % (args, output_log)
+command       = "scons %s >> %s" % (args, output_log)
+os.system(f"echo {command} > {output_log}")
 build_process = subprocess.Popen(command, shell=True)
 
 build_process.wait()
