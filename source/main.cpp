@@ -8,7 +8,7 @@
 #include <iostream>
 
 #include rnjin_module( core )
-#include "log/public/log.hpp"
+#include rnjin_module( log )
 
 #include "graphics/public/glfw.hpp"
 // #include "render_view.hpp"

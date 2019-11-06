@@ -8,7 +8,8 @@
 #include <glfw3.h>
 
 #include "graphics.hpp"
-#include "log/public/log.hpp"
+
+#include rnjin_module( log )
 
 namespace rnjin
 {

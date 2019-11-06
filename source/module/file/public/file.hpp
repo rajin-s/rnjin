@@ -10,8 +10,7 @@
 #include standard_library( fstream )
 
 #include rnjin_module( core )
-#include "log/public/log.hpp"
-// #include <fstream>
+#include rnjin_module( log )
 
 namespace rnjin
 {

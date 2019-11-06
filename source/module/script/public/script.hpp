@@ -6,8 +6,9 @@
 
 #pragma once
 #include <rnjin.hpp>
+
 #include rnjin_module( core )
-#include "log/public/log.hpp"
+#include rnjin_module( log )
 
 namespace rnjin
 {
