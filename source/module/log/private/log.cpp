@@ -4,12 +4,12 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "console/public/console.hpp"
 #include "log.hpp"
 
+#include standard_library( iostream )
+#include standard_library( sstream )
 
-#include <iostream>
-#include <sstream>
+#include rnjin_module( console )
 
 namespace rnjin
 {

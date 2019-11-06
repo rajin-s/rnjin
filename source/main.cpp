@@ -19,7 +19,7 @@
 // #include "vulkan_renderer.hpp"
 // #include "vulkan_ecs.hpp"
 
-#include "console/public/console.hpp"
+#include rnjin_module( console )
 
 // #include "primitives.hpp"
 

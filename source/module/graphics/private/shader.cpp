@@ -4,11 +4,12 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
+#include <shaderc/shaderc.hpp>
+
 #include "graphics.hpp"
 #include "shader.hpp"
-#include "shaderc/shaderc.hpp"
 
-#include "console/public/console.hpp"
+#include rnjin_module( console )
 
 namespace rnjin
 {
