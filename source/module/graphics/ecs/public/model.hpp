@@ -5,6 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 #include "resource/public/resource_database.hpp"
 #include "graphics/public/mesh.hpp"

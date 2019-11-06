@@ -5,6 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 #include "conf.h"
 #include "macro.hpp"

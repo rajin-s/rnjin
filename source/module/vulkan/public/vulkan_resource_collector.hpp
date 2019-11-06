@@ -5,6 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 #include "ecs/public/ecs.hpp"
 #include "graphics/ecs/public/visual_ecs.hpp"

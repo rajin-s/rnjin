@@ -5,10 +5,13 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "core/public/core.hpp"
+#include standard_library( fstream )
+
+#include rnjin_module( core )
 #include "log/public/log.hpp"
-#include <fstream>
+// #include <fstream>
 
 namespace rnjin
 {

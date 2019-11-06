@@ -5,6 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 #include "graphics/public/render_api.hpp"
 #include "graphics/public/renderer.hpp"

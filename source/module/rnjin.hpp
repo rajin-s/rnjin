@@ -4,13 +4,19 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-// clang-format off
 #pragma once
+
+/* -------------------------------------------------------------------------- */
+/*                         Module / Include Utilities                         */
+/* -------------------------------------------------------------------------- */
+
+// clang-format off
 
 #define __make_string( s ) #s
 
 #define rnjin_module( module_name ) __make_string( module_name/module_name.hpp )
-#define rnjin_module_header( module_name, header_name ) __make_string( module_name/public/header_name.hpp )
+#define rnjin_module_public( module_name, header_name ) __make_string( module_name/public/header_name.hpp )
 #define internal_header( header_name ) __make_string( header_name.hpp )
+#define standard_library( header_name ) <header_name>
 
 // clang-format on

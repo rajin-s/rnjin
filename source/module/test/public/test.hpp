@@ -5,9 +5,11 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include <iostream>
-#include "core/public/core.hpp"
+#include standard_library( ostream )
+
+#include rnjin_module( core )
 
 namespace rnjin::test
 {

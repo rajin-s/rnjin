@@ -5,6 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 // #define GLFW_INCLUDE_VULKAN // in case this is included before any of the vulkan includes
 #include <glfw3.h>

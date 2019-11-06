@@ -5,8 +5,9 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "core/public/core.hpp"
+#include rnjin_module( core )
 #include "entity.hpp"
 #include "component.hpp"
 

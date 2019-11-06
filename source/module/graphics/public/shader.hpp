@@ -5,6 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 #include "resource/public/resource.hpp"
 #include "resource/public/text_resource.hpp"

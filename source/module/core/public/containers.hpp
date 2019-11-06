@@ -5,12 +5,13 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 // STL data structures
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include standard_library( string )
+#include standard_library( unordered_map )
+#include standard_library( unordered_set )
+#include standard_library( vector )
 
 // Aliases for STL types
 namespace rnjin
@@ -39,7 +40,7 @@ namespace rnjin
             return result;
         }
 
-        inline version_id& operator++(int _)
+        inline version_id& operator++( int _ )
         {
             number++;
             return *this;

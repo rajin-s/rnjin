@@ -5,9 +5,12 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
+
+#include standard_library( ostream )
 
 #include "core/public/containers.hpp"
-#include <ostream>
+// #include <ostream>
 
 namespace rnjin::core
 {

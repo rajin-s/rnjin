@@ -11,24 +11,27 @@
  */
 
 #pragma once
-
-// Basic container type templates
-#include "containers.hpp"
-
-// build configuration
-#include "platform.hpp"
-
-// core data structures
-#include "bitmask.hpp"
-#include "math/public/math.hpp"
-#include "event.hpp"
-#include "unique_id.hpp"
+#include <rnjin.hpp>
 
 // macros
-#include "macro.hpp"
+#include "public/macro.hpp"
+
+// Basic container type templates
+#include "public/containers.hpp"
+
+// Default modules
+#include "math/public/math.hpp"
+
+// build configuration
+#include "public/platform.hpp"
+
+// core data structures
+#include "public/bitmask.hpp"
+#include "public/event.hpp"
+#include "public/unique_id.hpp"
 
 // debugging utilities
-#include "debug.hpp"
+#include "public/debug.hpp"
 
 // always used namespaces
 // using namespace rnjin;

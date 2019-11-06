@@ -5,8 +5,9 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include <iostream>
+#include standard_library( ostream )
 
 namespace rnjin::core
 {

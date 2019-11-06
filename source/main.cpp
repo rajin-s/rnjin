@@ -3,10 +3,11 @@
  * (c) Rajin Shankar, 2019  *
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
+#include <rnjin.hpp>
 
 #include <iostream>
 
-#include "core/public/core.hpp"
+#include rnjin_module( core )
 #include "log/public/log.hpp"
 
 #include "graphics/public/glfw.hpp"
