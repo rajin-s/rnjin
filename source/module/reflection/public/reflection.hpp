@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "containers.hpp"
-#include "macro.hpp"
+#include "core/public/containers.hpp"
+#include "core/public/macro.hpp"
 
 /* -------------------------------------------------------------------------- */
 /*                         Unspecified Reflection Info                        */

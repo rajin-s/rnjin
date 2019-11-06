@@ -4,7 +4,7 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "console.hpp"
+#include "console/public/console.hpp"
 #include "log.hpp"
 
 

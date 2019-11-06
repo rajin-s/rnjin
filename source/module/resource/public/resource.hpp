@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "core.hpp"
-#include "file.hpp"
+#include "core/public/core.hpp"
+#include "file/public/file.hpp"
 
 namespace rnjin::core
 {

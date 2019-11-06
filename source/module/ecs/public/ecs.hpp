@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "log.hpp"
+#include "log/public/log.hpp"
 
 #include "entity.hpp"
 #include "component.hpp"

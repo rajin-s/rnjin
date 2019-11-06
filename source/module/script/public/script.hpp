@@ -5,8 +5,8 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
-#include "core.hpp"
-#include "log.hpp"
+#include "core/public/core.hpp"
+#include "log/public/log.hpp"
 
 namespace rnjin
 {

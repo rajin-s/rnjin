@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include "core.hpp"
+#include "core/public/core.hpp"
 #include "entity.hpp"
 
-#include "reflection.hpp"
+#include "reflection/public/reflection.hpp"
 
 namespace rnjin::ecs
 {

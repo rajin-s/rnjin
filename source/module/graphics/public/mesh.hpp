@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "resource.hpp"
-#include "event.hpp"
+#include "resource/public/resource.hpp"
+#include "core/public/event.hpp"
 
 namespace rnjin::graphics
 {

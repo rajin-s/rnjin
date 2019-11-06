@@ -8,7 +8,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "glfw.hpp"
+#include "graphics/public/glfw.hpp"
 #include "vulkan_device.hpp"
 
 namespace rnjin::graphics::vulkan

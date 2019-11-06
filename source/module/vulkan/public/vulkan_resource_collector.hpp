@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "ecs.hpp"
-#include "visual_ecs.hpp"
+#include "ecs/public/ecs.hpp"
+#include "graphics/ecs/public/visual_ecs.hpp"
 #include "vulkan_renderer.hpp"
 #include "vulkan_resources.hpp"
 

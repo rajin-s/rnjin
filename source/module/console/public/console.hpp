@@ -5,8 +5,10 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "core.hpp"
+// #include "core/public/core.hpp"
+#include rnjin_module_header( core, core )
 
 namespace rnjin
 {

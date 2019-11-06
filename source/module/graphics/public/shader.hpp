@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "resource.hpp"
-#include "text_resource.hpp"
+#include "resource/public/resource.hpp"
+#include "resource/public/text_resource.hpp"
 
 namespace rnjin
 {

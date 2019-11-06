@@ -7,7 +7,7 @@
 #pragma once
 
 #include <iostream>
-#include "core.hpp"
+#include "core/public/core.hpp"
 
 namespace rnjin::test
 {

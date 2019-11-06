@@ -7,8 +7,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <glfw3.h>
 
-#include <graphics.hpp>
-#include <log.hpp>
+#include "graphics.hpp"
+#include "log/public/log.hpp"
 
 namespace rnjin
 {

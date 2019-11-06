@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "render_api.hpp"
-#include "renderer.hpp"
+#include "graphics/public/render_api.hpp"
+#include "graphics/public/renderer.hpp"
 
 namespace rnjin::graphics::vulkan
 {

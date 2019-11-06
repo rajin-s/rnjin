@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "core.hpp"
+#include "core/public/core.hpp"
 #include "entity.hpp"
 #include "component.hpp"
 

@@ -10,8 +10,8 @@
 
 #include "vulkan_device.hpp"
 
-#include "ecs.hpp"
-#include "visual_ecs.hpp"
+#include "ecs/public/ecs.hpp"
+#include "graphics/ecs/public/visual_ecs.hpp"
 
 namespace rnjin::graphics::vulkan
 {

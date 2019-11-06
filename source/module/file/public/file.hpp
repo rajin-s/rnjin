@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "core.hpp"
-#include "log.hpp"
+#include "core/public/core.hpp"
+#include "log/public/log.hpp"
 #include <fstream>
 
 namespace rnjin

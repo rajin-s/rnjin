@@ -8,7 +8,7 @@
 #include "shader.hpp"
 #include "shaderc/shaderc.hpp"
 
-#include "console.hpp"
+#include "console/public/console.hpp"
 
 namespace rnjin
 {

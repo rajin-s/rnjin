@@ -8,7 +8,7 @@
 
 #include "macro.hpp"
 #include "containers.hpp"
-#include "log.hpp"
+#include "log/public/log.hpp"
 
 namespace rnjin::core
 {

@@ -20,7 +20,7 @@
 
 // core data structures
 #include "bitmask.hpp"
-#include "math.hpp"
+#include "math/public/math.hpp"
 #include "event.hpp"
 #include "unique_id.hpp"
 

@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include "render_view.hpp"
+#include "graphics/public/render_view.hpp"
 #include "model.hpp"
-#include "ecs.hpp"
+#include "ecs/public/ecs.hpp"
 
 namespace rnjin::graphics
 {

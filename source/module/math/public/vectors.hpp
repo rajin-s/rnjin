@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "containers.hpp"
+#include "core/public/containers.hpp"
 #include <ostream>
 
 namespace rnjin::core

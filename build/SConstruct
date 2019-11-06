@@ -142,8 +142,9 @@ if not args.quiet:
 
 # Get all include directories in modules
 all_include_directories = library.include_directories
-for m in modules:
-    all_include_directories += m.include_directories
+# for m in modules:
+#     all_include_directories += m.include_directories
+all_include_directories.append(project.module_directory)
 
 # Create build environment with include directories and libraries
 environment = Environment(
@@ -161,8 +162,9 @@ all_module_objects = []
 for m in modules:
     if len(m.source_files) == 0: continue
 
-    module_environment = environment
+    module_environment = environment.Clone()
     module_environment.Append(CPPPATH=m.internal_directories)
+    module_environment.Append(CPPPATH=m.include_directories)
 
     output_path = f"{m.directory}/module.obj"
     module_object = module_environment.Library(

@@ -8,7 +8,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "ecs.hpp"
+#include "ecs/public/ecs.hpp"
 #include "vulkan_window_surface.hpp"
 #include "vulkan_api.hpp"
 #include "vulkan_resources.hpp"

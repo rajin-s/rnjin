@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include "resource_database.hpp"
-#include "mesh.hpp"
-#include "material.hpp"
-#include "ecs.hpp"
+#include "resource/public/resource_database.hpp"
+#include "graphics/public/mesh.hpp"
+#include "graphics/public/material.hpp"
+#include "ecs/public/ecs.hpp"
 
 using namespace rnjin::ecs;
 

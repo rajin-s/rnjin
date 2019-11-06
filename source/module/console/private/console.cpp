@@ -5,8 +5,8 @@
  * *** ** *** ** *** ** *** */
 
 #include "console.hpp"
-#include "file.hpp"
-#include "log.hpp"
+#include "file/public/file.hpp"
+#include "log/public/log.hpp"
 
 
 #include <iostream>
