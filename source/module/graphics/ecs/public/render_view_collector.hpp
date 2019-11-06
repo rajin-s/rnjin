@@ -9,7 +9,7 @@
 
 #include "graphics/public/render_view.hpp"
 #include "model.hpp"
-#include "ecs/public/ecs.hpp"
+#include rnjin_module( ecs )
 
 namespace rnjin::graphics
 {

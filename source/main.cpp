@@ -23,7 +23,7 @@
 
 // #include "primitives.hpp"
 
-#include "ecs/public/ecs.hpp"
+#include rnjin_module( ecs )
 
 using namespace rnjin;
 using namespace rnjin::core;

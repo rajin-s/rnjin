@@ -9,7 +9,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "ecs/public/ecs.hpp"
+#include rnjin_module( ecs )
 #include "vulkan_window_surface.hpp"
 #include "vulkan_api.hpp"
 #include "vulkan_resources.hpp"

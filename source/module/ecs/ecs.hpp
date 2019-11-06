@@ -5,10 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
-#include <rnjin.hpp>
 
-#include rnjin_module( log )
-
-#include "entity.hpp"
-#include "component.hpp"
-#include "system.hpp"
+#include "public/entity.hpp"
+#include "public/component.hpp"
+#include "public/system.hpp"

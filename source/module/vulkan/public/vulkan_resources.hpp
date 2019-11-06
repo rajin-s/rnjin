@@ -11,7 +11,7 @@
 
 #include "vulkan_device.hpp"
 
-#include "ecs/public/ecs.hpp"
+#include rnjin_module( ecs )
 #include "graphics/ecs/public/visual_ecs.hpp"
 
 namespace rnjin::graphics::vulkan

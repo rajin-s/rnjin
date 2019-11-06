@@ -10,7 +10,7 @@
 #include "resource/public/resource_database.hpp"
 #include "graphics/public/mesh.hpp"
 #include "graphics/public/material.hpp"
-#include "ecs/public/ecs.hpp"
+#include rnjin_module( ecs )
 
 using namespace rnjin::ecs;
 
