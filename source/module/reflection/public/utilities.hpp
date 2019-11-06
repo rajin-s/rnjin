@@ -7,8 +7,8 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include "core/public/containers.hpp"
-#include "core/public/macro.hpp"
+#include rnjin_module_public( core, macro )
+#include rnjin_module_public( core, containers )
 
 /* -------------------------------------------------------------------------- */
 /*                         Unspecified Reflection Info                        */

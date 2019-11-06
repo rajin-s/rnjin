@@ -5,7 +5,6 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
-#include <rnjin.hpp>
 
-#include "vectors.hpp"
-#include "math_utilities.hpp"
+#include "public/vectors.hpp"
+#include "public/math_utilities.hpp"
