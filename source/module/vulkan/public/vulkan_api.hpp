@@ -7,8 +7,7 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include "graphics/public/render_api.hpp"
-#include "graphics/public/renderer.hpp"
+#include rnjin_module_subset( graphics, rendering )
 
 namespace rnjin::graphics::vulkan
 {

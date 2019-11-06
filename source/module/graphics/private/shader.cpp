@@ -6,7 +6,7 @@
 
 #include <shaderc/shaderc.hpp>
 
-#include "graphics.hpp"
+#include "common.hpp"
 #include "shader.hpp"
 
 #include rnjin_module( console )

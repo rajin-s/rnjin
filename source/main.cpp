@@ -5,24 +5,12 @@
  * *** ** *** ** *** ** *** */
 #include <rnjin.hpp>
 
-#include <iostream>
+#include standard_library( iostream )
 
 #include rnjin_module( core )
 #include rnjin_module( log )
-
-#include "graphics/public/glfw.hpp"
-// #include "render_view.hpp"
-// #include "visual.hpp"
-// #include "visual_ecs.hpp"
-
-// #include "vulkan_api.hpp"
-// #include "vulkan_renderer.hpp"
-// #include "vulkan_ecs.hpp"
-
+#include rnjin_module( graphics )
 #include rnjin_module( console )
-
-// #include "primitives.hpp"
-
 #include rnjin_module( ecs )
 
 using namespace rnjin;

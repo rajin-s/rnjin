@@ -9,8 +9,9 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "graphics/public/glfw.hpp"
 #include "vulkan_device.hpp"
+
+#include rnjin_module_subset( graphics, windowing )
 
 namespace rnjin::graphics::vulkan
 {

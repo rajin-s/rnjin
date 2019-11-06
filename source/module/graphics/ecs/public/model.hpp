@@ -8,8 +8,8 @@
 #include <rnjin.hpp>
 
 #include "resource/public/resource_database.hpp"
-#include "graphics/public/mesh.hpp"
-#include "graphics/public/material.hpp"
+
+#include rnjin_module_subset( graphics, resources )
 #include rnjin_module( ecs )
 
 using namespace rnjin::ecs;

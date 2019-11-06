@@ -7,9 +7,10 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include "graphics/public/render_view.hpp"
 #include "model.hpp"
+
 #include rnjin_module( ecs )
+#include rnjin_module_public( graphics, render_view )
 
 namespace rnjin::graphics
 {
