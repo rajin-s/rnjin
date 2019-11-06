@@ -142,8 +142,6 @@ if not args.quiet:
 
 # Get all include directories in modules
 all_include_directories = library.include_directories
-# for m in modules:
-#     all_include_directories += m.include_directories
 all_include_directories.append(project.module_directory)
 
 # Create build environment with include directories and libraries
@@ -213,13 +211,19 @@ if args.build_engine:
     if not args.quiet:
         print("Set application icon")
 
-
 if args.build_tests:
+    # Tests have access to all public headers
+    for m in modules:
+        all_include_directories += m.include_directories
+
+    test_environment = environment.Clone()
+    test_environment.Append(CPPPATH=all_include_directories)
+
     all_test_files = []
     for m in modules:
         all_test_files += m.test_files
 
-    tests_main_object = environment.Object(
+    tests_main_object = test_environment.Object(
         target=project.tests_main_object,
         source=project.tests_source
     )
@@ -227,7 +231,7 @@ if args.build_tests:
     if not args.quiet:
         print(f"Build '{project.tests_main_object}'")
 
-    tests_executable = environment.Program(
+    tests_executable = test_environment.Program(
         target=project.tests_executable,
         source=[project.tests_main_object, project.core_object] + all_test_files
     )

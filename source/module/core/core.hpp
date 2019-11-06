@@ -20,7 +20,7 @@
 #include "public/containers.hpp"
 
 // Default modules
-#include rnjin_module( math )
+#include rnjin_module_subset( math, general )
 
 // build configuration
 #include "public/platform.hpp"

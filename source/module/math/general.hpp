@@ -4,8 +4,7 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "event.hpp"
-#include "test.hpp"
+#pragma once
 
-using namespace rnjin;
-using namespace rnjin::core;
+#include "public/vectors.hpp"
+#include "public/math_utilities.hpp"

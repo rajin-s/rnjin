@@ -6,14 +6,14 @@
 
 #include <rnjin.hpp>
 
+#include rnjin_module( test )
+
 #include rnjin_module( graphics )
 #include rnjin_module_subset( graphics, ecs )
 #include rnjin_module_subset( vulkan, ecs )
 
 #include rnjin_module( log )
 #include rnjin_module( math )
-
-#include "test.hpp"
 
 using namespace rnjin;
 using namespace rnjin::graphics;

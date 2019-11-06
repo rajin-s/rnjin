@@ -3,11 +3,13 @@
  * (c) Rajin Shankar, 2019  *
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
+#include <rnjin.hpp>
 
-#include <iostream>
-#include <core.hpp>
-#include <console.hpp>
-#include <test.hpp>
+#include standard_library( iostream )
+
+#include rnjin_module( core )
+#include rnjin_module( console )
+#include rnjin_module( test )
 
 using namespace rnjin;
 

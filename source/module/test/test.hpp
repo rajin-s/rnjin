@@ -6,6 +6,4 @@
 
 #pragma once
 
-#include "public/vectors.hpp"
-#include "public/math_utilities.hpp"
-#include "public/transformations.hpp"
+#include "public/utilities.hpp"
