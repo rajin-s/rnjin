@@ -4,8 +4,10 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "math.hpp"
-#include "test.hpp"
+#include <rnjin.hpp>
+
+#include rnjin_module( test )
+#include rnjin_module( math )
 
 using namespace rnjin;
 using namespace rnjin::core;
@@ -54,20 +56,20 @@ test( vector_comparison )
 
 test( vector_operators )
 {
-    note("Addition");
+    note( "Addition" );
     assert_equal( float2( 1, 3 ) + float2( 3, 4 ), float2( 4, 7 ) );
     assert_equal( float2( 1.2, 3.4 ) + float2( 5.6, 7.8 ), float2( 1.2f + 5.6f, 3.4f + 7.8f ) );
     assert_equal( double4( 1.2, 3.4, 5.6, 7.8 ) - double4( 0.9, 8.7, 6.5, 4.3 ), double4( 1.2 - 0.9, 3.4 - 8.7, 5.6 - 6.5, 7.8 - 4.3 ) );
-    
-    note("Subtraction");
+
+    note( "Subtraction" );
     assert_equal( int3( 100, 100, 100 ) - int3( 100, 100, 100 ), int3() );
     assert_equal( float3( 100, 100, 100 ) - float3( 100, 100, 100 ), float3() );
-    
-    note("Scalar Multiplication");
-    assert_equal( int2(1, 5) * 3, int2(3, 15));
-    assert_equal( 3 * int2(1, 5), int2(3, 15));
-    assert_equal( 2 * int2(0, -5) * 3, int2(0, -30));
 
-    note("Conversion");
+    note( "Scalar Multiplication" );
+    assert_equal( int2( 1, 5 ) * 3, int2( 3, 15 ) );
+    assert_equal( 3 * int2( 1, 5 ), int2( 3, 15 ) );
+    assert_equal( 2 * int2( 0, -5 ) * 3, int2( 0, -30 ) );
+
+    note( "Conversion" );
     assert_equal( (float3) float2( 3, 4 ), float3( 3, 4, 0 ) );
 }

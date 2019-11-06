@@ -5,11 +5,12 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "core.hpp"
 #include "entity.hpp"
 
-#include "reflection.hpp"
+#include rnjin_module( core )
+#include rnjin_module( reflection )
 
 namespace rnjin::ecs
 {

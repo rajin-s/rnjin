@@ -4,12 +4,6 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "math.hpp"
+#pragma once
 
-namespace rnjin
-{
-    namespace core
-    {
-        
-    }
-}
+#include "public/console.hpp"

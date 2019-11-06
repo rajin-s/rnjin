@@ -5,10 +5,10 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "resource.hpp"
 #include "shader.hpp"
-#include "event.hpp"
+#include rnjin_module( resource )
 
 namespace rnjin::graphics
 {

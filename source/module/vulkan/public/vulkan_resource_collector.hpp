@@ -5,9 +5,10 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "ecs.hpp"
-#include "visual_ecs.hpp"
+#include rnjin_module( ecs )
+#include "graphics/ecs/public/visual_ecs.hpp"
 #include "vulkan_renderer.hpp"
 #include "vulkan_resources.hpp"
 

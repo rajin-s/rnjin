@@ -5,11 +5,11 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "resource_database.hpp"
-#include "mesh.hpp"
-#include "material.hpp"
-#include "ecs.hpp"
+#include rnjin_module( ecs )
+#include rnjin_module_subset( graphics, resources )
+#include rnjin_module_public( resource, resource_database )
 
 using namespace rnjin::ecs;
 

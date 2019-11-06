@@ -5,7 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
-#include <rnjin.hpp>
 
-#include "model.hpp"
-#include "render_view_collector.hpp"
+#include "public/vectors.hpp"
+#include "public/math_utilities.hpp"
+#include "public/transformations.hpp"

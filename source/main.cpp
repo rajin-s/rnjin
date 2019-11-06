@@ -3,26 +3,15 @@
  * (c) Rajin Shankar, 2019  *
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
+#include <rnjin.hpp>
 
-#include <iostream>
+#include standard_library( iostream )
 
-#include "core.hpp"
-#include "log.hpp"
-
-#include "glfw.hpp"
-// #include "render_view.hpp"
-// #include "visual.hpp"
-// #include "visual_ecs.hpp"
-
-// #include "vulkan_api.hpp"
-// #include "vulkan_renderer.hpp"
-// #include "vulkan_ecs.hpp"
-
-#include "console.hpp"
-
-// #include "primitives.hpp"
-
-#include "ecs.hpp"
+#include rnjin_module( core )
+#include rnjin_module( log )
+#include rnjin_module( graphics )
+#include rnjin_module( console )
+#include rnjin_module( ecs )
 
 using namespace rnjin;
 using namespace rnjin::core;

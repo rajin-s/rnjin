@@ -4,8 +4,10 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
+#include <rnjin.hpp>
+
+#include rnjin_module( test )
 #include "event.hpp"
-#include "test.hpp"
 
 using namespace rnjin;
 using namespace rnjin::core;

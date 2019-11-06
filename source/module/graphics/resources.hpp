@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "log.hpp"
+#include "public/mesh.hpp"
+#include "public/primitives.hpp"
 
-#include "entity.hpp"
-#include "component.hpp"
-#include "system.hpp"
+#include "public/shader.hpp"
+#include "public/material.hpp"

@@ -5,10 +5,12 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 #include "macro.hpp"
 #include "containers.hpp"
-#include "log.hpp"
+
+#include rnjin_module( log )
 
 namespace rnjin::core
 {

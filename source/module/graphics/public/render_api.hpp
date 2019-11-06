@@ -5,8 +5,9 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "graphics.hpp"
+#include "common.hpp"
 #include "renderer.hpp"
 
 namespace rnjin

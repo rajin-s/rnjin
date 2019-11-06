@@ -4,8 +4,10 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "ecs.hpp"
-#include "test.hpp"
+#include <rnjin.hpp>
+
+#include rnjin_module( test )
+#include rnjin_module( ecs )
 
 using namespace rnjin::ecs;
 

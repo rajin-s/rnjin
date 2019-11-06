@@ -5,8 +5,9 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "graphics.hpp"
+#include "common.hpp"
 #include "mesh.hpp"
 #include "material.hpp"
 

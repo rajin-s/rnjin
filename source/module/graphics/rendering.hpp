@@ -4,8 +4,8 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "event.hpp"
-#include "test.hpp"
+#pragma once
 
-using namespace rnjin;
-using namespace rnjin::core;
+#include "public/render_api.hpp"
+#include "public/renderer.hpp"
+#include "public/render_view.hpp"

@@ -5,7 +5,6 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
-#include <rnjin.hpp>
 
-#include "model.hpp"
-#include "render_view_collector.hpp"
+#include "public/window.hpp"
+#include "public/glfw.hpp"

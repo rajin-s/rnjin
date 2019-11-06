@@ -5,6 +5,7 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 #include "mesh.hpp"
 

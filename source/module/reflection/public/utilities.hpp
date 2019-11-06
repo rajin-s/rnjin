@@ -5,9 +5,10 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "containers.hpp"
-#include "macro.hpp"
+#include rnjin_module_public( core, macro )
+#include rnjin_module_public( core, containers )
 
 /* -------------------------------------------------------------------------- */
 /*                         Unspecified Reflection Info                        */

@@ -5,13 +5,14 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
 #include <vulkan/vulkan.hpp>
 
 #include "vulkan_device.hpp"
 
-#include "ecs.hpp"
-#include "visual_ecs.hpp"
+#include rnjin_module( ecs )
+#include "graphics/ecs/public/visual_ecs.hpp"
 
 namespace rnjin::graphics::vulkan
 {

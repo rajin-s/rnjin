@@ -5,8 +5,9 @@
  * *** ** *** ** *** ** *** */
 
 #include "console.hpp"
-#include "file.hpp"
-#include "log.hpp"
+
+#include rnjin_module( file )
+#include rnjin_module( log )
 
 
 #include <iostream>

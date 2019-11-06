@@ -5,9 +5,9 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "render_api.hpp"
-#include "renderer.hpp"
+#include rnjin_module_subset( graphics, rendering )
 
 namespace rnjin::graphics::vulkan
 {

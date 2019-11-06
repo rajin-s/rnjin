@@ -24,10 +24,13 @@
  */
 
 #pragma once
+#include <rnjin.hpp>
+
+#include standard_library( ostream )
 
 #include "macro.hpp"
 #include "containers.hpp"
-#include <ostream>
+// #include <ostream>
 
 namespace rnjin
 {

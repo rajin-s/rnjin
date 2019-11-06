@@ -5,7 +5,6 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
-#include <rnjin.hpp>
 
-#include "model.hpp"
-#include "render_view_collector.hpp"
+#include "graphics/ecs/public/model.hpp"
+#include "graphics/ecs/public/render_view_collector.hpp"

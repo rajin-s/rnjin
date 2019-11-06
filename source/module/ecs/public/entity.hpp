@@ -5,9 +5,10 @@
  * *** ** *** ** *** ** *** */
 
 #pragma once
+#include <rnjin.hpp>
 
-#include "core.hpp"
-#include "log.hpp"
+#include rnjin_module( core )
+#include rnjin_module( log )
 
 namespace rnjin::ecs
 {
