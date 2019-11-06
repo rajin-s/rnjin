@@ -71,13 +71,11 @@ namespace rnjin::core
         template <typename T>
         class reference
         {
-            private: // methods
+            public: // methods
             reference( T& target ) : pass_member( target )
             {
                 target.add_reference();
             }
-
-            public: // methods
             reference( reference& other ) : pass_member( other.target )
             {
                 target.add_reference();

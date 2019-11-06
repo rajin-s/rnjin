@@ -131,6 +131,8 @@ namespace rnjin::core
         }
     }
 
+    define_static_group( resource::events );
+
 #pragma endregion resource
 
 } // namespace rnjin::core

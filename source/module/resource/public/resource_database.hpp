@@ -19,11 +19,13 @@ namespace rnjin::core
         ~resource_database();
 
         template <typename T>
-        resource::reference<T> load( const string& file_path )
+        static resource::reference<T> load( const string& file_path )
         {
-            let entry = entries.find( file_path );
+            static resource_database db;
 
-            if ( entry == entries.end() )
+            let entry = db.entries.find( file_path );
+
+            if ( entry == db.entries.end() )
             {
                 // No resource has been previously loaded at this path
 
@@ -34,13 +36,13 @@ namespace rnjin::core
                 new_resource->set_path( file_path );
                 new_resource->force_reload();
 
-                entries.insert( file_path, new_resource );
+                db.entries.emplace( file_path, new_resource );
                 return resource::reference<T>( *new_resource );
             }
             else
             {
                 // Some resource has already been loaded at this path
-                return resource::reference<T>( *( entry->second ) );
+                return resource::reference<T>( *(T*) entry->second );
             }
         }
 
