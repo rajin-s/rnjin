@@ -333,6 +333,11 @@ namespace rnjin
             return text;
         }
 
+        string file::read_text_from( const string& path )
+        {
+            return file( path, mode::read ).read_all_text();
+        }
+
         // We need these template specializations to be instantiated here, since having them elsewhere
         // won't trigger their compilation... This function otherwise does nothing
         void __()

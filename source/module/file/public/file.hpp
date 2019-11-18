@@ -152,6 +152,9 @@ namespace rnjin
             bitmask file_mode;
             uint size;
             file_stream* stream;
+
+            public: // static methods
+            static string read_text_from( const string& path );
         };
     } // namespace io
 } // namespace rnjin
