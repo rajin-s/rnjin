@@ -32,6 +32,8 @@ namespace rnjin::ecs
 
     class entity
     {
+        no_copy( entity );
+
         public: // types
         using id = unique_id<entity>;
 
@@ -85,6 +87,11 @@ namespace rnjin::ecs
         component_type* get_mutable() const
         {
             return component<component_type>::owned_by( *this );
+        }
+
+        inline bool operator==( const entity& other ) const
+        {
+            return entity_id == other.entity_id;
         }
 
         private: // methods

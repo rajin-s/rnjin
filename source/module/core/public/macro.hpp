@@ -11,7 +11,8 @@
 
 // More descriptive forms of common patterns
 #define group struct
-#define define_static_group( name ) decltype( name ) name{}
+#define define_static_group( name ) \
+    decltype( name ) name {}
 #define subregion for ( bool __ = true; __; __ = false )
 #define forward_declare_class( _namespace, _class ) \
     namespace _namespace                            \
@@ -25,6 +26,10 @@
 
 #define goto_target( name ) \
     name:
+
+#define no_copy( class_name )                 \
+    class_name( const class_name& ) = delete; \
+    void operator=( const class_name& ) = delete;
 
 // C++ language extensions
 #define foreach( iteration ) for ( const auto& iteration )
