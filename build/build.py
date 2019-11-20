@@ -30,6 +30,12 @@ if "quietly" in sys.argv:
 if not "singlecore" in sys.argv:
     args += " -j 4"
 
+if "clean" in sys.argv:
+    clean_command = f"scons -c {args}"
+    os.system(f"echo {clean_command}")
+    clean_process = subprocess.Popen(clean_command, shell=True)
+    clean_process.wait()
+
 command       = "scons %s >> %s" % (args, output_log)
 os.system(f"echo {command} > {output_log}")
 build_process = subprocess.Popen(command, shell=True)
