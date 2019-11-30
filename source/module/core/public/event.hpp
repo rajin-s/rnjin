@@ -103,6 +103,8 @@ namespace rnjin::core
         using function_type = void( As... );
 
         public: // methods
+        static_event_handler() : target_event( nullptr ), function( nullptr ) {}
+        
         // Register this handler with the target event on creation
         static_event_handler( event_type& target_event, function_type function ) : target_event( &target_event ), pass_member( function )
         {
