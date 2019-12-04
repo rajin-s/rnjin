@@ -1,4 +1,3 @@
-
 /* *** ** *** ** *** ** *** *
  * Part of rnjin            *
  * (c) Rajin Shankar, 2019  *
@@ -11,8 +10,8 @@
 #include third_party_library( "vulkan/vulkan.hpp" )
 
 #include "vulkan_device.hpp"
-#include rnjin_module( ecs )
-#include rnjin_module_subset( graphics, ecs )
+
+#include rnjin_module( core )
 
 namespace rnjin::graphics::vulkan
 {
@@ -179,45 +178,4 @@ namespace rnjin::graphics::vulkan
         buffer_allocator staging_buffer_allocator;
         buffer_allocator uniform_buffer_allocator;
     };
-
-
-    /* -------------------------------------------------------------------------- */
-    /*                        Internal Resources Component                        */
-    /* -------------------------------------------------------------------------- */
-
-    component_class( internal_resources )
-    {
-        public: // methods
-        internal_resources();
-        ~internal_resources();
-
-        void update_mesh_data( const mesh& source, resource_database& resources );
-        void update_material_data( const material& source, resource_database& resources, const vk::RenderPass& render_pass );
-        void release( resource_database & resource );
-
-        let& get_vertices get_value( vertices );
-        let& get_indices get_value( indices );
-        let& get_pipeline get_value( pipeline );
-
-        let get_vertex_count get_value( vertex_count );
-        let get_index_count get_value( index_count );
-
-        private: // members
-        version_id saved_vertices_version;
-        version_id saved_indices_version;
-        version_id saved_material_version;
-        version_id saved_uniforms_version;
-
-        usize vertex_count;
-        usize index_count;
-
-        buffer_allocation vertices;
-        buffer_allocation indices;
-        buffer_allocation uniforms;
-        render_pipeline pipeline;
-    };
 } // namespace rnjin::graphics::vulkan
-
-/* -------------------------------------------------------------------------- */
-/*                               Reflection Info                              */
-/* -------------------------------------------------------------------------- */

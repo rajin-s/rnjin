@@ -9,6 +9,7 @@
 #include rnjin_module( test )
 
 #include rnjin_module( log )
+#include rnjin_module( file )
 #include rnjin_module( math )
 #include rnjin_module( graphics )
 #include rnjin_module( vulkan_ecs )
@@ -17,115 +18,151 @@
 using namespace rnjin;
 using namespace rnjin::graphics;
 
-/*
-
 test( vulkan_ecs )
 {
-    // note: GLFW must be initialized before any Vulkan stuff can happen
-    //       the whole windowing API structure should probably be redesigned
+    /* -------------------------------------------------------------------------- */
+    /*                                Set Up Vulkan                               */
+    /* -------------------------------------------------------------------------- */
 
-    window<GLFW> main_window( "rnjin: vulkan_resource_management test", int2( 128, 128 ), true );
+    // Create main window
+    window<GLFW> main_window( "rnjin: vulkan_ecs test", int2( 16, 9 ) * 30, true );
 
-    vulkan::api vk_api( "rnjin: vulkan_resource_management test" );
+    // Create Vulkan API
+    vulkan::api vk_api( "rnjin: vulkan_ecs test" );
     {
         vk_api.validation.enable( vulkan::api::messages::all );
-        // vk_api.extension.enable();
-
         vk_api.initialize();
     }
 
+    // Create Vulkan device and window surface
     vulkan::device vk_device( vk_api );
     vulkan::window_surface vk_surface( vk_device );
     {
         vk_surface.create_surface( main_window );
         vk_device.set_reference_surface( vk_surface );
-
         vk_device.initialize();
         vk_surface.initialize();
     }
 
+    // Create Vulkan resource database and systems
+    vulkan::resource_database vk_resources( vk_device );
+    {
+        vulkan::resource_database::initialization_info resource_db_info{
+            4096 * sizeof( mesh::vertex ),                // vertex_buffer_space
+            4096 * sizeof( mesh::index ),                 // index_buffer_space
+            4096 * sizeof( mesh::vertex ),                // staging_buffer_space
+            4096 * sizeof( ecs_material::instance_data ), // uniform_buffer_space
+            512,                                          // max_descriptor_sets
+        };
+        vk_resources.initialize( resource_db_info );
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                               Set Up Systems                               */
+    /* -------------------------------------------------------------------------- */
+
+    // Create Vulkan renderer
     vulkan::renderer vk_renderer( vk_device, vk_surface );
     {
         vk_renderer.initialize();
     }
-    debug_checkpoint( rnjin::log::main );
 
-    // note: contains resource_database
-    vulkan::resource_collector vk_resource_collector( vk_renderer );
+    vulkan::mesh_collector vk_mesh_collector( vk_resources );
+    vulkan::material_collector vk_material_collector( vk_resources );
+    vulkan::mesh_reference_collector vk_mesh_reference_collector;
+    vulkan::material_reference_collector vk_material_reference_collector;
+    vulkan::model_collector vk_model_collector;
+
+    // Initialize Systems
     {
-        // note: these are arbitrary numbers
-        const usize vertex_buffer_space  = sizeof( mesh::vertex ) * 1000;
-        const usize index_buffer_space   = sizeof( mesh::index ) * 1000;
-        const usize staging_buffer_space = sizeof( mesh::vertex ) * 500;
-        const usize uniform_buffer_space = sizeof( float4x4 ) * 400;
-        const usize max_descriptor_sets  = 300;
+        vk_material_collector.temp_render_pass = vk_renderer.get_render_pass();
 
-        vulkan::resource_database::initialization_info resource_database_info{
-            vertex_buffer_space,  // vertex_buffer_space;
-            index_buffer_space,   // index_buffer_space;
-            staging_buffer_space, // staging_buffer_space;
-            uniform_buffer_space, // uniform_buffer_space;
-            max_descriptor_sets   // max_descriptor_sets;
-        };
+        vk_mesh_collector.initialize();
+        vk_mesh_reference_collector.initialize();
 
-        vk_resource_collector.initialize( resource_database_info );
+        vk_material_collector.initialize();
+        vk_material_reference_collector.initialize();
+
+        vk_model_collector.initialize();
     }
 
-    debug_checkpoint( rnjin::log::main );
+    /* -------------------------------------------------------------------------- */
+    /*                              Set Up Resources                              */
+    /* -------------------------------------------------------------------------- */
 
-    entity ent1, ent2;
-
-    subregion
+    shader test_vsh( "test_vertex_shader", shader::type::vertex ), test_fsh( "test_fragment_shader", shader::type::fragment );
     {
-        graphics::mesh new_cube = graphics::primitives::cube( 0.25 );
-        new_cube.set_path( "test/cube.mesh" );
-        new_cube.save();
+        test_vsh.set_glsl( io::file::read_text_from( "shaders/test_vsh.glsl" ) );
+        test_fsh.set_glsl( io::file::read_text_from( "shaders/test_fsh.glsl" ) );
 
-        shader test_vertex   = shader( "Test Vertex Shader", shader::type::vertex );
-        shader test_fragment = shader( "Test Fragment Shader", shader::type::fragment );
-        test_vertex.set_glsl( io::file( "shaders/test_vsh.glsl", io::file::mode::read ).read_all_text() );
-        test_vertex.compile();
-        test_vertex.set_path( "test/vertex.shader" );
-        test_vertex.save();
+        test_vsh.compile();
+        test_fsh.compile();
+    }
+    mesh test_mesh = primitives::cube( 0.45 );
 
-        test_fragment.set_glsl( io::file( "shaders/test_fsh.glsl", io::file::mode::read ).read_all_text() );
-        test_fragment.compile();
-        test_fragment.set_path( "test/fragment.shader" );
-        test_fragment.save();
+    /* -------------------------------------------------------------------------- */
+    /*                               Set Up Entities                              */
+    /* -------------------------------------------------------------------------- */
 
-        material new_material = material( "Test Material", test_vertex, test_fragment );
-        new_material.set_path( "test/new.material" );
-        new_material.save();
+    entity ent1, ent2, ent3;
+
+    // Add Components
+    {
+        ent1.add<ecs_mesh>( test_mesh );
+        ent2.add<ecs_material>( &test_vsh, &test_fsh );
+
+        ent3.add<ecs_model>();
+        ent3.add<ecs_mesh::reference>( &ent1 );
+        ent3.add<ecs_material::reference>( &ent2 );
     }
 
-    ent1.add<model>( "test/cube.mesh", "test/new.material" );
-    ent2.add<model>( "test/cube.mesh", "test/new.material" );
+    /* -------------------------------------------------------------------------- */
+    /*                             Simulate Main Loop                             */
+    /* -------------------------------------------------------------------------- */
 
-    let_mutable& mat1 = ent1.get_mutable<model>()->get_material_mutable();
+    let_mutable* material_pointer = ent2.get_mutable<ecs_material>();
 
     bool do_render = false;
-    while ( not glfwWindowShouldClose( main_window.get_api_window() ) )
+
+    while ( true )
     {
+        let window_closed = glfwWindowShouldClose( main_window.get_api_window() );
+        if ( window_closed )
+        {
+            log::main.print( "Closing main window '\1'", main_window.get_title() );
+            break;
+        }
+
         glfwPollEvents();
         let advance = glfwGetKey( main_window.get_api_window(), GLFW_KEY_A );
-        let run     = glfwGetKey( main_window.get_api_window(), GLFW_KEY_S );
+
         if ( advance )
         {
-            if ( do_render or run )
+            if ( do_render )
             {
-                {
-                    mat1.set_position( float3( 0, 0.01, 0 ) );
-                    mat1.set_rotation_and_scale( float3(), float3( 1, 1, 1 ) );
-                    mat1.set_view( float3(), float3() );
+                do_render = false;
 
+                // Update transformations
+                {
                     let window_size = main_window.get_size();
-                    mat1.set_projection( math::projection::orthographic_vertical( 2, float2( window_size.x, window_size.y ), -1, 1 ) );
+                    let projection  = math::projection::orthographic_vertical( 2, float2( window_size.x, window_size.y ), -1, 1 );
+
+                    material_pointer->get_mutable_instance_data().world_transform      = float4x4::identity();
+                    material_pointer->get_mutable_instance_data().view_transform       = float4x4::identity();
+                    material_pointer->get_mutable_instance_data().projection_transform = projection;
+
+                    material_pointer->increment_instance_data_version();
                 }
 
-                vk_resource_collector.update_all();
-                vk_renderer.update_all();
+                vk_mesh_collector.update_all();
+                vk_mesh_reference_collector.update_all();
 
-                do_render = false;
+                vk_material_collector.update_all();
+                vk_material_reference_collector.update_all();
+
+                vk_model_collector.update_all();
+
+                vk_renderer.update_all();
             }
         }
         else
@@ -133,10 +170,14 @@ test( vulkan_ecs )
             do_render = true;
         }
     }
-
-    debug_checkpoint( rnjin::log::main );
-
-    // GLFW::clean_up();
 }
+
+/*
+
+    TO DO
+    - Clean up old resources
+        - material
+        - mesh
+        - shader
 
 */

@@ -4,11 +4,11 @@
  *        rajinshankar.com  *
  * *** ** *** ** *** ** *** */
 
-#include "vulkan_resources.hpp"
+#include "vulkan_memory.hpp"
 
 namespace rnjin::graphics::vulkan
 {
-/* -------------------------------------------------------------------------- */
+    /* -------------------------------------------------------------------------- */
 /*                              Buffer Allocation                             */
 /* -------------------------------------------------------------------------- */
 #pragma region buffer_allocation
@@ -906,107 +906,4 @@ namespace rnjin::graphics::vulkan
     }
 
 #pragma endregion resource_database
-
-/* -------------------------------------------------------------------------- */
-/*                        Internal Resources Component                        */
-/* -------------------------------------------------------------------------- */
-#pragma region internal_resources
-
-    internal_resources::internal_resources()
-      : saved_indices_version( version_id::invalid() ),  //
-        saved_vertices_version( version_id::invalid() ), //
-        saved_material_version( version_id::invalid() ), //
-        saved_uniforms_version( version_id::invalid() )  //
-    {}
-    internal_resources::~internal_resources() {}
-
-    void internal_resources::update_mesh_data( const mesh& source, resource_database& resources )
-    {
-        // Re-allocate a vertex buffer if the source vertices have changed since the last update
-        // note: will always be called for the first update, since the saved version starts invalid
-        if ( saved_vertices_version.update_to( source.vertices.get_version() ) )
-        {
-            vulkan_log_verbose.print( "Updating Vulkan data for mesh vertices (\1)", source.get_id() );
-
-            // Release an existing vertex buffer if it has been allocated
-            // TODO: re-use the same buffer and copy new data if the number of elements stays the same
-            if ( vertices.is_valid() )
-            {
-                resources.free_vertex_buffer( vertices );
-            }
-            vertices     = resources.create_vertex_buffer( source.vertices.get_data() );
-            vertex_count = source.vertices.get_data().size();
-        }
-
-        // Re-allocate an index buffer if the source indices have changed since the last update
-        // note: will always be called for the first update, since the saved version starts invalid
-        if ( saved_indices_version.update_to( source.indices.get_version() ) )
-        {
-            vulkan_log_verbose.print( "Updating Vulkan data for mesh indices (\1)", source.get_id() );
-
-            // Release an existing index buffer if it has been allocated
-            // TODO: re-use the same buffer and copy new data if the number of elements stays the same
-            if ( indices.is_valid() )
-            {
-                resources.free_index_buffer( indices );
-            }
-            indices     = resources.create_index_buffer( source.indices.get_data() );
-            index_count = source.indices.get_data().size();
-        }
-    }
-
-    void internal_resources::update_material_data( const material& source, resource_database& resources, const vk::RenderPass& render_pass )
-    {
-        // Re-create a pipeline if the source material has changed since the last update
-        // note: will always be called for the first update, since the saved version starts invalid
-        if ( saved_material_version.update_to( source.get_version() ) )
-        {
-            vulkan_log_verbose.print( "Updating Vulkan data for material (\1)", source.get_id() );
-
-            // Release an existing pipeline if it has been created
-            if ( pipeline.is_valid() )
-            {
-                resources.free_pipeline( pipeline );
-            }
-            pipeline = resources.create_pipeline( source.get_vertex_shader(), source.get_fragment_shader(), render_pass );
-
-            // Release an existing uniform buffer if it has been created
-            if ( uniforms.is_valid() )
-            {
-                resources.free_uniform_buffer( uniforms );
-            }
-            uniforms               = resources.create_uniform_buffer( material::get_uniforms_size(), &source.get_uniforms() );
-            saved_uniforms_version = version_id::invalid();
-
-            // Bind the new uniform buffer allocation to the pipeline's descriptor set
-            resources.bind_uniform_buffer( pipeline, uniforms );
-        }
-
-        // Transfer uniform data if it has changed since the last update
-        // note: will always be called for the first update, as well as any update where
-        //       the material itself changed, since the saved version is set to invalid
-        if ( saved_uniforms_version.update_to( source.get_uniforms_version() ) )
-        {
-            vulkan_log_verbose.print( "Updating Vulkan data for material uniforms (\1)", source.get_id() );
-            resources.transfer_uniform_buffer( material::get_uniforms_size(), &source.get_uniforms(), uniforms );
-        }
-    }
-
-    void internal_resources::release( resource_database& resources )
-    {
-        if ( vertices.is_valid() )
-        {
-            resources.free_vertex_buffer( vertices );
-        }
-        if ( indices.is_valid() )
-        {
-            resources.free_index_buffer( indices );
-        }
-        if ( pipeline.is_valid() )
-        {
-            resources.free_pipeline( pipeline );
-        }
-    }
-
-#pragma endregion internal_resources
 } // namespace rnjin::graphics::vulkan

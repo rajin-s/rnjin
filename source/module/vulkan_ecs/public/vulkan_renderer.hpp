@@ -11,7 +11,10 @@
 
 #include "vulkan_window_surface.hpp"
 #include "vulkan_api.hpp"
-#include "vulkan_resource_collectors.hpp"
+
+#include "vulkan_model_resources.hpp"
+#include "vulkan_mesh_resources.hpp"
+#include "vulkan_material_resources.hpp"
 
 #include rnjin_module( ecs )
 #include rnjin_module( reflection )
