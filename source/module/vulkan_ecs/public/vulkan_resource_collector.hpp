@@ -40,7 +40,7 @@ namespace rnjin::graphics::vulkan
 /*                               Reflection Info                              */
 /* -------------------------------------------------------------------------- */
 
-reflection_info_for( rnjin::graphics::vulkan, resource_collector )
-{
-    reflect_type_name( "vulkan::resource_collector" );
-};
+// reflection_info_for( rnjin::graphics::vulkan, resource_collector )
+// {
+//     reflect_type_name( "vulkan::resource_collector" );
+// };

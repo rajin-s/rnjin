@@ -42,7 +42,7 @@ namespace rnjin::graphics
     };
 } // namespace rnjin::graphics
 
-reflection_info_for( rnjin::graphics, model )
-{
-    reflect_type_name( "model" );
-};
+// reflection_info_for( rnjin::graphics, model )
+// {
+//     reflect_type_name( "model" );
+// };

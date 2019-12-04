@@ -13,6 +13,7 @@ namespace rnjin::core
 {
     // A resource database handles queries for loading a resource from file, and if it has already been loaded,
     // provides a reference to an existing shared resource object instead.
+    // note: allocates new resources using 'new.' This could be simplified if resources were treated as components
     class resource_database : event_receiver
     {
         public: // methods

@@ -8,3 +8,5 @@
 
 #include "graphics/ecs/public/model.hpp"
 #include "graphics/ecs/public/render_view_collector.hpp"
+
+#include "graphics/ecs/public/ecs_resources.hpp"

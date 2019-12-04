@@ -11,12 +11,18 @@
 
 #include "vulkan_window_surface.hpp"
 #include "vulkan_api.hpp"
-#include "vulkan_resources.hpp"
+#include "vulkan_resource_collectors.hpp"
+
 #include rnjin_module( ecs )
+#include rnjin_module( reflection )
 
 namespace rnjin::graphics::vulkan
 {
-    class renderer : public ecs::system<read_from<internal_resources>>
+    class renderer                                //
+      : public ecs::system<                       //
+            read_from<model_resources>,           //
+            read_from<mesh_resources::reference>, //
+            read_from<material_resources::reference>>
     {
         public: // methods
         renderer( const device& device_instance, window_surface& target );
@@ -30,8 +36,10 @@ namespace rnjin::graphics::vulkan
 
         protected: // internal
         void define() override;
-        void before_update() override;
+
         void update( entity_components& components ) override;
+
+        void before_update() override;
         void after_update() override;
 
         private: // members
@@ -48,11 +56,7 @@ namespace rnjin::graphics::vulkan
     };
 } // namespace rnjin::graphics::vulkan
 
-/* -------------------------------------------------------------------------- */
-/*                               Reflection Info                              */
-/* -------------------------------------------------------------------------- */
-
-reflection_info_for( rnjin::graphics::vulkan, renderer )
+namespace reflection
 {
-    reflect_type_name( "vulkan::renderer" );
-};
+    auto_reflect_type( rnjin::graphics, vulkan::renderer );
+} // namespace reflection

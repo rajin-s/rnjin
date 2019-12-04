@@ -17,6 +17,8 @@
 using namespace rnjin;
 using namespace rnjin::graphics;
 
+/*
+
 test( vulkan_ecs )
 {
     // note: GLFW must be initialized before any Vulkan stuff can happen
@@ -136,3 +138,5 @@ test( vulkan_ecs )
 
     // GLFW::clean_up();
 }
+
+*/

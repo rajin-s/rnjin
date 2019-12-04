@@ -1,3 +1,4 @@
+
 /* *** ** *** ** *** ** *** *
  * Part of rnjin            *
  * (c) Rajin Shankar, 2019  *
@@ -220,8 +221,3 @@ namespace rnjin::graphics::vulkan
 /* -------------------------------------------------------------------------- */
 /*                               Reflection Info                              */
 /* -------------------------------------------------------------------------- */
-
-reflection_info_for( rnjin::graphics::vulkan, internal_resources )
-{
-    reflect_type_name( "vulkan::internal_resources" );
-};
