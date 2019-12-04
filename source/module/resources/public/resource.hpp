@@ -7,8 +7,8 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include rnjin_module( core )
-#include rnjin_module( file )
+#include "core/module.h"
+#include "file/module.h"
 
 namespace rnjin::core
 {

@@ -6,8 +6,8 @@
 
 #include <rnjin.hpp>
 
-#include rnjin_module( test )
-#include rnjin_module( ecs )
+#include "test/module.h"
+#include "ecs/module.h"
 
 using namespace rnjin::ecs;
 

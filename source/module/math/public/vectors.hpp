@@ -7,9 +7,9 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include standard_library( ostream )
+#include <ostream>
 
-#include rnjin_module_public( core, containers )
+#include "core/public/containers.hpp"
 
 namespace rnjin::core
 {

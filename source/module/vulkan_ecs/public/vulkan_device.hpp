@@ -7,7 +7,7 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include third_party_library( "vulkan/vulkan.hpp" )
+#include <vulkan/vulkan.hpp>
 
 #include "vulkan_api.hpp"
 

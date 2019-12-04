@@ -7,10 +7,10 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include third_party_library( "vulkan/vulkan.hpp" )
+#include <vulkan/vulkan.hpp>
 
 #include "vulkan_device.hpp"
-#include rnjin_module_subset( graphics, windowing )
+#include "graphics/windowing.h"
 
 namespace rnjin::graphics::vulkan
 {

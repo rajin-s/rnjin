@@ -9,8 +9,8 @@
 
 #include "script.hpp"
 
-#include rnjin_module( core )
-#include rnjin_module( log )
+#include "core/module.h"
+#include "log/module.h"
 
 namespace rnjin
 {

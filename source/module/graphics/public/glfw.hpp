@@ -7,7 +7,7 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include third_party_library( "glfw3.h" )
+#include <glfw3.h>
 
 #include "window.hpp"
 

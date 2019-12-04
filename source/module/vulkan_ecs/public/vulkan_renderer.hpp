@@ -7,7 +7,7 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include third_party_library( "vulkan/vulkan.hpp" )
+#include <vulkan/vulkan.hpp>
 
 #include "vulkan_window_surface.hpp"
 #include "vulkan_api.hpp"
@@ -16,8 +16,8 @@
 #include "vulkan_mesh_resources.hpp"
 #include "vulkan_material_resources.hpp"
 
-#include rnjin_module( ecs )
-#include rnjin_module( reflection )
+#include "ecs/module.h"
+#include "reflection/module.h"
 
 namespace rnjin::graphics::vulkan
 {

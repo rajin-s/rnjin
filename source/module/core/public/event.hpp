@@ -10,7 +10,7 @@
 #include "macro.hpp"
 #include "containers.hpp"
 
-#include rnjin_module( log )
+#include "log/module.h"
 
 namespace rnjin::core
 {

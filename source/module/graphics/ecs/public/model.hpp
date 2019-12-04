@@ -7,9 +7,9 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include rnjin_module( ecs )
-#include rnjin_module_subset( graphics, resources )
-#include rnjin_module_public( resources, resource_database )
+#include "ecs/module.h"
+#include "graphics/resources.h"
+#include "resources/public/resource_database.hpp"
 
 using namespace rnjin::ecs;
 

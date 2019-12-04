@@ -9,7 +9,7 @@
 #include "shader.hpp"
 
 #include "common.hpp"
-#include rnjin_module( console )
+#include "console/module.h"
 
 namespace rnjin
 {

@@ -6,7 +6,7 @@
 
 #include <rnjin.hpp>
 
-#include rnjin_module( test )
+#include "test/module.h"
 #include "file.hpp"
 
 using namespace rnjin;

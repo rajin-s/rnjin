@@ -6,8 +6,8 @@
 
 #include <rnjin.hpp>
 
-#include rnjin_module( test )
-#include rnjin_module( math )
+#include "test/module.h"
+#include "math/module.h"
 
 using namespace rnjin;
 using namespace rnjin::core;

@@ -8,10 +8,10 @@
 #include <rnjin.hpp>
 
 // STL data structures
-#include standard_library( string )
-#include standard_library( unordered_map )
-#include standard_library( unordered_set )
-#include standard_library( vector )
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 // Aliases for STL types
 namespace rnjin

@@ -7,9 +7,9 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include standard_library( ostream )
+#include <ostream>
 
-#include rnjin_module( core )
+#include "core/module.h"
 
 namespace rnjin::test
 {

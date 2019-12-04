@@ -11,16 +11,16 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include third_party_library( "shaderc/shaderc.hpp" )
+#include <shaderc/shaderc.hpp>
 
-#include rnjin_module( core )
-#include rnjin_module( ecs )
-#include rnjin_module_public( graphics, common )
+#include "core/module.h"
+#include "ecs/module.h"
+#include "graphics/public/common.hpp"
 
 // Temporarily pull in some stuff from old resources
-#include rnjin_module_public( graphics, mesh )
-#include rnjin_module_public( graphics, shader )
-#include rnjin_module_public( graphics, material )
+#include "graphics/public/mesh.hpp"
+#include "graphics/public/shader.hpp"
+#include "graphics/public/material.hpp"
 
 namespace rnjin::graphics
 {

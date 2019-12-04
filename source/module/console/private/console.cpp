@@ -6,9 +6,9 @@
 
 #include "console.hpp"
 
-#include standard_library( iostream )
-#include rnjin_module( file )
-#include rnjin_module( log )
+#include <iostream>
+#include "file/module.h"
+#include "log/module.h"
 
 namespace rnjin
 {
@@ -279,7 +279,7 @@ namespace rnjin
                     // Parameters
                     for ( uint i : range( binding.parameter_count ) )
                     {
-                        log << " <" << binding.parameter_names[i] << ">";
+                        log << " < << binding.parameter_names[i] << >";
                     }
 
                     // Description

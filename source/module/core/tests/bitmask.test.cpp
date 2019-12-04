@@ -6,7 +6,7 @@
 
 #include <rnjin.hpp>
 
-#include rnjin_module( test )
+#include "test/module.h"
 #include "bitmask.hpp"
 
 using namespace rnjin;

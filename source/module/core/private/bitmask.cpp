@@ -152,7 +152,7 @@ namespace rnjin
 
         std::ostream& operator<<( std::ostream& stream, const bitmask& mask )
         {
-            stream << "<" << mask.toString( '-', '_' ) << ">(" << mask.raw_value() << ")";
+            stream << "< << mask.toString( '-', '_' ) << >(" << mask.raw_value() << ")";
             return stream;
         }
     } // namespace core

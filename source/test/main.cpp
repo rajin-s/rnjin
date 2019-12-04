@@ -5,11 +5,11 @@
  * *** ** *** ** *** ** *** */
 #include <rnjin.hpp>
 
-#include standard_library( iostream )
+#include <iostream>
 
-#include rnjin_module( core )
-#include rnjin_module( console )
-#include rnjin_module( test )
+#include "core/module.h"
+#include "console/module.h"
+#include "test/module.h"
 
 using namespace rnjin;
 

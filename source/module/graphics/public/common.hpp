@@ -7,7 +7,7 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include rnjin_module( log )
+#include "log/module.h"
 
 namespace rnjin::graphics
 {

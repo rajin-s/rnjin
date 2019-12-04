@@ -7,13 +7,13 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include third_party_library( "vulkan/vulkan.hpp" )
+#include <vulkan/vulkan.hpp>
 
 #include "vulkan_memory.hpp"
 
-#include rnjin_module( core )
-#include rnjin_module( reflection )
-#include rnjin_module_subset( graphics, ecs )
+#include "core/module.h"
+#include "reflection/module.h"
+#include "graphics/ecs.h"
 
 namespace rnjin::graphics::vulkan
 {

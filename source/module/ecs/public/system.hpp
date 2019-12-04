@@ -10,7 +10,7 @@
 #include "entity.hpp"
 #include "component.hpp"
 
-#include rnjin_module( core )
+#include "core/module.h"
 
 namespace rnjin::ecs
 {

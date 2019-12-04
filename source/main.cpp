@@ -5,13 +5,13 @@
  * *** ** *** ** *** ** *** */
 #include <rnjin.hpp>
 
-#include standard_library( iostream )
+#include <iostream>
 
-#include rnjin_module( core )
-#include rnjin_module( log )
-#include rnjin_module( graphics )
-#include rnjin_module( console )
-#include rnjin_module( ecs )
+#include "core/module.h"
+#include "log/module.h"
+#include "graphics/module.h"
+#include "console/module.h"
+#include "ecs/module.h"
 
 using namespace rnjin;
 using namespace rnjin::core;

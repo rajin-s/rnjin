@@ -9,8 +9,8 @@
 
 #include "entity.hpp"
 
-#include rnjin_module( core )
-#include rnjin_module( reflection )
+#include "core/module.h"
+#include "reflection/module.h"
 
 namespace rnjin::ecs
 {

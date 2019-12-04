@@ -7,7 +7,7 @@
 #pragma once
 #include <rnjin.hpp>
 
-#include rnjin_module( core )
+#include "core/module.h"
 
 namespace rnjin::console
 {

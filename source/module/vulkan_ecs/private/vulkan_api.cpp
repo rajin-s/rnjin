@@ -7,8 +7,8 @@
 #include "vulkan_api.hpp"
 
 #include "vulkan_api_internal.hpp"
-#include third_party_library( "glfw3.h" )
-#include third_party_library( "vulkan/vulkan.hpp" )
+#include <glfw3.h>
+#include <vulkan/vulkan.hpp>
 
 namespace rnjin::graphics::vulkan
 {
