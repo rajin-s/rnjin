@@ -22,7 +22,7 @@ void main()
 {
     // just pass the color along
     vec4 position = vec4( vertex_position.xyz, 1.0 );
-    position.z    = 0;
+    // position.z    = 0;
 
     position = uniforms.world_matrix * position;
     // position = uniforms.view_matrix * position;

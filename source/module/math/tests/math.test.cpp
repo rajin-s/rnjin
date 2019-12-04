@@ -73,3 +73,8 @@ test( vector_operators )
     note( "Conversion" );
     assert_equal( (float3) float2( 3, 4 ), float3( 3, 4, 0 ) );
 }
+
+test( matrix_operations )
+{
+    assert_equal( float4x4() * float4( 1, 2, 3, 4 ), float4( 1, 2, 3, 4 ) );
+}

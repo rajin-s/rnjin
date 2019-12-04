@@ -122,7 +122,8 @@ test( vulkan_ecs )
 
     let_mutable* material_pointer = ent2.get_mutable<ecs_material>();
 
-    bool do_render = false;
+    bool do_render         = false;
+    let_mutable projection = math::orthographic_projection( 4, -1, 1 );
 
     while ( true )
     {
@@ -144,12 +145,13 @@ test( vulkan_ecs )
 
                 // Update transformations
                 {
-                    let window_size = main_window.get_size();
-                    let projection  = math::projection::orthographic_vertical( 2, float2( window_size.x, window_size.y ), -1, 1 );
+                    let window_size  = main_window.get_size();
+                    let aspect_ratio = ( (float) window_size.x ) / ( (float) window_size.y );
+                    projection.set_aspect_ratio( aspect_ratio );
 
                     material_pointer->get_mutable_instance_data().world_transform      = float4x4::identity();
                     material_pointer->get_mutable_instance_data().view_transform       = float4x4::identity();
-                    material_pointer->get_mutable_instance_data().projection_transform = projection;
+                    material_pointer->get_mutable_instance_data().projection_transform = projection.get_matrix();
 
                     material_pointer->increment_instance_data_version();
                 }
