@@ -74,7 +74,7 @@ namespace rnjin
                 return flag_bindings;
             }
 
-            // Get the static flag w/ paramteres binding dictionary
+            // Get the static flag w/ parameters binding dictionary
             // note: accessing through static methods ensures the dictionary is initialized before it first needs to be used
             //       (which might be during the initialization of other static data)
             static dictionary<string, flag_parameters_binding>& get_flag_parameters_bindings()

@@ -9,39 +9,35 @@
 
 #include rnjin_module( core )
 
-namespace rnjin
+namespace rnjin::console
 {
-    namespace console
+    namespace internal
     {
-        namespace internal
-        {
-            using flag_action            = void ( * )( void );
-            using flag_parameters_action = void ( * )( const list<string>& );
+        using flag_action            = void ( * )( void );
+        using flag_parameters_action = void ( * )( const list<string>& );
 
-            void add_flag( const string& flag, const string& alt, const string& description, flag_action action );
-            void add_flag_parameters( const string& flag, const string& alt, const string& description, flag_parameters_action action, const list<string>& parameter_names );
-        } // namespace internal
+        void add_flag( const string& flag, const string& alt, const string& description, flag_action action );
+        void add_flag_parameters( const string& flag, const string& alt, const string& description, flag_parameters_action action, const list<string>& parameter_names );
+    } // namespace internal
 
-        void parse_arguments( const list<string> args );
+    void parse_arguments( const list<string> args );
+} // namespace rnjin::console
 
 // Abuse static constructors being called before main to bind arguments before program execution
 #define bind_console_flag( long_name, short_name, description, function_name )                                \
-    struct _bind_##function_name##_                                                                           \
+    struct _generated_bind_##function_name                                                                    \
     {                                                                                                         \
-        _bind_##function_name##_()                                                                            \
+        _generated_bind_##function_name()                                                                     \
         {                                                                                                     \
             rnjin::console::internal::add_flag( "--" long_name, "-" short_name, description, function_name ); \
         }                                                                                                     \
-    } __bind_##function_name##__
+    } _generated_bind_##function_name##_instance
 
 #define bind_console_parameters( long_name, short_name, description, function_name, ... )                                                 \
-    struct _bind_##function_name##_                                                                                                       \
+    struct _generated_bind_##function_name                                                                                                \
     {                                                                                                                                     \
-        _bind_##function_name##_()                                                                                                        \
+        _generated_bind_##function_name()                                                                                                 \
         {                                                                                                                                 \
             rnjin::console::internal::add_flag_parameters( "--" long_name, "-" short_name, description, function_name, { __VA_ARGS__ } ); \
         }                                                                                                                                 \
-    } __bind_##function_name##__
-
-    } // namespace console
-} // namespace rnjin
+    } _generated_bind_##function_name##_instance
