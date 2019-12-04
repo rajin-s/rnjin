@@ -93,9 +93,9 @@ namespace rnjin::ecs
         };
 
         protected: // virtual methods
-        virtual void define() is_abstract;
+        virtual void define() pure_virtual;
 
-        virtual void update( entity_components& components ) is_abstract;
+        virtual void update( entity_components& components ) pure_virtual;
         
         virtual void before_update() {}
         virtual void after_update() {}

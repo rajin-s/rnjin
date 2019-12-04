@@ -25,8 +25,8 @@ namespace rnjin::core
     class event_handler_base
     {
         public: // methods
-        virtual ~event_handler_base() is_abstract{};
-        virtual bool has_valid_event() is_abstract;
+        virtual ~event_handler_base() pure_virtual{};
+        virtual bool has_valid_event() pure_virtual;
     };
 
     // Base type of event handlers as known by an event
@@ -35,10 +35,10 @@ namespace rnjin::core
     class event_handler_args
     {
         public: // methods
-        virtual ~event_handler_args() is_abstract{};
+        virtual ~event_handler_args() pure_virtual{};
 
-        virtual void invoke( As... args ) is_abstract;
-        virtual void invalidate_event() is_abstract;
+        virtual void invoke( As... args ) pure_virtual;
+        virtual void invalidate_event() pure_virtual;
     };
 
     // Actual event handler type that stores an instance and an instance method

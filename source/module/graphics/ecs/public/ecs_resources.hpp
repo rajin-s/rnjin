@@ -48,8 +48,8 @@ namespace rnjin::graphics
             spirv_text.clear();
             check_error_condition( return, graphics_log_errors, glsl_text.empty(), "Can't compile shader without GLSL" );
 
-            with( shaderc::Compiler compiler )
             {
+                shaderc::Compiler compiler;
                 shaderc_shader_kind shader_kind;
 
                 switch ( shader_type )

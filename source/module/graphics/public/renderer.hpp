@@ -17,7 +17,7 @@ namespace rnjin
         class renderer_base
         {
             public:
-            virtual void render( const render_view& view ) is_abstract;
+            virtual void render( const render_view& view ) pure_virtual;
 
             template <typename T>
             void add_target( T& target )

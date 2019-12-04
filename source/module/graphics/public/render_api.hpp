@@ -20,7 +20,7 @@ namespace rnjin
             render_api();
             ~render_api();
 
-            virtual const string& get_name() is_abstract;
+            virtual const string& get_name() pure_virtual;
         };
     } // namespace graphics
 } // namespace rnjin

@@ -33,29 +33,37 @@
 #define or ||
 #define xor ^
 #define not !
-
-#define group struct
-#define define_static_group( name ) decltype( name ) name {}
-
-#define subregion for ( bool __ = true; __; __ = false )
-#define forward_declare_class( _namespace, _class ) namespace _namespace { class _class; }
 // clang-format on
 
-#define no_copy( class_name )                 \
-    class_name( const class_name& ) = delete; \
-    void operator=( const class_name& ) = delete;
+#define group struct
+#define define_static_group( name ) \
+    decltype( name ) name {}
+
+#define subregion for ( bool __ = true; __; __ = false )
+#define forward_declare_class( _namespace, _class ) \
+    namespace _namespace                            \
+    {                                               \
+        class _class;                               \
+    }
 
 #define foreach( iteration ) for ( const auto& iteration )
+#define pass
+
+#define nonconst
 #define let const auto
 #define let_mutable auto
-#define is_abstract = 0
-#define pass
-#define nonconst
-
 #define cast( arg, type ) reinterpret_cast<type>( arg )
 
 // Constructors and such
+
+// clang-format off
+#define pure_virtual =0
+// clang-format on
+
 #define pass_member( name ) name( name )
+#define no_copy( class_name )                 \
+    class_name( const class_name& ) = delete; \
+    void operator=( const class_name& ) = delete;
 
 // simple accessor macro to use with let
 // example: let get_name get_value( name );

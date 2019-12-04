@@ -24,7 +24,7 @@ namespace rnjin::ecs
     class component_type_handle_base
     {
         public:
-        virtual void on_entity_destroyed( entity& destroyed_entity ) const is_abstract;
+        virtual void on_entity_destroyed( entity& destroyed_entity ) const pure_virtual;
     };
 
     template <typename T>
