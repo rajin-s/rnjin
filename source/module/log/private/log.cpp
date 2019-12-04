@@ -220,3 +220,16 @@ namespace rnjin
         bind_console_parameters( "log-flag", "lf", "Set or unset a log flag", set_log_flag, "log name", "+/-", "channel name" );
     } // namespace log
 } // namespace rnjin
+
+std::ostream& operator<<( std::ostream& stream, const rnjin::version_id& id )
+{
+    if ( id.is_invalid() )
+    {
+        stream << "invalid id";
+    }
+    else
+    {
+        stream << ( (rnjin::usize) id );
+    }
+    return stream;
+}

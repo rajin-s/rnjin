@@ -197,19 +197,41 @@ test( ecs_initialization )
     assert_equal( ent4.get<dependent_component>()->value, 12 );
 }
 
+test( ecs_references )
+{
+    entity ent1, ent2, ent3, ent4, ent5;
+
+    record( ent2.add<int_component>( 2 ) );
+    record( ent4.add<int_component>( 4 ) );
+
+    record( ent1.add<int_component::reference>( ent2.get<int_component>() ) );
+    record( ent3.add<int_component::reference>( &ent4 ) );
+
+    assert_equal( ent1.get<int_component::reference>()->get_pointer()->get_int_value(), 2 );
+    assert_equal( ent3.get<int_component::reference>()->get_pointer()->get_int_value(), 4 );
+
+    record( ent1.add<int_component>( 1 ) );
+    record( ent3.add<int_component>( 3 ) );
+    record( ent5.add<int_component::reference>( ent1.get<int_component>() ) );
+
+    assert_equal( ent1.get<int_component::reference>()->get_pointer()->get_int_value(), 2 );
+    assert_equal( ent3.get<int_component::reference>()->get_pointer()->get_int_value(), 4 );
+    assert_equal( ent5.get<int_component::reference>()->get_pointer()->get_int_value(), 1 );
+
+    record( ent3.remove<int_component>() );
+
+    assert_equal( ent1.get<int_component::reference>()->get_pointer()->get_int_value(), 2 );
+    assert_equal( ent3.get<int_component::reference>()->get_pointer()->get_int_value(), 4 );
+    assert_equal( ent5.get<int_component::reference>()->get_pointer()->get_int_value(), 1 );
+}
+
 /* -------------------------------------------------------------------------- */
 /*                               Reflection Info                              */
 /* -------------------------------------------------------------------------- */
 
-reflection_info_for(, int_component )
+namespace reflection
 {
-    reflect_type_name( "int_component" );
-};
-reflection_info_for(, float_component )
-{
-    reflect_type_name( "float_component" );
-};
-reflection_info_for(, dependent_component )
-{
-    reflect_type_name( "dependent_component" );
-};
+    auto_reflect_component(, int_component );
+    auto_reflect_component(, float_component );
+    auto_reflect_component(, dependent_component );
+} // namespace reflection

@@ -14,7 +14,6 @@
 
 namespace rnjin::ecs
 {
-
     /* -------------------------------------------------------------------------- */
     /*                              Component Helpers                             */
     /* -------------------------------------------------------------------------- */
@@ -45,13 +44,17 @@ namespace rnjin::ecs
         }
     };
 
+    // // Defined below
+    // template <typename T>
+    // class reference;
+
     /* -------------------------------------------------------------------------- */
     /*                                  Component                                 */
     /* -------------------------------------------------------------------------- */
 
     // Specializing the component type creates a new global manager for components of that type.
     // General usage (for ease of use) would be `class MyComponent : public component<MyComponent> {...};`
-    
+
     // note: alternatively, use the component_class macro `component_class( MyComponent ) {...};`
 
     // note<1>: it would probably be better to not have a pointer to the owner on the component itself, but is currently
@@ -75,7 +78,7 @@ namespace rnjin::ecs
         const entity& get_owner() const
         {
             const static entity invalid_owner{};
-            check_error_condition( return invalid_owner, ecs_log_errors, owner_pointer == nullptr, "Component (\1) doesn't have a valid owner pointer", reflect<T>::get_type_name() );
+            check_error_condition( return invalid_owner, ecs_log_errors, owner_pointer == nullptr, "Component (\1) doesn't have a valid owner pointer", reflection::get_type_name<T>() );
 
             return *owner_pointer;
         }
@@ -108,95 +111,10 @@ namespace rnjin::ecs
             entity::id owner_id;
         };
 
-        // Since components are stored in a list (c++ vector) that is updated when adding/removing a component from an entity,
-        // it is impossible to store direct pointers (or references) without the risk of them becoming invalidated. The
-        // reference member type handles this by lazily setting up pointers based on a component's owner: any time the location
-        // of that component changes or it is created/destroyed, the internal pointer will be updated.
-        // note: this could also be used to do reference counting inside the component type, which might be useful???
-        //       Maybe have a special flag that subtypes can set to remove components that lose all references?
-        class reference
-        {
-            public: // methods
-            // Create a reference based on a particular owner
-            reference( const entity& owner )
-              : owner_pointer( &owner ),                                                                                       //
-                component_reallocated_handler( component::events.reallocated(), this, &reference::on_components_reallocated ), //
-                component_added_handler( component::events.added(), this, &reference::on_component_added ),                    //
-                component_removed_handler( component::events.removed(), this, &reference::on_component_removed )               //
-            {
-                component_pointer = component::owned_by( owner );
-            }
-            // Copy a reference
-            reference( const reference& other )
-              : owner_pointer( other.owner_pointer ),                                                                          //
-                component_reallocated_handler( component::events.reallocated(), this, &reference::on_components_reallocated ), //
-                component_added_handler( component::events.added(), this, &reference::on_component_added ),                    //
-                component_removed_handler( component::events.removed(), this, &reference::on_component_removed )               //
-            {}
-            ~reference() {}
-
-            // Allow reference->... syntax to access the internal component pointer
-            // note: is const by default for safety -- get_mutable_pointer can be used for mutable access
-            inline const T* operator->()
-            {
-                return component_pointer;
-            }
-
-            private: // methods
-            // When the corresponding component list is changed, some or all elements might be moved in memory, resulting in
-            // invalid or incorrect pointers. As such, component references need to update their internal pointer any time this happens.
-            void on_components_reallocated()
-            {
-                // We don't know how the component list has been changed, so search for a component owned by the appropriate entity
-                // note: this is a O(log N) search for every reference -- it may be possible to update all references with a linear
-                //       pass through the component list -- complexity O( log (component_count) * reference_count ) vs. O( component_count )
-                ecs_log_verbose.print( "component_reference<\1>::on_components_reallocated", reflect<T>::get_type_name() );
-                component_pointer = component::owned_by( *owner_pointer );
-            }
-            void on_component_added( T& new_component, entity& new_owner )
-            {
-                // A component has been added to some entity, so we check if it's the owner and validate the internal pointer as appropriate
-                // note: this will be called on all references for every component that is added -- it would probably be better to move have
-                //       the source event live in the entity, since that is fixed when a reference is created
-                ecs_log_verbose.print( "component_reference<\1>::on_component_added", reflect<T>::get_type_name() );
-                if ( owner_pointer->get_id() == new_owner.get_id() )
-                {
-                    component_pointer = &new_component;
-                }
-            }
-            void on_component_removed( const T& old_component, entity& old_owner )
-            {
-                // A component has been removed from some entity, so we check if it's the owner and invalidate the internal pointer as appropriate
-                ecs_log_verbose.print( "component_reference<\1>::on_component_removed", reflect<T>::get_type_name() );
-                if ( owner_pointer->get_id() == old_owner.get_id() )
-                {
-                    component_pointer = nullptr;
-                }
-            }
-
-            public: // accessors
-            // A reference can be invalid if the associated owner doesn't have the component (it has not yet been added or has since been removed)
-            let is_valid get_value( component_pointer != nullptr );
-            let* get_pointer get_value( component_pointer );
-            let_mutable* get_mutable_pointer get_mutable_value( component_pointer );
-
-            // Get the owner of the (potentially) referenced component
-            let& get_owner get_value( *owner_pointer );
-
-            private: // members
-            // note: we have to store a pointer, as components might be un-initialized during list (c++ vector) allocation preventing use of a reference
-            //       if we want to store references inside components (which is the whole point)
-            const entity* owner_pointer;
-            T* component_pointer;
-
-            event_handler<reference> component_reallocated_handler;
-            event_handler<reference, T&, entity&> component_added_handler;
-            event_handler<reference, const T&, entity&> component_removed_handler;
-        };
-
         protected: // static methods (accessible to friend class entity)
         friend class entity;
         friend class component_type_handle<T>;
+        // friend class reference<T>;
         // friend class reference<T>;
 
         static let* get_type_handle_pointer()
@@ -221,16 +139,15 @@ namespace rnjin::ecs
             // let_mutable component_data = T( args... );
             // component_data.set_owner( owner );
 
-            ecs_log_verbose.print( "Add component '\2' to entity (\1)", owner_id, reflect<T>::get_type_name() );
-            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) > 0, "Can't add multiple instances of the same component '\2' to an entity (\1)", owner_id, reflect<T>::get_type_name() );
-
-            // Keep track of the original data container pointer so we can tell if the vector was
-            // re-allocated as a result of adding a new element
-            let* original_component_data_pointer = components.data();
-            bool add_to_middle                   = false;
+            ecs_log_verbose.print( "Add component '\2' to entity (\1)", owner_id, reflection::get_type_name<T>() );
+            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) > 0, "Can't add multiple instances of the same component '\2' to an entity (\1)", owner_id, reflection::get_type_name<T>() );
 
             // Keep track of the newly added component so we can notify others that it was added
             T* new_component;
+
+            // Keep track of where a component was inserted to so we can update reference indices if needed
+            bool components_shifted = false;
+            usize insert_index      = 0;
 
             // No components have been registered yet
             if ( components.empty() )
@@ -252,8 +169,8 @@ namespace rnjin::ecs
             else
             {
                 // such that the `components` list remains sorted by owner IDs
-                uint start = 0;
-                uint end   = components.size();
+                usize start = 0;
+                usize end   = components.size();
                 while ( start != end )
                 {
                     let middle    = start + ( end - start ) / 2;
@@ -272,33 +189,31 @@ namespace rnjin::ecs
                     {
                         // ID is equal to some other id (ie the same component is added to an entity twice) this isn't allowed, but continue and notify the user
                         // note: this case should already have been covered by an earlier check of the owners set
-                        start         = middle;
-                        add_to_middle = true;
+                        start = middle;
 
                         let owner_id_already_exists = true;
-                        check_error_condition( pass, ecs_log_errors, owner_id_already_exists == true, "Component '\2' already associated with an entity (\1)", owner_id, reflect<T>::get_type_name() );
+                        check_error_condition( pass, ecs_log_errors, owner_id_already_exists == true, "Component '\2' already associated with an entity (\1)", owner_id, reflection::get_type_name<T>() );
                         break;
                     }
                 }
 
-                // components.insert( components.begin() + start, owned_component( owner_id, component_data ) );
                 components.emplace( components.begin() + start, owner, args... );
                 new_component = &components.at( start ).component_data;
+
+                components_shifted = true;
+                insert_index       = start;
             }
 
             // Make sure the component was actually added
-            check_error_condition( return, ecs_log_errors, new_component == nullptr, "Failed to create new component '\2' for entity (\1)", owner_id, reflect<T>::get_type_name() );
+            check_error_condition( return, ecs_log_errors, new_component == nullptr, "Failed to create new component '\2' for entity (\1)", owner_id, reflection::get_type_name<T>() );
 
             // Track the new owner
             owners.insert( owner_id );
 
-            // Check if the data container pointer has moved, potentially notifying others that need to react accordingly
-            // note: used by component_reference to find the correct component pointer for a given entity
-            let* new_component_data_pointer = components.data();
-            if ( original_component_data_pointer != new_component_data_pointer || add_to_middle )
+            // If we insert a new component in the middle of the list, we need to notify references to update their indices
+            if ( components_shifted )
             {
-                ecs_log_verbose.print_additional( "triggered reallocation" );
-                component<T>::events.reallocated().send();
+                component<T>::reallocating_component_added_event.send( insert_index );
             }
 
             // Potentially notify others that a component of type T has been added to an entity
@@ -315,12 +230,12 @@ namespace rnjin::ecs
             let owner_id = owner.get_id();
             if ( not is_owned_by( owner ) )
             {
-                ecs_log_verbose.print( "<\1>::add_unique(...) adding component to entity (\2)", reflect<T>::get_type_name(), owner_id );
+                ecs_log_verbose.print( "<\1>::add_unique(...) adding component to entity (\2)", reflection::get_type_name<T>(), owner_id );
                 add_to( owner, args... );
             }
             else
             {
-                ecs_log_verbose.print( "<\1>::add_unique(...) already owned by entity (\2)", reflect<T>::get_type_name(), owner_id );
+                ecs_log_verbose.print( "<\1>::add_unique(...) already owned by entity (\2)", reflection::get_type_name<T>(), owner_id );
             }
         }
 
@@ -336,7 +251,7 @@ namespace rnjin::ecs
         {
             let owner_id = owner.get_id();
 
-            ecs_log_verbose.print( "Remove component '\2' from entity (\1)", owner_id, reflect<T>::get_type_name() );
+            ecs_log_verbose.print( "Remove component '\2' from entity (\1)", owner_id, reflection::get_type_name<T>() );
 
             // Since event handlers for components being removed can request other components to be removed, this
             // could be called on an entity that doesn't own this component, as it has already been removed by the entity's destructor.
@@ -344,22 +259,21 @@ namespace rnjin::ecs
             //     remove B in destructor -> remove A in destructor -> system tries to remove B again
             if ( owner.is_being_destroyed() and owners.count( owner_id ) == 0 )
             {
-                ecs_log_verbose.print( "Component type '\2' has already been removed from destroyed entity (\1)", owner_id, reflect<T>::get_type_name() );
+                ecs_log_verbose.print( "Component type '\2' has already been removed from destroyed entity (\1)", owner_id, reflection::get_type_name<T>() );
                 return;
             }
 
             // Check if no components have been registered yet
-            check_error_condition( return, ecs_log_errors, components.empty(), "Component type '\2' is not attached to any entities, can't remove (\1)", owner_id, reflect<T>::get_type_name() );
+            check_error_condition( return, ecs_log_errors, components.empty(), "Component type '\2' is not attached to any entities, can't remove (\1)", owner_id, reflection::get_type_name<T>() );
             // Check that the entity is actually an owner
-            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) == 0, "Can't remove component '\2' from an entity it's not attached to (\1)", owner_id, reflect<T>::get_type_name() );
+            check_error_condition( return, ecs_log_errors, owners.count( owner_id ) == 0, "Can't remove component '\2' from an entity it's not attached to (\1)", owner_id, reflection::get_type_name<T>() );
 
             // Remove the entity from the set of owners
             owners.erase( owner_id );
 
-            // Keep track of the original data container pointer so we can tell if
-            // the vector was re-allocated as a result of removing an element
-            let* original_component_data_pointer = components.data();
-            bool removed_from_middle             = false;
+            // Keep track of where a component was removed from so we can update reference indices if needed
+            bool components_shifted = false;
+            usize removal_index     = 0;
 
             // Associated component is at end of list
             // note: would be handled by binary search below, but this is a common case that can be easily optimized
@@ -374,8 +288,8 @@ namespace rnjin::ecs
             // such that the `components` list remains sorted by owner IDs
             else
             {
-                uint start = 0;
-                uint end   = components.size();
+                usize start = 0;
+                usize end   = components.size();
                 while ( start != end )
                 {
                     let middle    = start + ( end - start ) / 2;
@@ -402,22 +316,21 @@ namespace rnjin::ecs
                     // Potentially notify others that a component of type T has been removed from an entity (before it is destroyed)
                     events.removed().send( components.at( start ).component_data, owner );
                     components.erase( components.begin() + start );
-                    removed_from_middle = true;
+
+                    components_shifted = true;
+                    removal_index      = start;
                 }
                 else
                 {
                     let owner_id_not_found = true;
-                    check_error_condition( pass, ecs_log_errors, owner_id_not_found == true, "Component '\2' not associated with entity (\1)", owner_id, reflect<T>::get_type_name() );
+                    check_error_condition( pass, ecs_log_errors, owner_id_not_found == true, "Component '\2' not associated with entity (\1)", owner_id, reflection::get_type_name<T>() );
                 }
             }
 
-            // Check if the data container pointer has moved, potentially notifying others that need to react accordingly
-            // note: used by component_reference to find the correct component pointer for a given entity
-            let* new_component_data_pointer = components.data();
-            if ( original_component_data_pointer != new_component_data_pointer || removed_from_middle )
+            // If we remove a component in the middle of the list, we need to notify references to update their indices
+            if ( components_shifted )
             {
-                ecs_log_verbose.print_additional( "triggered reallocation" );
-                component<T>::events.reallocated().send();
+                component<T>::reallocating_component_removed_event.send( removal_index );
             }
         }
 
@@ -499,30 +412,201 @@ namespace rnjin::ecs
             public: // accessors
             let_mutable& added get_mutable_value( component_added_event );
             let_mutable& removed get_mutable_value( component_removed_event );
-            let_mutable& reallocated get_mutable_value( components_reallocated_event );
 
             private: // members
             event<T&, entity&> component_added_event{ "component added" };
             event<const T&, entity&> component_removed_event{ "component removed" };
-            event<> components_reallocated_event{ "components reallocated" };
         }
         events;
+
+        protected: // static accessors
+        static usize index_owned_by( const entity& owner )
+        {
+            static let invalid_index = ~0;
+
+            let owner_id = owner.get_id();
+
+            // Check that the entity is actually an owner
+            check_error_condition( return invalid_index, ecs_log_errors, owners.count( owner_id ) == 0, "Can't get index of component '\2' from an entity it's not attached to (\1)", owner_id,
+                                          reflection::get_type_name<T>() );
+
+            // Associated component is at end of list
+            // note: would be handled by binary search below, but this is a common case that can be easily optimized
+            if ( owner_id == components.back().get_owner_id() )
+            {
+                return components.size() - 1;
+            }
+            // New component is somewhere in the list, perform a
+            // binary search to get the appropriate index
+            else
+            {
+                uint start = 0;
+                uint end   = components.size();
+                while ( start != end )
+                {
+                    let middle    = start + ( end - start ) / 2;
+                    let middle_id = components.at( middle ).get_owner_id();
+                    if ( owner_id < middle_id )
+                    {
+                        // continue search in left side
+                        end = middle;
+                    }
+                    else if ( owner_id > middle_id )
+                    {
+                        // continue search in right side
+                        start = middle + 1;
+                    }
+                    else
+                    {
+                        start = middle;
+                        break;
+                    }
+                }
+
+                if ( owner_id == components.at( start ).get_owner_id() )
+                {
+                    return start;
+                }
+                else
+                {
+                    let owner_id_not_found = true;
+                    check_error_condition( pass, ecs_log_errors, owner_id_not_found == true, "Component '\2' not associated with entity (\1)", owner_id, reflection::get_type_name<T>() );
+                    return invalid_index;
+                }
+            }
+        }
 
         protected: // static members
         // A contiguous array storing component data for efficient iteration
         static list<owned_component> components;
         // A set of owner id values, used to efficiently check if a given entity is an owner
         static set<entity::id> owners;
+        // Events used specifically be component references
+        static event<usize> reallocating_component_added_event;
+        static event<usize> reallocating_component_removed_event;
+
+        /* -------------------------------------------------------------------------- */
+        /*                            Component References                            */
+        /* -------------------------------------------------------------------------- */
+        public:
+        class reference : public component<reference>
+        {
+            public: // methods
+            reference( const T* target_pointer )
+            {
+                set_target( target_pointer );
+
+                if ( not reference::handlers_initialized )
+                {
+                    reference::initialize_handlers();
+                }
+            }
+            reference( const entity* target_owner_pointer )
+            {
+                set_target_from_owner( target_owner_pointer );
+
+                if ( not reference::handlers_initialized )
+                {
+                    reference::initialize_handlers();
+                }
+            }
+            reference( const reference& other ) : target_index( other.target_index ) {}
+            ~reference() {}
+
+            void set_target( const T* target_pointer )
+            {
+                let& target_owner = target_pointer->get_owner();
+                target_index      = T::index_owned_by( target_owner );
+            }
+            void set_target_from_owner( const entity* target_owner_pointer )
+            {
+                target_index = T::index_owned_by( *target_owner_pointer );
+            }
+
+            public: // accessors
+            const T* get_pointer() const
+            {
+                return &( component<T>::components[target_index].component_data );
+            }
+            const entity& get_referenced_owner() const
+            {
+                return get_pointer()->get_owner();
+            }
+
+            inline let is_valid get_value( target_index != invalid_index );
+
+            private: // members
+            usize target_index;
+
+            private: // static methods
+            static void on_component_added( usize insert_index )
+            {
+                ecs_log_verbose.print( "Update reference indices for '\1' (on add)", reflection::get_type_name<T>() );
+
+                for ( nonconst auto& c : reference::components )
+                {
+                    // All indices after the insertion position need to be incremented
+                    if ( c.component_data.target_index >= insert_index )
+                    {
+                        c.component_data.target_index += 1;
+                    }
+                }
+            }
+
+            // note: this will only be called for reallocating removals, so removing the last component in the list will not warn about invalidating active references
+            //       we should probably have dedicated events for those cases in case they need to be handled for warning / etc.
+            static void on_component_removed( usize remove_index )
+            {
+                ecs_log_verbose.print( "Update reference indices for '\1' (on remove)", reflection::get_type_name<T>() );
+
+                for ( nonconst auto& c : components )
+                {
+                    let invalidating_active_reference = c.component_data.target_index == remove_index;
+
+                    // The component at an index currently being referenced is being removed, which is bad
+                    check_error_condition( continue, ecs_log_errors, invalidating_active_reference == true, "Destroying component '\1' with active references (index=\2)", reflection::get_type_name<T>(), remove_index );
+
+                    // All indices after the deletion position need to be decremented
+                    if ( c.component_data.target_index > remove_index )
+                    {
+                        c.component_data.target_index -= 1;
+                    }
+                }
+            }
+
+            // Set up handlers for components being added / removed
+            // note: this is called on first instantiation of a reference type,
+            //       since sequence of memory allocation isn't handled well yet
+            static void initialize_handlers()
+            {
+                ecs_log_verbose.print( "Initialize reference handlers for '\1'", reflection::get_type_name<T>() );
+
+                component_added_handler.set( component<T>::reallocating_component_added_event, on_component_added );
+                component_removed_handler.set( component<T>::reallocating_component_removed_event, on_component_removed );
+            }
+
+            private: // static members
+            static bool handlers_initialized;
+            static static_event_handler<usize> component_added_handler;
+            static static_event_handler<usize> component_removed_handler;
+
+            public: // constants
+            static const usize invalid_index = ~0;
+        };
     };
 
-    // Static member definitions
-    template <typename T>
-    typename component<T>::component_events component<T>::events;
-    template <typename T>
-    list<typename component<T>::owned_component> component<T>::components;
-    template <typename T>
-    set<typename entity::id> component<T>::owners;
+    // static member definitions
+    // clang-format off
+    template <typename T> typename component<T>::component_events component<T>::events;
+    template <typename T> list<typename component<T>::owned_component> component<T>::components;
+    template <typename T> set<typename entity::id> component<T>::owners;
+    template <typename T> event<usize> component<T>::reallocating_component_added_event { "reallocating component added" };
+    template <typename T> event<usize> component<T>::reallocating_component_removed_event { "reallocating component removed" };
+
+    template <typename T> bool component<T>::reference::handlers_initialized = false;
+    template <typename T> static_event_handler<usize> component<T>::reference::component_added_handler;
+    template <typename T> static_event_handler<usize> component<T>::reference::component_removed_handler;
+    // clang-format on 
 
 #define component_class( name ) class name : public rnjin::ecs::component<name>
-
 } // namespace rnjin::ecs

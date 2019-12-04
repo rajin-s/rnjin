@@ -241,6 +241,11 @@ namespace rnjin::core
                 rows[3] * other  //
             );
         }
+
+        inline static float4x4 identity()
+        {
+            return float4x4( float4( 1, 0, 0, 0 ), float4( 0, 1, 0, 0 ), float4( 0, 0, 1, 0 ), float4( 0, 0, 0, 1 ) );
+        }
     };
 
 #pragma endregion

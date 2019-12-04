@@ -46,11 +46,11 @@ namespace rnjin
             return *this;
         }
 
-        inline bool is_first()
+        inline bool is_first() const
         {
             return number == version_id::first_number;
         }
-        inline bool is_invalid()
+        inline bool is_invalid() const
         {
             return number == version_id::invalid_number;
         }
@@ -60,8 +60,13 @@ namespace rnjin
             return version_id( version_id::invalid_number );
         }
 
+        inline explicit operator usize() const
+        {
+            return number;
+        }
+
         private:
-        using numeric_type = uint64;
+        using numeric_type = usize;
         numeric_type number;
 
         inline version_id( numeric_type number ) : number( number ) {}

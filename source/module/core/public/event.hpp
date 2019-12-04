@@ -100,11 +100,14 @@ namespace rnjin::core
     {
         private: // types
         using event_type    = event<As...>;
-        using function_type = void( As... );
+        using function_type = void ( * )( As... );
 
         public: // methods
-        static_event_handler() : target_event( nullptr ), function( nullptr ) {}
-        
+        static_event_handler() : target_event( nullptr ), function( nullptr )
+        {
+            this->function = nullptr;
+        }
+
         // Register this handler with the target event on creation
         static_event_handler( event_type& target_event, function_type function ) : target_event( &target_event ), pass_member( function )
         {
@@ -116,6 +119,22 @@ namespace rnjin::core
             if ( target_event != nullptr )
             {
                 target_event->remove_handler( this );
+            }
+        }
+
+        void set( event_type& new_target_event, function_type new_function )
+        {
+            if ( target_event != nullptr )
+            {
+                target_event->remove_handler( this );
+            }
+
+            target_event = &new_target_event;
+            function     = new_function;
+
+            if ( target_event != nullptr )
+            {
+                target_event->add_handler( this );
             }
         }
 

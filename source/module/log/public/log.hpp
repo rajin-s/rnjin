@@ -689,3 +689,5 @@ namespace rnjin
         extern source::masked main_errors;
     } // namespace log
 } // namespace rnjin
+
+std::ostream& operator<<( std::ostream& stream, const rnjin::version_id& id );
