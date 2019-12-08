@@ -104,26 +104,38 @@ test( vulkan_ecs )
     /*                               Set Up Entities                              */
     /* -------------------------------------------------------------------------- */
 
-    entity ent1, ent2, ent3;
+    entity ent1, ent2, ent3, ent4;
 
     // Add Components
     {
         ent1.add<ecs_mesh>( test_mesh );
+        ent1.add<ecs_material>( &test_vsh, &test_fsh );
         ent2.add<ecs_material>( &test_vsh, &test_fsh );
 
         ent3.add<ecs_model>();
         ent3.add<ecs_mesh::reference>( &ent1 );
-        ent3.add<ecs_material::reference>( &ent2 );
+        ent3.add<ecs_material::reference>( &ent1 );
+        
+        ent4.add<ecs_model>();
+        ent4.add<ecs_mesh::reference>( &ent1 );
+        ent4.add<ecs_material::reference>( &ent2 );
     }
 
     /* -------------------------------------------------------------------------- */
     /*                             Simulate Main Loop                             */
     /* -------------------------------------------------------------------------- */
 
-    let_mutable* material_pointer = ent2.get_mutable<ecs_material>();
+    let_mutable* material_pointer1 = ent1.get_mutable<ecs_material>();
+    let_mutable* material_pointer2 = ent2.get_mutable<ecs_material>();
 
-    bool do_render         = false;
-    let_mutable projection = math::orthographic_projection( 4, -1, 1 );
+    bool do_render            = false;
+    let_mutable projection    = math::perspective_projection( 90, 0.1, 5 );
+    
+    let_mutable transform1 = math::transform();
+    transform1.set_position( float3( -1, 0, -1.5 ) );
+    
+    let_mutable transform2 = math::transform();
+    transform2.set_position( float3( 0, 0, -2 ) );
 
     while ( true )
     {
@@ -137,9 +149,11 @@ test( vulkan_ecs )
         glfwPollEvents();
         let advance = glfwGetKey( main_window.get_api_window(), GLFW_KEY_A );
 
+        graphics::get_graphics_log().disable_flag( (uint) graphics::log_flag::verbose );
+
         if ( advance )
         {
-            if ( do_render )
+            if ( do_render or true )
             {
                 do_render = false;
 
@@ -149,11 +163,19 @@ test( vulkan_ecs )
                     let aspect_ratio = ( (float) window_size.x ) / ( (float) window_size.y );
                     projection.set_aspect_ratio( aspect_ratio );
 
-                    material_pointer->get_mutable_instance_data().world_transform      = float4x4::identity();
-                    material_pointer->get_mutable_instance_data().view_transform       = float4x4::identity();
-                    material_pointer->get_mutable_instance_data().projection_transform = projection.get_matrix();
+                    transform1.rotate( float3( 0.07, 0.1, -0.03 ) );
+                    transform2.rotate( float3( 0.03, -0.04, -0.07 ) );
+                    
+                    material_pointer1->get_mutable_instance_data().world_transform      = transform1.get_matrix();
+                    material_pointer1->get_mutable_instance_data().view_transform       = float4x4::identity();
+                    material_pointer1->get_mutable_instance_data().projection_transform = projection.get_matrix();
+                    
+                    material_pointer2->get_mutable_instance_data().world_transform      = transform2.get_matrix();
+                    material_pointer2->get_mutable_instance_data().view_transform       = float4x4::identity();
+                    material_pointer2->get_mutable_instance_data().projection_transform = projection.get_matrix();
 
-                    material_pointer->increment_instance_data_version();
+                    material_pointer1->increment_instance_data_version();
+                    material_pointer2->increment_instance_data_version();
                 }
 
                 vk_mesh_collector.update_all();

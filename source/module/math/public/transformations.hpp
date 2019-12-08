@@ -11,6 +11,51 @@
 
 namespace rnjin::core::math
 {
+
+    /* -------------------------------------------------------------------------- */
+    /*                           Affine Transformations                           */
+    /* -------------------------------------------------------------------------- */
+
+    class transform
+    {
+        public: // methods
+        transform();
+        ~transform();
+
+        void set_position( float3 new_position );
+        void set_rotation( float3 new_euler_angles );
+        void set_scale( float3 new_scale );
+
+        void translate( float3 offset );
+        void scale( float3 amount );
+        void rotate( float3 amount );
+
+        void set_uniform_scale( float new_scale );
+        void uniform_scale( float amount );
+
+        public: // accessors
+        let get_matrix get_value( matrix );
+        let get_inverse_matrix get_value( inverse_matrix );
+
+        let has_zero_scale get_value( ( scale_amount.x * scale_amount.y * scale_amount.z ) == 0 );
+
+        private: // members
+        float3 translation_amount;
+
+        float3 rotation_degrees;
+        float3 rotation_sin;
+        float3 rotation_cos;
+
+        float3 scale_amount;
+
+        float4x4 matrix;
+        float4x4 inverse_matrix;
+    };
+
+    /* -------------------------------------------------------------------------- */
+    /*                         Projection Transformations                         */
+    /* -------------------------------------------------------------------------- */
+
     class projection_base
     {
         public:

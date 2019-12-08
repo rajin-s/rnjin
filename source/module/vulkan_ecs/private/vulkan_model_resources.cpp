@@ -40,7 +40,7 @@ namespace rnjin::graphics::vulkan
 
     void model_collector::update( entity_components& components )
     {
-        log::main.print( "\1::update", reflection::get_type_name<model_collector>() );
+        // log::main.print( "\1::update", reflection::get_type_name<model_collector>() );
     }
 
 } // namespace rnjin::graphics::vulkan

@@ -189,7 +189,8 @@ namespace rnjin::graphics
         private: // members
     };
 
-    component_class( ecs_model ){
+    component_class( ecs_model )
+    {
         // public: // methods
         // ecs_model( ecs_mesh::reference mesh_reference, ecs_material::reference material_reference )
         //   : pass_member( mesh_reference ),    //
