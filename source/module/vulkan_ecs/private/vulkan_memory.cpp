@@ -35,8 +35,6 @@ namespace rnjin::graphics::vulkan
 /* -------------------------------------------------------------------------- */
 #pragma region buffer_allocator
 
-    uint find_best_memory_type( vk::PhysicalDevice device, bitmask type_filter, vk::MemoryPropertyFlags target_properties );
-
     buffer_allocator::buffer_allocator( const device& device_instance, vk::BufferUsageFlags usage_flags, vk::MemoryPropertyFlags memory_property_flags )
       : pass_member( device_instance ),       //
         pass_member( usage_flags ),           //
@@ -98,7 +96,7 @@ namespace rnjin::graphics::vulkan
 
         // Get memory information based on buffer requirements
         let buffer_memory_requirements = vulkan_device.getBufferMemoryRequirements( buffer );
-        let buffer_memory_type_index   = find_best_memory_type( device_instance.get_physical_device(), buffer_memory_requirements.memoryTypeBits, memory_property_flags );
+        let buffer_memory_type_index   = device_instance.find_best_memory_type( buffer_memory_requirements.memoryTypeBits, memory_property_flags );
 
         vulkan_log_verbose.print_additional( "Allocating \1 bytes for buffer space", total_size );
 
@@ -305,33 +303,6 @@ namespace rnjin::graphics::vulkan
         allocation.offset = 0;
         allocation.size   = 0;
         allocation.buffer = nullptr;
-    }
-
-    // Static helper function to find a suitable memory type (based on type_filter) that has all the required property flags (target_properties)
-    uint find_best_memory_type( vk::PhysicalDevice device, bitmask type_filter, vk::MemoryPropertyFlags target_properties )
-    {
-        let device_memory_properties = device.getMemoryProperties();
-
-        // Go through all available memory types
-        for ( uint i : range( device_memory_properties.memoryTypeCount ) )
-        {
-            let is_suitable_type = type_filter[i];
-            if ( is_suitable_type )
-            {
-                // Check that the current memory type has all the target flags
-                let device_memory_property_flags = device_memory_properties.memoryTypes[i].propertyFlags;
-                let has_target_properties        = ( device_memory_property_flags & target_properties ) == target_properties;
-
-                if ( has_target_properties )
-                {
-                    return i;
-                }
-            }
-        }
-
-        // No memory type was found that is suitable and had all the needed flags
-        const bool failed_to_find_memory_type = true;
-        check_error_condition( return 0, vulkan_log_errors, failed_to_find_memory_type == true, "Failed to find a suitable memory type" );
     }
 
 #pragma endregion buffer_allocator
@@ -779,6 +750,19 @@ namespace rnjin::graphics::vulkan
                 false                        // alphaToOneEnable
             );
 
+            vk::PipelineDepthStencilStateCreateInfo depth_stencil(
+                {},                   // flags
+                true,                 // depthTestEnable
+                true,                 // depthWriteEnable
+                vk::CompareOp::eLess, // depthCompareOp
+                false,                // depthBoundsTestEnable
+                false,                // stencilTestEnable
+                {},                   // front
+                {},                   // back
+                0.0,                  // minDepthBounds
+                1.0                   // maxDepthBounds
+            );
+
             // Color output state
             // TODO: pull this from material info
             let color_write_all = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
@@ -820,7 +804,7 @@ namespace rnjin::graphics::vulkan
                 &viewport_state,     // pViewportState
                 &rasterizer,         // pRasterizationState
                 &multisampling,      // pMultisampleState
-                nullptr,             // pDepthStencilState
+                &depth_stencil,      // pDepthStencilState
                 &color_blending,     // pColorBlendState
                 &dynamic_state,      // pDynamicState
                 new_pipeline_layout, // layout

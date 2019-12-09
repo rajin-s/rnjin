@@ -38,17 +38,25 @@ namespace rnjin::graphics::vulkan
     {
         create_swapchain();
         create_render_pass();
+
+        create_depth_buffer();
         create_frame_buffers();
+
         create_command_buffers();
+
         initialize_synchronization();
     }
 
     void window_surface::clean_up()
     {
         destroy_synchronization();
+
         destroy_frame_buffers();
+        destroy_depth_buffer();
+
         destroy_render_pass();
         destroy_swapchain();
+
         destroy_surface();
     }
 
@@ -61,6 +69,7 @@ namespace rnjin::graphics::vulkan
     const vk::SurfaceFormatKHR get_best_surface_format( const list<vk::SurfaceFormatKHR>& available_formats );
     const vk::PresentModeKHR get_best_present_mode( const list<vk::PresentModeKHR>& available_present_modes );
     const uint2 get_best_swap_extent( const vk::SurfaceCapabilitiesKHR capabilities, const uint2 window_size );
+    const vk::Format get_best_depth_format( vk::PhysicalDevice device );
 
     void window_surface::create_swapchain()
     {
@@ -162,6 +171,7 @@ namespace rnjin::graphics::vulkan
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan render pass creation" );
 
+        // Color attachment information
         vk::AttachmentDescription color_attachment(
             {},                               // flags
             swapchain.format.format,          // format
@@ -173,12 +183,29 @@ namespace rnjin::graphics::vulkan
             vk::ImageLayout::eUndefined,      // initialLayout
             vk::ImageLayout::ePresentSrcKHR   // finalLayout
         );
-
         vk::AttachmentReference color_attachment_reference(
             0,                                       // attachment
             vk::ImageLayout::eColorAttachmentOptimal // layout
         );
 
+        // Depth / Stencil attachment information
+        vk::AttachmentDescription depth_attachment(
+            {},                                                             // flags
+            get_best_depth_format( device_instance.get_physical_device() ), // format
+            vk::SampleCountFlagBits::e1,                                    // samples
+            vk::AttachmentLoadOp::eClear,                                   // loadOp
+            vk::AttachmentStoreOp::eDontCare,                               // storeOp
+            vk::AttachmentLoadOp::eDontCare,                                // stencilLoadOp
+            vk::AttachmentStoreOp::eDontCare,                               // stencilStoreOp
+            vk::ImageLayout::eUndefined,                                    // initialLayout
+            vk::ImageLayout::eDepthStencilAttachmentOptimal                 // finalLayout
+        );
+        vk::AttachmentReference depth_attachment_reference(
+            1,                                              // attachment
+            vk::ImageLayout::eDepthStencilAttachmentOptimal // layout
+        );
+
+        // Our one subpass uses both color and depth attachments
         vk::SubpassDescription subpass(
             {},                               // flags,
             vk::PipelineBindPoint::eGraphics, // pipelineBindPoint,
@@ -187,7 +214,7 @@ namespace rnjin::graphics::vulkan
             1,                                // colorAttachmentCount,
             &color_attachment_reference,      // pColorAttachments,
             0,                                // pResolveAttachments,
-            nullptr,                          // pDepthStencilAttachment,
+            &depth_attachment_reference,      // pDepthStencilAttachment,
             0,                                // preserveAttachmentCount,
             nullptr                           // pPreserveAttachments,
         );
@@ -205,10 +232,11 @@ namespace rnjin::graphics::vulkan
             {} // dependencyFlags
         );
 
+        const vk::AttachmentDescription attachments[] = { color_attachment, depth_attachment };
         vk::RenderPassCreateInfo render_pass_info(
             {},                 // flags
-            1,                  // attachmentCount
-            &color_attachment,  // pAttachments
+            2,                  // attachmentCount
+            attachments,        // pAttachments
             1,                  // subpassCount
             &subpass,           // pSubpasses
             1,                  // dependencyCount
@@ -227,11 +255,11 @@ namespace rnjin::graphics::vulkan
         {
             auto& element = swapchain.elements[i];
 
-            vk::ImageView frame_buffer_attachments[] = { element.image_view };
+            vk::ImageView frame_buffer_attachments[] = { element.image_view, depth_buffer.image_view };
             vk::FramebufferCreateInfo framebuffer_info(
                 {},                       // flags
                 render_pass,              // renderPass
-                1,                        // attachmentCount
+                2,                        // attachmentCount
                 frame_buffer_attachments, // pAttachments
                 swapchain.image_size.x,   // width
                 swapchain.image_size.y,   // height
@@ -241,6 +269,69 @@ namespace rnjin::graphics::vulkan
             element.frame_buffer = device_instance.get_vulkan_device().createFramebuffer( framebuffer_info );
             check_error_condition( return, vulkan_log_errors, not element.frame_buffer, "Failed to create Vulkan frame buffer" );
         }
+    }
+
+    void window_surface::create_depth_buffer()
+    {
+        let& vulkan_device     = device_instance.get_vulkan_device();
+        let depth_image_format = get_best_depth_format( device_instance.get_physical_device() );
+
+        // Create Image
+
+        vk::ImageCreateInfo image_info(
+            {},                                                                // flags
+            vk::ImageType::e2D,                                                // imageType
+            depth_image_format,                                                // format
+            vk::Extent3D( swapchain.image_size.x, swapchain.image_size.y, 1 ), // extent
+            1,                                                                 // mipLevels
+            1,                                                                 // arrayLayers
+            vk::SampleCountFlagBits::e1,                                       // samples
+            vk::ImageTiling::eOptimal,                                         // tiling
+            vk::ImageUsageFlagBits::eDepthStencilAttachment,                   // usage
+            vk::SharingMode::eExclusive,                                       // sharingMode
+            0,                                                                 // queueFamilyIndexCount
+            nullptr,                                                           // pQueueFamilyIndices
+            vk::ImageLayout::eUndefined                                        // initialLayout
+        );
+
+        depth_buffer.image = vulkan_device.createImage( image_info );
+        check_error_condition( return, vulkan_log_errors, not depth_buffer.image, "Failed to create Vulkan depth buffer image" );
+
+        // Allocate Device Memory
+
+        let memory_requirements = vulkan_device.getImageMemoryRequirements( depth_buffer.image );
+        let memory_type         = device_instance.find_best_memory_type( memory_requirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal );
+
+        vk::MemoryAllocateInfo allocation_info(
+            memory_requirements.size, // size
+            memory_type               // memoryTypeIndex
+        );
+
+        depth_buffer.device_memory = vulkan_device.allocateMemory( allocation_info );
+        check_error_condition( return, vulkan_log_errors, not depth_buffer.device_memory, "Failed to allocate device memory for Vulkan depth buffer" );
+
+        vulkan_device.bindImageMemory( depth_buffer.image, depth_buffer.device_memory, 0 );
+
+        // Create Image View
+
+        vk::ImageSubresourceRange image_view_range(
+            vk::ImageAspectFlagBits::eDepth, // aspectMask
+            0,                               // baseMipLevel
+            1,                               // levelCount
+            0,                               // baseArrayLayer
+            1                                // layerCount
+        );
+        vk::ImageViewCreateInfo image_view_info(
+            {},                     // flags
+            depth_buffer.image,     // image
+            vk::ImageViewType::e2D, // viewType
+            depth_image_format,     // format
+            vk::ComponentMapping(), // components
+            image_view_range        // subresourceRange
+        );
+
+        depth_buffer.image_view = vulkan_device.createImageView( image_view_info );
+        check_error_condition( return, vulkan_log_errors, not depth_buffer.image_view, "Failed to create Vulkan depth buffer image view" );
     }
 
     void window_surface::create_command_buffers()
@@ -264,7 +355,7 @@ namespace rnjin::graphics::vulkan
 
     void window_surface::initialize_synchronization()
     {
-        let task = vulkan_log_verbose.track_scope( "Vulkan surface synchronization initialization" );
+        let task           = vulkan_log_verbose.track_scope( "Vulkan surface synchronization initialization" );
         let& vulkan_device = device_instance.get_vulkan_device();
 
         vk::SemaphoreCreateInfo semaphore_info;
@@ -319,9 +410,13 @@ namespace rnjin::graphics::vulkan
         let_mutable& current_swapchain_element = swapchain.elements[swapchain.current_element_index];
         {
             // Start the command buffer and render pass
-            let viewport            = vk::Viewport( 0.0, 0.0, swapchain.image_size.x, swapchain.image_size.y );
-            let_mutable clear_value = vk::ClearValue();
-            let subpass_contents    = vk::SubpassContents::eInline;
+            let viewport         = vk::Viewport( 0.0, 0.0, swapchain.image_size.x, swapchain.image_size.y );
+            let subpass_contents = vk::SubpassContents::eInline;
+
+            vk::ClearValue clear_values[] = {
+                vk::ClearColorValue(),                 // color clear value
+                vk::ClearDepthStencilValue( 1.0, 0.0 ) // depth clear value
+            };
 
             let begin_info = vk::CommandBufferBeginInfo(
                 {},     // flags
@@ -335,8 +430,8 @@ namespace rnjin::graphics::vulkan
                 render_pass,                            // renderPass
                 current_swapchain_element.frame_buffer, // framebuffer
                 full_screen_area,                       // renderArea
-                1,                                      // clearValueCount
-                &clear_value                            // pClearValues
+                2,                                      // clearValueCount
+                clear_values                            // pClearValues
             );
 
             current_swapchain_element.command_buffer.begin( begin_info );
@@ -439,6 +534,15 @@ namespace rnjin::graphics::vulkan
         }
     }
 
+    void window_surface::destroy_depth_buffer()
+    {
+        let& vulkan_device = device_instance.get_vulkan_device();
+
+        vulkan_device.destroyImageView( depth_buffer.image_view );
+        vulkan_device.destroyImage( depth_buffer.image );
+        vulkan_device.freeMemory( depth_buffer.device_memory );
+    }
+
     void window_surface::destroy_synchronization()
     {
         let task = vulkan_log_verbose.track_scope( "Vulkan synchronization cleanup" );
@@ -473,11 +577,13 @@ namespace rnjin::graphics::vulkan
         device_instance.wait_for_idle();
 
         destroy_frame_buffers();
+        destroy_depth_buffer();
         destroy_render_pass();
         destroy_swapchain();
 
         create_swapchain();
         create_render_pass();
+        create_depth_buffer();
         create_frame_buffers();
     }
 #pragma endregion clean_up
@@ -540,6 +646,35 @@ namespace rnjin::graphics::vulkan
         }
 
         return extent;
+    }
+
+    const vk::Format get_supported_format( vk::PhysicalDevice device, const list<vk::Format>& options, vk::ImageTiling tiling, vk::FormatFeatureFlags features )
+    {
+        foreach ( option : options )
+        {
+            let properties = device.getFormatProperties( option );
+            if ( tiling == vk::ImageTiling::eLinear and ( ( properties.linearTilingFeatures & features ) == features ) )
+            {
+                return option;
+            }
+            else if ( tiling == vk::ImageTiling::eOptimal and ( ( properties.optimalTilingFeatures & features ) == features ) )
+            {
+                return option;
+            }
+        }
+
+        let failed_to_find_format = true;
+        check_error_condition( return vk::Format(), vulkan_log_errors, failed_to_find_format == true, "Failed to find supported Vulkan format" );
+    }
+
+    const vk::Format get_best_depth_format( vk::PhysicalDevice device )
+    {
+        return get_supported_format(
+            device,                                                                                // device
+            { vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint }, // options
+            vk::ImageTiling::eOptimal,                                                             // tiling
+            vk::FormatFeatureFlagBits::eDepthStencilAttachment                                     // features
+        );
     }
 
 #pragma endregion helpers

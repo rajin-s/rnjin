@@ -25,6 +25,8 @@ namespace rnjin::graphics::vulkan
         void initialize();
         void clean_up();
 
+        uint find_best_memory_type( bitmask type_filter, vk::MemoryPropertyFlags target_properties ) const;
+
         void wait_for_idle() const;
 
         public: // accessors

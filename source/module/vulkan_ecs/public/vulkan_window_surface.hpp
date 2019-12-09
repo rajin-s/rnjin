@@ -46,6 +46,9 @@ namespace rnjin::graphics::vulkan
         void create_swapchain();
         void destroy_swapchain();
 
+        void create_depth_buffer();
+        void destroy_depth_buffer();
+
         void create_render_pass();
         void destroy_render_pass();
 
@@ -67,6 +70,13 @@ namespace rnjin::graphics::vulkan
         const window<GLFW>* window_pointer;
         vk::SurfaceKHR vulkan_surface;
         vk::RenderPass render_pass;
+
+        group
+        {
+            vk::Image image;
+            vk::DeviceMemory device_memory;
+            vk::ImageView image_view;
+        } depth_buffer;
 
         group swapchain_info
         {

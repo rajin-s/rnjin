@@ -208,6 +208,33 @@ namespace rnjin::graphics::vulkan
         }
     }
 
+    uint device::find_best_memory_type( bitmask type_filter, vk::MemoryPropertyFlags target_properties ) const
+    {
+        // Static helper function to find a suitable memory type (based on type_filter) that has all the required property flags (target_properties)
+        let device_memory_properties = physical_device.getMemoryProperties();
+
+        // Go through all available memory types
+        for ( uint i : range( device_memory_properties.memoryTypeCount ) )
+        {
+            let is_suitable_type = type_filter[i];
+            if ( is_suitable_type )
+            {
+                // Check that the current memory type has all the target flags
+                let device_memory_property_flags = device_memory_properties.memoryTypes[i].propertyFlags;
+                let has_target_properties        = ( device_memory_property_flags & target_properties ) == target_properties;
+
+                if ( has_target_properties )
+                {
+                    return i;
+                }
+            }
+        }
+
+        // No memory type was found that is suitable and had all the needed flags
+        const bool failed_to_find_memory_type = true;
+        check_error_condition( return 0, vulkan_log_errors, failed_to_find_memory_type == true, "Failed to find a suitable memory type" );
+    }
+
     // Release Vulkan resources used by this device wrapper
     void device::clean_up()
     {
