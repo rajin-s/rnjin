@@ -31,5 +31,5 @@ void main()
     gl_Position = position;
 
     // out_color   = vec4( vertex_position.xy * 4.0 - 1.0, 1.0, 1.0 );
-    out_color = vec4( vertex_uv, 0, 1 );
+    out_color = vec4( vertex_uv, 1.0, 1.0 );
 }
